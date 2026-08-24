@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f7f9fc" />
+  <title>Mate-fx · Laboratorio geométrico de funciones</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand" aria-label="Mate-fx">
+        <span class="brand-mark" aria-hidden="true">ƒ</span>
+        <div>
+          <strong>Mate-fx</strong>
+          <span>Laboratorio geométrico de funciones</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="fitBtn" class="icon-btn" title="Ajustar vista" aria-label="Ajustar vista">⌂</button>
+        <button id="resetBtn" class="icon-btn" title="Restablecer" aria-label="Restablecer">↺</button>
+        <button id="helpBtn" class="icon-btn" title="Ayuda" aria-label="Ayuda">?</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="sidebar" id="sidebar">
+        <section class="control-section">
+          <label class="section-label" for="functionInput">Función <span class="math-muted">f : ℕ → ℝ</span></label>
+          <div class="function-input-wrap">
+            <span class="fx-prefix">f(x)=</span>
+            <input id="functionInput" type="text" value="x^2" autocomplete="off" spellcheck="false" aria-describedby="functionError" />
+          </div>
+          <p id="functionError" class="field-message" aria-live="polite"></p>
+        </section>
+
+        <section class="control-section">
+          <div class="section-label row-between">
+            <span>Funciones rápidas</span>
+            <button id="morePresetsBtn" class="text-btn" type="button">Más</button>
+          </div>
+          <div class="preset-grid" id="presetGrid">
+            <button class="preset active" data-expression="x^2">x²</button>
+            <button class="preset" data-expression="x^n">xⁿ</button>
+            <button class="preset" data-expression="ln(x)">ln x</button>
+            <button class="preset" data-expression="sin(x)">sen x</button>
+            <button class="preset" data-expression="exp(x)">eˣ</button>
+            <button class="preset" data-expression="x">x</button>
+            <button class="preset preset-more" data-expression="tan(x)">tan x</button>
+            <button class="preset preset-more" data-expression="n^x">nˣ</button>
+            <button class="preset preset-more" data-expression="abs(x)">|x|</button>
+            <button class="preset preset-more" data-expression="-x">−x</button>
+          </div>
+        </section>
+
+        <section class="control-section parameter-section" id="parameterSection" hidden>
+          <div class="section-label">Parámetro <span class="math-muted">n</span></div>
+          <div class="inline-fields">
+            <input id="parameterN" type="number" value="3" step="0.1" />
+            <span class="mini-help">Se usa en xⁿ o nˣ</span>
+          </div>
+        </section>
+
+        <section class="control-section">
+          <div class="section-label">Modo</div>
+          <div class="segmented" role="group" aria-label="Modo de conexión">
+            <button id="linesModeBtn" class="segment active" data-mode="lines">Rectas</button>
+            <button id="curvesModeBtn" class="segment" data-mode="curves">Curvas</button>
+          </div>
+          <p class="microcopy" id="modeHint">Une ±x con f(x) mediante segmentos.</p>
+        </section>
+
+        <section class="control-section angle-section">
+          <div class="section-label row-between">
+            <span>Ángulo entre ejes <span class="math-muted">θ</span></span>
+            <div class="angle-input-wrap">
+              <input id="angleNumber" type="number" min="0" max="360" step="0.1" value="90" inputmode="decimal" aria-label="Ángulo en grados" />
+              <span>°</span>
+            </div>
+          </div>
+          <input id="angleSlider" class="angle-slider" type="range" min="0" max="360" step="0.1" value="90" />
+          <div class="angle-ticks" aria-hidden="true">
+            <button data-angle="0">0°</button>
+            <button data-angle="90">90°</button>
+            <button data-angle="180">180°</button>
+            <button data-angle="270">270°</button>
+            <button data-angle="360">360°</button>
+          </div>
+          <div class="animation-row">
+            <button id="playBtn" class="soft-btn" type="button" aria-label="Animar ángulo">▶ Animar</button>
+            <select id="speedSelect" aria-label="Velocidad de animación">
+              <option value="8">0.5×</option>
+              <option value="18" selected>1×</option>
+              <option value="36">2×</option>
+            </select>
+          </div>
+        </section>
+
+        <section class="control-section range-section">
+          <div class="section-label row-between">
+            <span>Naturales visibles</span>
+            <span id="rangeLabel" class="math-muted">1 ≤ x ≤ 8</span>
+          </div>
+          <div class="inline-fields range-fields">
+            <label>x mín.<input id="xMinInput" type="number" min="1" max="50" step="1" value="1" /></label>
+            <label>x máx.<input id="xMaxInput" type="number" min="1" max="50" step="1" value="8" /></label>
+          </div>
+        </section>
+
+        <div class="sidebar-foot">
+          <span>Solo evalúa x ∈ ℕ</span>
+          <span>Radianes en trigonometría</span>
+        </div>
+      </aside>
+
+      <section class="stage-wrap">
+        <div id="stage" class="stage" tabindex="0" aria-label="Lienzo geométrico interactivo">
+          <svg id="graph" viewBox="0 0 1200 800" role="img" aria-label="Representación geométrica de la función">
+            <defs>
+              <pattern id="smallGrid" width="24" height="24" patternUnits="userSpaceOnUse">
+                <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#e7edf5" stroke-width="1" />
+              </pattern>
+              <pattern id="grid" width="120" height="120" patternUnits="userSpaceOnUse">
+                <rect width="120" height="120" fill="url(#smallGrid)" />
+                <path d="M 120 0 L 0 0 0 120" fill="none" stroke="#d7e1ee" stroke-width="1.2" />
+              </pattern>
+              <filter id="selectedGlow" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <rect class="graph-bg" x="0" y="0" width="1200" height="800" fill="url(#grid)" />
+            <g id="viewport">
+              <g id="axisLayer"></g>
+              <g id="geometryLayer"></g>
+              <g id="pointLayer"></g>
+              <g id="labelLayer"></g>
+            </g>
+          </svg>
+
+          <div class="stage-title" id="stageTitle">
+            <strong id="prettyFunction">f(x) = x²</strong>
+            <span>x ∈ ℕ</span>
+          </div>
+
+          <div class="angle-badge" id="angleBadge">θ = 90°</div>
+
+          <div class="view-controls" aria-label="Controles de vista">
+            <button id="zoomOutBtn" title="Alejar">−</button>
+            <button id="zoomInBtn" title="Acercar">＋</button>
+            <button id="fitBtn2" title="Ajustar">⌂</button>
+          </div>
+
+          <div class="gesture-tip" id="gestureTip">Rueda: zoom · Arrastra: desplazar · Clic: inspeccionar</div>
+        </div>
+
+        <aside class="inspector" id="inspector">
+          <div class="inspector-head">
+            <div>
+              <span>Inspector</span>
+              <strong id="selectedTitle">x = 4</strong>
+            </div>
+            <button id="inspectorToggle" class="icon-btn small" title="Contraer inspector">⌄</button>
+          </div>
+          <div class="inspector-body" id="inspectorBody">
+            <div class="metric-grid">
+              <div class="metric"><span>f(x)</span><strong id="metricFx">16</strong></div>
+              <div class="metric"><span>θ</span><strong id="metricTheta">90°</strong></div>
+            </div>
+
+            <div class="metric-card emphasis">
+              <span>Producto invariante</span>
+              <strong id="metricProduct">x·f(x) = 64</strong>
+              <small>No cambia al rotar el eje de salida.</small>
+            </div>
+
+            <div class="metric-card">
+              <span>Punto de salida</span>
+              <strong id="metricQ">Q = (0, 16)</strong>
+            </div>
+
+            <div class="metric-card" id="triangleMetricCard">
+              <span>Área orientada</span>
+              <strong id="metricArea">A = 64</strong>
+              <small>A = x·f(x)·sen θ</small>
+            </div>
+
+            <div class="metric-card split-card">
+              <div><span>Componente cos</span><strong id="metricCos">0</strong></div>
+              <div><span>Componente sen</span><strong id="metricSin">64</strong></div>
+            </div>
+
+            <details class="details-card">
+              <summary>Más relaciones</summary>
+              <div class="formula-list">
+                <div><span>d₊²</span><code id="metricDPlus">208</code></div>
+                <div><span>d₋²</span><code id="metricDMinus">208</code></div>
+                <div><span>d₋² − d₊²</span><code id="metricDiff">0</code></div>
+                <div><span>¼ elipse orientada</span><code id="metricEllipse">50.265</code></div>
+              </div>
+            </details>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="helpDialog" class="help-dialog">
+    <form method="dialog">
+      <button class="dialog-close" aria-label="Cerrar">×</button>
+      <h2>Cómo leer Mate-fx</h2>
+      <p>Cada natural <strong>x</strong> vive sobre el eje horizontal. Su valor <strong>f(x)</strong> se coloca sobre un segundo eje que gira un ángulo <strong>θ</strong>.</p>
+      <ul>
+        <li><strong>Rectas:</strong> conecta −x y +x con el punto f(x).</li>
+        <li><strong>Curvas:</strong> usa cuartos de elipse cuando los ejes son perpendiculares. Al coincidir los ejes, aplica la convención original: +x se conecta por arriba y −x por abajo.</li>
+        <li><strong>θ:</strong> puede moverse de 0° a 360°, con slider o escribiendo el valor.</li>
+        <li><strong>x·f(x):</strong> es el producto que reaparece en áreas y diferencias de longitudes, independientemente del ángulo.</li>
+      </ul>
+      <p class="dialog-note">Las funciones trigonométricas se evalúan en radianes. Los valores no finitos se omiten del dibujo.</p>
+      <button class="primary-btn">Entendido</button>
+    </form>
+  </dialog>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
