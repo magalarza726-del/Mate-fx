@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f7f9fc" />
   <title>Mate-fx · Laboratorio geométrico de funciones</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="polish.css" />
 </head>
 <body>
   <div class="app-shell">
@@ -100,11 +101,11 @@
         <section class="control-section range-section">
           <div class="section-label row-between">
             <span>Naturales visibles</span>
-            <span id="rangeLabel" class="math-muted">1 ≤ x ≤ 8</span>
+            <span id="rangeLabel" class="math-muted">1 ≤ x ≤ 6</span>
           </div>
           <div class="inline-fields range-fields">
             <label>x mín.<input id="xMinInput" type="number" min="1" max="50" step="1" value="1" /></label>
-            <label>x máx.<input id="xMaxInput" type="number" min="1" max="50" step="1" value="8" /></label>
+            <label>x máx.<input id="xMaxInput" type="number" min="1" max="50" step="1" value="6" /></label>
           </div>
         </section>
 
@@ -170,9 +171,9 @@
             </div>
 
             <div class="metric-card emphasis">
-              <span>Producto invariante</span>
+              <span>Invariante al giro</span>
               <strong id="metricProduct">x·f(x) = 64</strong>
-              <small>No cambia al rotar el eje de salida.</small>
+              <small>El producto x·f(x) no depende de θ.</small>
             </div>
 
             <div class="metric-card">
@@ -223,5 +224,6 @@
   </dialog>
 
   <script type="module" src="src/app.js"></script>
+  <script type="module" src="src/polish.js"></script>
 </body>
 </html>
