@@ -1,0 +1,34 @@
+/* Mate-fx visual polish layer — intentionally separate from the mathematical core. */
+.workspace{grid-template-columns:292px 1fr}
+.sidebar{padding:15px 16px 10px}
+.control-section{padding-bottom:13px;margin-bottom:13px}
+.section-label{margin-bottom:7px}
+.preset{min-height:34px}
+.segment{height:35px}
+.animation-row{margin-top:8px}
+.inspector{top:18px;right:18px;width:226px}
+.stage-title{box-shadow:0 5px 16px rgba(23,32,51,.05)}
+
+/* Critical: keep selection markers in screen-sized SVG radii. The old CSS r value
+   was interpreted in world units and became a giant red disk after zooming. */
+.geom-point.selected-point{fill:#fff;stroke:var(--red);stroke-width:2.6}
+.geom-object.selected .geom-line{opacity:1;stroke-width:2.8;filter:none}
+.geom-object.selected .geom-fill{fill:rgba(239,51,64,.045)}
+
+.geom-label{font-size:11px}
+.geom-label.subtle{fill:#7d8798;font-size:9.5px;opacity:.82}
+.geom-label.polished-selected{fill:var(--red);font-size:11px;font-weight:750}
+
+/* Keep the mathematics dominant over the chrome. */
+.graph-bg{opacity:.9}
+.axis-output{stroke:#7b8799}
+.angle-arc{stroke:#657086}
+.gesture-tip{background:rgba(255,255,255,.78);padding:5px 8px;border-radius:8px}
+
+@media (max-height:900px) and (min-width:761px){
+  .control-section{padding-bottom:10px;margin-bottom:10px}
+  .sidebar{padding-top:12px}
+  .preset{min-height:32px}
+  .microcopy{margin-top:5px}
+  .sidebar-foot{display:none}
+}
