@@ -388,12 +388,11 @@ function renderGeometry() {
 
     const anchors = geometryAnchorPoints(geometry, state.mode);
     anchors.forEach(point => {
-      const isOutput = Math.hypot(point.x - geometry.q.x, point.y - geometry.q.y) < 1e-7;
       els.pointLayer.append(svgEl('circle', {
         cx: point.x,
         cy: point.y,
         r: markerRadius,
-        class: `geom-point${selected && isOutput ? ' selected-point' : ''}`,
+        class: 'geom-point',
       }));
     });
   }
