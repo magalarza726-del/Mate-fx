@@ -37,6 +37,10 @@ function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 function lerp(a, b, t) { return a + (b - a) * t; }
 function lerpPoint(a, b, t) { return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t) }; }
 function cosineEase(t) { t = clamp01(t); return 0.5 - 0.5 * Math.cos(Math.PI * t); }
+function smootherstep(t) {
+  t = clamp01(t);
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
 
 function normalizedAngle(deg) {
   let a = Number(deg) % 360;
@@ -107,26 +111,35 @@ export function makeLinePath(g) {
 }
 
 /* --------------------------------------------------------------------------
- * CURVAS
+ * CURVAS — volver a la definición original
  *
- * Canonical states from the original sketches:
+ * Los estados canónicos son exactamente los acordados en la conversación:
  *
- *   0°   : exact circle with endpoints x and f(x)
- *          C=(f+x)/2, D=|f-x|.
- *   90°  : two exact quarter ellipses joining ±x to (0,f).
- *   180° : the 0° circle reflected horizontally, therefore its endpoints are
- *          -x and -f(x), NOT +x and -f(x).  The centre is -(f+x)/2 and the
- *          diameter remains |f-x|.
- *   270° : the 90° construction reflected vertically.
+ * 0°:
+ *   círculo completo con
+ *      centro = (f(x)+x)/2
+ *      diámetro = |f(x)-x|
+ *   es decir, extremos x y f(x) sobre el eje coincidente.
  *
- * Between those states each branch is one rational quadratic conic.  Its
- * start anchor moves continuously so that both branches really converge to
- * the same circle endpoint at 0°/180°, while separating to ±x at 90°/270°.
- * Weights stay non-negative; the previous negative branch weight was what
- * could generate loop/spiral-like shapes.
+ * 90°:
+ *   dos cuartos de elipse exactos que unen ±x con (0,f(x)).
+ *
+ * 180°:
+ *   el MISMO círculo de 0°, reflejado horizontalmente.
+ *   Por tanto sus extremos son -x y -f(x), su centro es -(f+x)/2
+ *   y su diámetro sigue siendo |f-x|.
+ *
+ * 270°:
+ *   los cuartos de elipse de 90°, reflejados verticalmente.
+ *
+ * Importante: no usamos una cónica racional singular cerca de 0°/180°.
+ * Esa fue la causa de los arcos altos que parecían elipses cuando deberían
+ * estar convergiendo a círculos. En su lugar se interpola, punto a punto y
+ * con parametrización compatible, entre las figuras canónicas exactas.
+ * Así 179.4° es visualmente casi el círculo de 180°, como debe ocurrir.
  * -------------------------------------------------------------------------- */
 
-function circleSemicircle(a, b, upper = true, samples = 80) {
+function circleSemicircle(a, b, upper = true, samples = 96) {
   const cx = (a.x + b.x) / 2;
   const cy = (a.y + b.y) / 2;
   const dx = b.x - a.x;
@@ -138,14 +151,14 @@ function circleSemicircle(a, b, upper = true, samples = 80) {
   const uy = dy / chord;
   let nx = -uy;
   let ny = ux;
+  const r = chord / 2;
 
-  const midpointY = cy + ny * chord / 2;
-  if ((upper && midpointY < cy) || (!upper && midpointY > cy)) {
+  const testMidY = cy + ny * r;
+  if ((upper && testMidY < cy) || (!upper && testMidY > cy)) {
     nx = -nx;
     ny = -ny;
   }
 
-  const r = chord / 2;
   const pts = [];
   for (let i = 0; i <= samples; i++) {
     const t = i / samples;
@@ -159,7 +172,14 @@ function circleSemicircle(a, b, upper = true, samples = 80) {
   return pts;
 }
 
-function quarterEllipse(g, branch = 1, downward = false, samples = 80) {
+function canonicalCircle(g, opposed = false, branch = 1, samples = 96) {
+  const sign = opposed ? -1 : 1;
+  const a = { x: sign * g.x, y: 0 };
+  const b = { x: sign * g.fx, y: 0 };
+  return circleSemicircle(a, b, branch > 0, samples);
+}
+
+function quarterEllipse(g, branch = 1, downward = false, samples = 96) {
   const pts = [];
   const sy = downward ? -1 : 1;
   for (let i = 0; i <= samples; i++) {
@@ -172,95 +192,49 @@ function quarterEllipse(g, branch = 1, downward = false, samples = 80) {
   return pts;
 }
 
-function canonicalCircle(g, opposed = false, branch = 1, samples = 80) {
-  const sign = opposed ? -1 : 1;
-  const a = { x: sign * g.x, y: 0 };
-  const b = { x: sign * g.fx, y: 0 };
-  return circleSemicircle(a, b, branch > 0, samples);
+function morphCanonical(fromPts, toPts, amount, trueOutputPoint) {
+  const e = smootherstep(amount);
+  const n = Math.min(fromPts.length, toPts.length);
+  const out = new Array(n);
+
+  for (let i = 0; i < n; i++) {
+    out[i] = lerpPoint(fromPts[i], toPts[i], e);
+  }
+
+  // La salida debe seguir estando exactamente sobre el eje f rotado.
+  // Corregimos la diferencia de forma distribuida a lo largo de TODA la rama,
+  // no solo cerca del extremo; esto evita quiebres, rizos y falsas espirales.
+  const last = out[n - 1];
+  const dx = trueOutputPoint.x - last.x;
+  const dy = trueOutputPoint.y - last.y;
+  for (let i = 0; i < n; i++) {
+    const u = i / Math.max(1, n - 1);
+    const w = smootherstep(u);
+    out[i].x += dx * w;
+    out[i].y += dy * w;
+  }
+
+  return out;
 }
 
-function branchAnchorX(g, angleDeg, branch) {
-  const a = normalizedAngle(angleDeg);
+export function curvedPoints(g, branch = 1, samples = 96) {
+  const a = normalizedAngle(g.angleDeg ?? g.theta * 180 / Math.PI);
+
+  const circle0 = canonicalCircle(g, false, branch, samples);
+  const ellipse90 = quarterEllipse(g, branch, false, samples);
+  const circle180 = canonicalCircle(g, true, branch, samples);
+  const ellipse270 = quarterEllipse(g, branch, true, samples);
 
   if (a <= 90) {
-    // 0°: both at +x. 90°: + branch at +x, - branch at -x.
-    if (branch > 0) return g.x;
-    return g.x * Math.cos(2 * degToRad(a));
+    return morphCanonical(circle0, ellipse90, a / 90, g.q);
   }
-
   if (a <= 180) {
-    // 90°: ±x. 180°: both at -x.
-    if (branch < 0) return -g.x;
-    const beta = degToRad(a - 90);
-    return g.x * Math.cos(2 * beta);
+    return morphCanonical(ellipse90, circle180, (a - 90) / 90, g.q);
   }
-
   if (a <= 270) {
-    // 180°: both at -x. 270°: + branch at +x, - branch at -x.
-    if (branch < 0) return -g.x;
-    const beta = degToRad(a - 180);
-    return -g.x * Math.cos(2 * beta);
+    return morphCanonical(circle180, ellipse270, (a - 180) / 90, g.q);
   }
-
-  // 270°: ±x. 360°: both at +x.
-  if (branch > 0) return g.x;
-  const beta = degToRad(a - 270);
-  return -g.x * Math.cos(2 * beta);
-}
-
-function effectiveSweepRad(theta) {
-  // π at coincident axes, π/2 at perpendicular axes.
-  return Math.PI - (Math.PI / 2) * Math.abs(Math.sin(theta));
-}
-
-function rationalConicBranch(g, angleDeg, branch = 1, samples = 80) {
-  const theta = degToRad(angleDeg);
-  const c = Math.cos(theta);
-  const s = Math.sin(theta);
-  const q = { x: g.fx * c, y: g.fx * s };
-  const sx = branchAnchorX(g, angleDeg, branch);
-  const p0 = { x: sx, y: 0 };
-
-  if (Math.abs(s) < 1e-9) {
-    return circleSemicircle(p0, q, branch > 0, samples);
-  }
-
-  // Intersection of the vertical tangent at p0 with the tangent at Q that is
-  // perpendicular to the rotating f-axis.
-  const p1 = {
-    x: sx,
-    y: (g.fx - sx * c) / s,
-  };
-
-  const delta = effectiveSweepRad(theta);
-  const w = Math.max(0, Math.cos(delta / 2));
-
-  const pts = [];
-  for (let i = 0; i <= samples; i++) {
-    const t = i / samples;
-    const b0 = (1 - t) * (1 - t);
-    const b1 = 2 * (1 - t) * t;
-    const b2 = t * t;
-    const den = b0 + b1 * w + b2;
-    const safeDen = Math.abs(den) < 1e-12 ? 1e-12 : den;
-    pts.push({
-      x: (b0 * p0.x + b1 * w * p1.x + b2 * q.x) / safeDen,
-      y: (b0 * p0.y + b1 * w * p1.y + b2 * q.y) / safeDen,
-    });
-  }
-  return pts;
-}
-
-export function curvedPoints(g, branch = 1, samples = 80) {
-  const a = normalizedAngle(g.angleDeg ?? g.theta * 180 / Math.PI);
-  const eps = 1e-8;
-
-  if (Math.abs(a) < eps) return canonicalCircle(g, false, branch, samples);
-  if (Math.abs(a - 90) < eps) return quarterEllipse(g, branch, false, samples);
-  if (Math.abs(a - 180) < eps) return canonicalCircle(g, true, branch, samples);
-  if (Math.abs(a - 270) < eps) return quarterEllipse(g, branch, true, samples);
-
-  return rationalConicBranch(g, a, branch, samples);
+  return morphCanonical(ellipse270, circle0, (a - 270) / 90, g.q);
 }
 
 export function pointsToPath(points) {
@@ -279,7 +253,7 @@ export function geometryBounds(geometries, mode = 'lines') {
   for (const g of geometries) {
     pts.push(g.pPlus, g.pMinus, g.q);
     if (mode === 'curves' && Number.isFinite(g.fx)) {
-      pts.push(...curvedPoints(g, 1, 32), ...curvedPoints(g, -1, 32));
+      pts.push(...curvedPoints(g, 1, 36), ...curvedPoints(g, -1, 36));
     } else {
       pts.push(...straightTrianglePoints(g));
     }
