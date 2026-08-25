@@ -24,7 +24,6 @@ function polishGraphLabels(){
 
   const subtle = labels.filter(el => el.classList.contains('subtle'));
   subtle.forEach(el => { el.style.display = ''; });
-  // Preserve context while preventing a wall of tiny labels.
   if (subtle.length > 4) subtle.forEach((el,i) => { if (i % 2 === 1) el.style.display = 'none'; });
 
   const selected = labels.find(el => !el.classList.contains('subtle'));
@@ -35,8 +34,22 @@ function syncModeLanguage(){
   const curves = $('curvesModeBtn')?.classList.contains('active');
   const hint = $('modeHint');
   if (hint) hint.textContent = curves
-    ? 'Conecta ±x con f(x) mediante cuartos de elipse; al coincidir los ejes conserva la orientación superior/inferior.'
+    ? 'Cada rama conserva su ancla ±x. A 90°/270° son cuartos de elipse; al coincidir, +x conecta por arriba y −x por abajo.'
     : 'Conecta −x y +x con f(x) mediante segmentos rectos.';
+}
+
+function polishInspectorLanguage(){
+  const triangleCard = $('triangleMetricCard');
+  const triangleLabel = triangleCard?.querySelector(':scope > span');
+  if (triangleLabel) triangleLabel.textContent = 'Área triangular orientada';
+
+  const ellipseValue = $('metricEllipse');
+  const ellipseRow = ellipseValue?.closest('div');
+  const ellipseLabel = ellipseRow?.querySelector('span');
+  if (ellipseLabel) {
+    ellipseLabel.textContent = 'Referencia elíptica';
+    ellipseLabel.title = 'Coincide con el área de un cuarto de elipse en los keyframes perpendiculares (90°/270°).';
+  }
 }
 
 function watchGraph(){
@@ -46,7 +59,12 @@ function watchGraph(){
   const schedule = () => {
     if (queued) return;
     queued = true;
-    requestAnimationFrame(() => { queued=false; polishGraphLabels(); syncModeLanguage(); });
+    requestAnimationFrame(() => {
+      queued=false;
+      polishGraphLabels();
+      syncModeLanguage();
+      polishInspectorLanguage();
+    });
   };
   new MutationObserver(schedule).observe(graph,{subtree:true,childList:true,characterData:true});
   schedule();
@@ -55,6 +73,7 @@ function watchGraph(){
 requestAnimationFrame(() => {
   compactInitialRange();
   watchGraph();
+  polishInspectorLanguage();
   $('linesModeBtn')?.addEventListener('click', syncModeLanguage);
   $('curvesModeBtn')?.addEventListener('click', syncModeLanguage);
 });
