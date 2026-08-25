@@ -9,8 +9,7 @@
 .inspector{top:18px;right:18px;width:226px}
 .stage-title{box-shadow:0 5px 16px rgba(23,32,51,.05)}
 
-/* Critical: keep selection markers in screen-sized SVG radii. The old CSS r value
-   was interpreted in world units and became a giant red disk after zooming. */
+/* Critical: keep selection markers in screen-sized SVG radii. */
 .geom-point.selected-point{fill:#fff;stroke:var(--red);stroke-width:2.6}
 .geom-object.selected .geom-line{opacity:1;stroke-width:2.8;filter:none}
 .geom-object.selected .geom-fill{fill:rgba(239,51,64,.045)}
@@ -22,7 +21,12 @@
 /* Keep the mathematics dominant over the chrome. */
 .graph-bg{opacity:.9}
 .axis-output{stroke:#7b8799}
-.angle-arc{stroke:#657086}
+
+/* The old angle guide becomes a grey semicircle near 180° and visually looks
+   like an extra mathematical circle. The slider/badge already communicate θ,
+   so the guide is intentionally hidden. */
+.angle-arc{display:none!important}
+
 .gesture-tip{background:rgba(255,255,255,.78);padding:5px 8px;border-radius:8px}
 
 @media (max-height:900px) and (min-width:761px){
