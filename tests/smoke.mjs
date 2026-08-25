@@ -23,11 +23,13 @@ function testParser() {
   assert.equal(compileExpression('n^x')(3, 2), 8);
   assert.equal(compileExpression('|-x|')(5), 5);
   approx(compileExpression('ln(e)')(1), 1, 1e-12, 'ln(e)');
+  approx(compileExpression('2πx')(3), 6 * Math.PI, 1e-12, '2πx');
+  approx(compileExpression('pi x')(3), 3 * Math.PI, 1e-12, 'pi x');
 
   const nested = compileExpression('√(x^2+sin(x)^2)')(2);
   approx(nested, Math.sqrt(4 + Math.sin(2) ** 2), 1e-12, 'nested square root');
 
-  assert.equal(normalizeExpression('y = 2πx'), '2pix');
+  assert.equal(normalizeExpression('y = 2πx'), '2(pi)x');
   assert.throws(() => compileExpression('sin()'), /espera 1 argumento/);
   assert.throws(() => compileExpression('sqrt(1,2)'), /espera 1 argumento/);
 }
