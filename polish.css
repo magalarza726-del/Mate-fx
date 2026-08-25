@@ -9,8 +9,12 @@
 .inspector{top:18px;right:18px;width:226px}
 .stage-title{box-shadow:0 5px 16px rgba(23,32,51,.05)}
 
-/* Critical: keep selection markers in screen-sized SVG radii. */
-.geom-point.selected-point{fill:#fff;stroke:var(--red);stroke-width:2.6}
+/* Do not enlarge the selected output point. styles.css contains an old SVG
+   `r` presentation rule that is interpreted in world units after zoom, which
+   is exactly the big red circle visible in the screenshots. The selected
+   object is already indicated by stroke weight and the inspector, so the
+   special selected marker is intentionally suppressed. */
+.geom-point.selected-point{r:0!important;fill:none!important;stroke:none!important}
 .geom-object.selected .geom-line{opacity:1;stroke-width:2.8;filter:none}
 .geom-object.selected .geom-fill{fill:rgba(239,51,64,.045)}
 
@@ -23,8 +27,7 @@
 .axis-output{stroke:#7b8799}
 
 /* The old angle guide becomes a grey semicircle near 180° and visually looks
-   like an extra mathematical circle. The slider/badge already communicate θ,
-   so the guide is intentionally hidden. */
+   like an extra mathematical circle. The slider/badge already communicate θ. */
 .angle-arc{display:none!important}
 
 .gesture-tip{background:rgba(255,255,255,.78);padding:5px 8px;border-radius:8px}
