@@ -1,4 +1,4 @@
-/* Mate-fx visual polish layer — intentionally separate from the mathematical core. */
+/* Mate-fx visual polish layer — presentation only. */
 .workspace{grid-template-columns:292px 1fr}
 .sidebar{padding:15px 16px 10px}
 .control-section{padding-bottom:13px;margin-bottom:13px}
@@ -9,27 +9,15 @@
 .inspector{top:18px;right:18px;width:226px}
 .stage-title{box-shadow:0 5px 16px rgba(23,32,51,.05)}
 
-/* Do not enlarge the selected output point. styles.css contains an old SVG
-   `r` presentation rule that is interpreted in world units after zoom, which
-   is exactly the big red circle visible in the screenshots. The selected
-   object is already indicated by stroke weight and the inspector, so the
-   special selected marker is intentionally suppressed. */
-.geom-point.selected-point{r:0!important;fill:none!important;stroke:none!important}
+/* Keep selection readable without changing any SVG geometry. */
 .geom-object.selected .geom-line{opacity:1;stroke-width:2.8;filter:none}
 .geom-object.selected .geom-fill{fill:rgba(239,51,64,.045)}
-
 .geom-label{font-size:11px}
 .geom-label.subtle{fill:#7d8798;font-size:9.5px;opacity:.82}
-.geom-label.polished-selected{fill:var(--red);font-size:11px;font-weight:750}
 
-/* Keep the mathematics dominant over the chrome. */
+/* Keep the mathematics visually dominant over the chrome. */
 .graph-bg{opacity:.9}
 .axis-output{stroke:#7b8799}
-
-/* The old angle guide becomes a grey semicircle near 180° and visually looks
-   like an extra mathematical circle. The slider/badge already communicate θ. */
-.angle-arc{display:none!important}
-
 .gesture-tip{background:rgba(255,255,255,.78);padding:5px 8px;border-radius:8px}
 
 @media (max-height:900px) and (min-width:761px){
