@@ -7,6 +7,7 @@
   <title>Mate-fx · Laboratorio geométrico de funciones</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="polish.css" />
+  <link rel="stylesheet" href="math-entry.css" />
 </head>
 <body>
   <div class="app-shell">
@@ -32,8 +33,96 @@
           <div class="function-input-wrap">
             <span class="fx-prefix">f(x)=</span>
             <input id="functionInput" type="text" value="x^2" autocomplete="off" spellcheck="false" aria-describedby="functionError" />
+            <button id="mathKeyboardToggle" class="math-keyboard-toggle" type="button" title="Teclado matemático (Ctrl+K)" aria-label="Abrir teclado matemático" aria-expanded="false">⌨</button>
+          </div>
+          <div class="builder-meta">
+            <span id="builderStatus" class="builder-status valid">f(x) = x²</span>
+            <button id="clearExpressionBtn" class="builder-clear" type="button">Limpiar</button>
           </div>
           <p id="functionError" class="field-message" aria-live="polite"></p>
+
+          <div class="natural-samples" aria-label="Vista previa sobre números naturales">
+            <div class="natural-samples-head">
+              <span>Muestras en ℕ</span>
+              <span>entrada ↦ salida</span>
+            </div>
+            <div id="naturalSamplesList" class="natural-samples-list"></div>
+          </div>
+
+          <div id="mathBuilder" class="math-builder" hidden>
+            <div class="math-builder-head">
+              <div class="math-builder-tabs" role="tablist" aria-label="Teclado matemático">
+                <button class="math-builder-tab active" type="button" data-tab="basic" role="tab">123</button>
+                <button class="math-builder-tab" type="button" data-tab="functions" role="tab">f(x)</button>
+              </div>
+              <button id="mathBuilderClose" class="builder-close" type="button" aria-label="Cerrar teclado">×</button>
+            </div>
+
+            <div class="math-pad" data-pad="basic">
+              <button class="math-key action" type="button" data-insert="x">x</button>
+              <button class="math-key action" type="button" data-insert="n">n</button>
+              <button class="math-key" type="button" data-insert="pi">π</button>
+              <button class="math-key" type="button" data-insert="e">e</button>
+
+              <button class="math-key" type="button" data-insert="7">7</button>
+              <button class="math-key" type="button" data-insert="8">8</button>
+              <button class="math-key" type="button" data-insert="9">9</button>
+              <button class="math-key operator" type="button" data-insert="/">÷</button>
+
+              <button class="math-key" type="button" data-insert="4">4</button>
+              <button class="math-key" type="button" data-insert="5">5</button>
+              <button class="math-key" type="button" data-insert="6">6</button>
+              <button class="math-key operator" type="button" data-insert="*">×</button>
+
+              <button class="math-key" type="button" data-insert="1">1</button>
+              <button class="math-key" type="button" data-insert="2">2</button>
+              <button class="math-key" type="button" data-insert="3">3</button>
+              <button class="math-key operator" type="button" data-insert="-">−</button>
+
+              <button class="math-key" type="button" data-insert="(">(</button>
+              <button class="math-key" type="button" data-insert="0">0</button>
+              <button class="math-key" type="button" data-insert=")">)</button>
+              <button class="math-key operator" type="button" data-insert="+">+</button>
+
+              <button class="math-key" type="button" data-insert=".">.</button>
+              <button class="math-key" type="button" data-template="§^()" data-fallback="^§">xʸ</button>
+              <button class="math-key operator" type="button" data-action="left">←</button>
+              <button class="math-key operator" type="button" data-action="backspace">⌫</button>
+            </div>
+
+            <div class="math-pad" data-pad="functions" hidden>
+              <button class="math-key function" type="button" data-template="§^2" data-fallback="x^2">x²</button>
+              <button class="math-key function" type="button" data-template="§^n" data-fallback="x^n">xⁿ</button>
+              <button class="math-key function" type="button" data-template="sqrt(§)">√</button>
+              <button class="math-key function" type="button" data-template="abs(§)">|x|</button>
+
+              <button class="math-key function" type="button" data-template="sin(§)">sen</button>
+              <button class="math-key function" type="button" data-template="cos(§)">cos</button>
+              <button class="math-key function" type="button" data-template="tan(§)">tan</button>
+              <button class="math-key function" type="button" data-template="ln(§)">ln</button>
+
+              <button class="math-key function" type="button" data-template="log(§)">log</button>
+              <button class="math-key function" type="button" data-template="exp(§)">eˣ</button>
+              <button class="math-key function" type="button" data-template="min(§,)" >min</button>
+              <button class="math-key function" type="button" data-template="max(§,)" >max</button>
+
+              <button class="math-key function" type="button" data-template="asin(§)">asin</button>
+              <button class="math-key function" type="button" data-template="acos(§)">acos</button>
+              <button class="math-key function" type="button" data-template="atan(§)">atan</button>
+              <button class="math-key function" type="button" data-template="sign(§)">sign</button>
+
+              <button class="math-key function" type="button" data-template="floor(§)">⌊x⌋</button>
+              <button class="math-key function" type="button" data-template="ceil(§)">⌈x⌉</button>
+              <button class="math-key function" type="button" data-template="round(§)">round</button>
+              <button class="math-key operator" type="button" data-insert="%">mod</button>
+            </div>
+
+            <div class="builder-tip">Selecciona una parte de la expresión antes de pulsar √, sen, x², etc. para envolverla. También puedes escribir <strong>f(x)=...</strong>, usar <strong>x²</strong>, <strong>√x</strong> o multiplicación implícita como <strong>2x</strong>.</div>
+          </div>
+
+          <div id="functionHistory" class="function-history" aria-label="Funciones recientes">
+            <span class="function-history-label">Recientes</span>
+          </div>
         </section>
 
         <section class="control-section">
@@ -213,8 +302,10 @@
       <h2>Cómo leer Mate-fx</h2>
       <p>Cada natural <strong>x</strong> vive sobre el eje horizontal. Su valor <strong>f(x)</strong> se coloca sobre un segundo eje que gira un ángulo <strong>θ</strong>.</p>
       <ul>
+        <li><strong>Constructor:</strong> escribe directamente o abre ⌨. Puedes usar f(x)=..., x², √x, 2x y plantillas de funciones.</li>
+        <li><strong>Vista previa ℕ:</strong> antes de mirar la geometría puedes comprobar rápidamente pares entrada ↦ salida.</li>
         <li><strong>Rectas:</strong> conecta −x y +x con el punto f(x).</li>
-        <li><strong>Curvas:</strong> usa cuartos de elipse cuando los ejes son perpendiculares. Al coincidir los ejes, aplica la convención original: +x se conecta por arriba y −x por abajo.</li>
+        <li><strong>Curvas:</strong> usa cuartos de elipse cuando los ejes son perpendiculares y círculos en los estados coincidentes definidos por el modelo.</li>
         <li><strong>θ:</strong> puede moverse de 0° a 360°, con slider o escribiendo el valor.</li>
         <li><strong>x·f(x):</strong> es el producto que reaparece en áreas y diferencias de longitudes, independientemente del ángulo.</li>
       </ul>
@@ -225,5 +316,6 @@
 
   <script type="module" src="src/app.js"></script>
   <script type="module" src="src/polish.js"></script>
+  <script type="module" src="src/math-entry.js"></script>
 </body>
 </html>
