@@ -42,7 +42,8 @@ export function normalizeExpression(input) {
   let source = stripDefinition(input).toLowerCase();
 
   source = source
-    .replaceAll('π', 'pi')
+    // Parenthesizing pi preserves a token boundary in compact forms such as πx.
+    .replaceAll('π', '(pi)')
     .replaceAll('−', '-')
     .replaceAll('×', '*')
     .replaceAll('·', '*')
@@ -60,6 +61,8 @@ export function normalizeExpression(input) {
     .replace(new RegExp(`\\b(${SIMPLE_FUNCTIONS})\\s+([a-z0-9_.]+)`, 'g'), '$1($2)')
     .replace(/sen/g, 'sin')
     .replace(/\|([^|]+)\|/g, 'abs($1)')
+    // Preserve intended multiplication between symbolic atoms before spaces vanish.
+    .replace(/\b(pi|e|x|n)\s+(?=(?:pi|e|x|n)\b)/g, '$1*')
     .replace(/\s+/g, '');
 
   return source;
