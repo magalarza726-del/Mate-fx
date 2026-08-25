@@ -1,9 +1,46 @@
 /* Mate-fx mathematical entry assistant.
-   It adds notebook-like comfort without changing the geometric model. */
+   The canonical expression still lives in #functionInput for the parser,
+   but the user edits a MathLive <math-field> in true 2D mathematical notation. */
 
-.function-input-wrap{position:relative;padding-right:42px}
+.function-input-wrap{
+  position:relative;
+  min-height:54px;
+  height:auto;
+  padding:5px 42px 5px 12px;
+  align-items:center;
+}
+.fx-prefix{
+  flex:0 0 auto;
+  align-self:center;
+  margin-right:5px;
+  font:500 20px/1.1 Georgia,"Times New Roman",serif;
+  color:#637088;
+}
+.linear-shadow-input{display:none!important}
+
+#mathFunctionInput{
+  flex:1 1 auto;
+  min-width:0;
+  min-height:42px;
+  padding:5px 2px;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:#172033;
+  font-size:21px;
+  line-height:1.25;
+  --caret-color:var(--blue);
+  --selection-background-color:rgba(60,124,244,.16);
+  --contains-highlight-background-color:transparent;
+}
+#mathFunctionInput:focus-within{outline:0}
+#mathFunctionInput::part(container){padding:0;border:0;background:transparent}
+#mathFunctionInput::part(content){padding:0;min-height:32px}
+#mathFunctionInput::part(virtual-keyboard-toggle),
+#mathFunctionInput::part(menu-toggle){display:none}
+
 .math-keyboard-toggle{
-  position:absolute;right:5px;top:5px;width:32px;height:32px;border:0;border-radius:8px;
+  position:absolute;right:5px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:0;border-radius:8px;
   display:grid;place-items:center;background:#f3f6fb;color:#53627a;font-size:15px;
 }
 .math-keyboard-toggle:hover,.math-keyboard-toggle.active{background:var(--blue-soft);color:var(--blue)}
@@ -63,6 +100,7 @@
 
 /* Keep the builder compact on small-height screens. */
 @media (max-height:820px) and (min-width:761px){
+  #mathFunctionInput{font-size:19px}
   .math-key{min-height:30px}
   .math-pad{gap:4px;padding:6px}
   .builder-tip{display:none}
@@ -70,6 +108,7 @@
 }
 
 @media (max-width:760px){
+  #mathFunctionInput{font-size:20px}
   .math-builder{position:fixed;left:10px;right:10px;bottom:10px;z-index:40;box-shadow:0 20px 55px rgba(23,32,51,.2)}
   .math-key{min-height:40px;font-size:14px}
 }
