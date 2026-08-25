@@ -3,6 +3,9 @@
  * Supports real-valued expressions in x, parameter n, constants pi/e,
  * operators + - * / ^ %, parentheses and common functions.
  * No eval / Function constructor is used.
+ *
+ * The normalizer intentionally accepts several forms that feel natural in a
+ * mathematical notebook: f(x)=..., y=..., x², x³, xⁿ, nˣ, √x, 2x and 2π.
  */
 
 const FUNCTIONS = {
@@ -32,17 +35,33 @@ const FUNCTIONS = {
 const CONSTANTS = { pi: Math.PI, e: Math.E };
 
 function normalize(input) {
-  return String(input)
-    .trim()
-    .toLowerCase()
+  let s = String(input).trim().toLowerCase();
+
+  // A GeoGebra-like convenience: users may paste/write the whole equation.
+  s = s.replace(/^\s*(?:f\s*\(\s*x\s*\)|y)\s*=\s*/i, '');
+
+  // Common mathematical glyphs and superscripts.
+  s = s
     .replaceAll('π', 'pi')
     .replaceAll('−', '-')
     .replaceAll('×', '*')
+    .replaceAll('·', '*')
     .replaceAll('÷', '/')
+    .replaceAll('²', '^2')
+    .replaceAll('³', '^3')
+    .replaceAll('ⁿ', '^n')
+    .replaceAll('ˣ', '^x');
+
+  // Allow notebook-style “sen x”, “ln x”, “√x” for a single simple atom.
+  s = s
+    .replace(/\b(sen|sin|cos|tan|asin|acos|atan|ln|log|exp|sqrt|abs)\s+([a-z0-9_.]+)/g, '$1($2)')
+    .replace(/√\s*\(([^)]+)\)/g, 'sqrt($1)')
+    .replace(/√\s*([a-z0-9_.]+)/g, 'sqrt($1)')
     .replace(/sen/g, 'sin')
-    .replace(/√\s*\(/g, 'sqrt(')
     .replace(/\|([^|]+)\|/g, 'abs($1)')
     .replace(/\s+/g, '');
+
+  return s;
 }
 
 function tokenize(input) {
@@ -80,8 +99,8 @@ function tokenize(input) {
     }
     throw new Error(`Símbolo no reconocido: ${ch}`);
   }
-  // Insert implicit multiplication only where it is unambiguous after tokenization:
-  // 2x, 2(x+1), x(x+1), 2pi. A known function followed by '(' is a call, not a product.
+
+  // Implicit multiplication: 2x, 2(x+1), x(x+1), 2pi.
   const expanded = [];
   const canEnd = (t) => t && (t.type === 'number' || t.type === 'ident' || t.type === ')');
   const canStart = (t) => t && (t.type === 'number' || t.type === 'ident' || t.type === '(');
@@ -226,6 +245,7 @@ export function compileExpression(input) {
 export function prettyExpression(input) {
   return String(input)
     .trim()
+    .replace(/^\s*(?:f\s*\(\s*x\s*\)|y)\s*=\s*/i, '')
     .replace(/\^2\b/g, '²')
     .replace(/\^3\b/g, '³')
     .replace(/\^n\b/g, 'ⁿ')
