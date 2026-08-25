@@ -47,21 +47,6 @@ function normalizedAngle(deg) {
 
 /* --------------------------------------------------------------------------
  * RECTAS
- *
- * The two exact drawings supplied by the user are treated as canonical:
- *
- * 0°   (coincident axes):
- *   B = f(x) - x,  H = (f(x) + x)/2.
- *   The base endpoints are x and f(x); the apex sits above their midpoint
- *   at height H.  Only the two sloping sides are drawn.
- *
- * 90°  (perpendicular axes):
- *   (-x,0) -> (0,f(x)) -> (+x,0).
- *
- * 180° and 270° are the horizontal/vertical reflections of those same
- * constructions. Intermediate angles are a conservative cosine-eased morph
- * between exact keyframes. This fixes the previous 180° formula, which used
- * f(x)+x as the base and therefore did not match B=f(x)-x.
  * -------------------------------------------------------------------------- */
 
 function lineKeyframe0(g) {
@@ -122,28 +107,23 @@ export function makeLinePath(g) {
 }
 
 /* --------------------------------------------------------------------------
- * CURVAS — conic interpolation, not a hand-drawn morph
+ * CURVAS
  *
- * Exact canonical cases:
+ * Canonical states from the original sketches:
  *
- * 0° / 180°: circles.
- *   At 0° the circle has
- *      centre C=(f(x)+x)/2, diameter D=|f(x)-x|.
- *   The upper semicircle is the +x connection, the lower one is the -x
- *   connection. At 180° the construction is mirrored horizontally.
+ *   0°   : exact circle with endpoints x and f(x)
+ *          C=(f+x)/2, D=|f-x|.
+ *   90°  : two exact quarter ellipses joining ±x to (0,f).
+ *   180° : the 0° circle reflected horizontally, therefore its endpoints are
+ *          -x and -f(x), NOT +x and -f(x).  The centre is -(f+x)/2 and the
+ *          diameter remains |f-x|.
+ *   270° : the 90° construction reflected vertically.
  *
- * 90° / 270°: quarter ellipses.
- *   X²/x² + Y²/f(x)² = 1, with the appropriate quadrant.
- *
- * Between the canonical positions we use rational quadratic conics. Their
- * endpoint tangents are perpendicular to the two axes, so the transition is
- * geometric and local: there is no point-cloud homotopy, no spiral-like
- * twisting and no late ellipse->circle jump.
- *
- * The second branch must change its x-anchor because at 0° both semicircles
- * share the endpoint x, while at 90° the left quarter-ellipse starts at -x.
- * The smooth periodic anchor x*cos(2θ) is the minimal cosine interpolation
- * satisfying exactly +x at 0/180/360 and -x at 90/270.
+ * Between those states each branch is one rational quadratic conic.  Its
+ * start anchor moves continuously so that both branches really converge to
+ * the same circle endpoint at 0°/180°, while separating to ±x at 90°/270°.
+ * Weights stay non-negative; the previous negative branch weight was what
+ * could generate loop/spiral-like shapes.
  * -------------------------------------------------------------------------- */
 
 function circleSemicircle(a, b, upper = true, samples = 80) {
@@ -156,13 +136,15 @@ function circleSemicircle(a, b, upper = true, samples = 80) {
 
   const ux = dx / chord;
   const uy = dy / chord;
-  const nx0 = -uy;
-  const ny0 = ux;
-  let nx = nx0, ny = ny0;
-  const midYIfPositive = cy + ny0 * chord / 2;
-  if ((upper && midYIfPositive < cy) || (!upper && midYIfPositive > cy)) {
-    nx = -nx; ny = -ny;
+  let nx = -uy;
+  let ny = ux;
+
+  const midpointY = cy + ny * chord / 2;
+  if ((upper && midpointY < cy) || (!upper && midpointY > cy)) {
+    nx = -nx;
+    ny = -ny;
   }
+
   const r = chord / 2;
   const pts = [];
   for (let i = 0; i <= samples; i++) {
@@ -190,8 +172,45 @@ function quarterEllipse(g, branch = 1, downward = false, samples = 80) {
   return pts;
 }
 
+function canonicalCircle(g, opposed = false, branch = 1, samples = 80) {
+  const sign = opposed ? -1 : 1;
+  const a = { x: sign * g.x, y: 0 };
+  const b = { x: sign * g.fx, y: 0 };
+  return circleSemicircle(a, b, branch > 0, samples);
+}
+
+function branchAnchorX(g, angleDeg, branch) {
+  const a = normalizedAngle(angleDeg);
+
+  if (a <= 90) {
+    // 0°: both at +x. 90°: + branch at +x, - branch at -x.
+    if (branch > 0) return g.x;
+    return g.x * Math.cos(2 * degToRad(a));
+  }
+
+  if (a <= 180) {
+    // 90°: ±x. 180°: both at -x.
+    if (branch < 0) return -g.x;
+    const beta = degToRad(a - 90);
+    return g.x * Math.cos(2 * beta);
+  }
+
+  if (a <= 270) {
+    // 180°: both at -x. 270°: + branch at +x, - branch at -x.
+    if (branch < 0) return -g.x;
+    const beta = degToRad(a - 180);
+    return -g.x * Math.cos(2 * beta);
+  }
+
+  // 270°: ±x. 360°: both at +x.
+  if (branch > 0) return g.x;
+  const beta = degToRad(a - 270);
+  return -g.x * Math.cos(2 * beta);
+}
+
 function effectiveSweepRad(theta) {
-  return degToRad(180 - 90 * Math.abs(Math.sin(theta)));
+  // π at coincident axes, π/2 at perpendicular axes.
+  return Math.PI - (Math.PI / 2) * Math.abs(Math.sin(theta));
 }
 
 function rationalConicBranch(g, angleDeg, branch = 1, samples = 80) {
@@ -199,22 +218,22 @@ function rationalConicBranch(g, angleDeg, branch = 1, samples = 80) {
   const c = Math.cos(theta);
   const s = Math.sin(theta);
   const q = { x: g.fx * c, y: g.fx * s };
-  const sx = branch > 0 ? g.x : g.x * Math.cos(2 * theta);
+  const sx = branchAnchorX(g, angleDeg, branch);
   const p0 = { x: sx, y: 0 };
 
-  if (Math.abs(s) < 1e-8) {
-    const upper = branch > 0;
-    return circleSemicircle(p0, q, upper, samples);
+  if (Math.abs(s) < 1e-9) {
+    return circleSemicircle(p0, q, branch > 0, samples);
   }
 
+  // Intersection of the vertical tangent at p0 with the tangent at Q that is
+  // perpendicular to the rotating f-axis.
   const p1 = {
     x: sx,
     y: (g.fx - sx * c) / s,
   };
 
   const delta = effectiveSweepRad(theta);
-  let w = Math.cos(delta / 2);
-  if (branch < 0) w *= -Math.cos(2 * theta);
+  const w = Math.max(0, Math.cos(delta / 2));
 
   const pts = [];
   for (let i = 0; i <= samples; i++) {
@@ -223,7 +242,7 @@ function rationalConicBranch(g, angleDeg, branch = 1, samples = 80) {
     const b1 = 2 * (1 - t) * t;
     const b2 = t * t;
     const den = b0 + b1 * w + b2;
-    const safeDen = Math.abs(den) < 1e-10 ? (den < 0 ? -1e-10 : 1e-10) : den;
+    const safeDen = Math.abs(den) < 1e-12 ? 1e-12 : den;
     pts.push({
       x: (b0 * p0.x + b1 * w * p1.x + b2 * q.x) / safeDen,
       y: (b0 * p0.y + b1 * w * p1.y + b2 * q.y) / safeDen,
@@ -232,29 +251,16 @@ function rationalConicBranch(g, angleDeg, branch = 1, samples = 80) {
   return pts;
 }
 
-function curvedPointsHalfTurn(g, a, branch, samples) {
-  if (Math.abs(a) < 1e-9) {
-    const p0 = { x: g.x, y: 0 };
-    const q = { x: g.fx, y: 0 };
-    return circleSemicircle(p0, q, branch > 0, samples);
-  }
-  if (Math.abs(a - 90) < 1e-9) return quarterEllipse(g, branch, false, samples);
-  if (Math.abs(a - 180) < 1e-9) {
-    const p0 = { x: g.x, y: 0 };
-    const q = { x: -g.fx, y: 0 };
-    return circleSemicircle(p0, q, branch > 0, samples);
-  }
-  return rationalConicBranch(g, a, branch, samples);
-}
-
 export function curvedPoints(g, branch = 1, samples = 80) {
   const a = normalizedAngle(g.angleDeg ?? g.theta * 180 / Math.PI);
+  const eps = 1e-8;
 
-  if (a <= 180) return curvedPointsHalfTurn(g, a, branch, samples);
+  if (Math.abs(a) < eps) return canonicalCircle(g, false, branch, samples);
+  if (Math.abs(a - 90) < eps) return quarterEllipse(g, branch, false, samples);
+  if (Math.abs(a - 180) < eps) return canonicalCircle(g, true, branch, samples);
+  if (Math.abs(a - 270) < eps) return quarterEllipse(g, branch, true, samples);
 
-  const mirrorAngle = 360 - a;
-  const mirrored = curvedPointsHalfTurn(g, mirrorAngle, -branch, samples);
-  return mirrored.map(p => ({ x: p.x, y: -p.y }));
+  return rationalConicBranch(g, a, branch, samples);
 }
 
 export function pointsToPath(points) {
