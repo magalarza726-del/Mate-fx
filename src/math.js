@@ -1,47 +1,47 @@
 /**
- * Tiny expression parser for Mate-fx.
- * Supports real-valued expressions in x, parameter n, constants pi/e,
- * operators + - * / ^ %, parentheses and common functions.
- * No eval / Function constructor is used.
+ * Safe expression parser for Mate-fx.
  *
- * The normalizer intentionally accepts several forms that feel natural in a
- * mathematical notebook: f(x)=..., y=..., x², x³, xⁿ, nˣ, √x, 2x and 2π.
+ * The public syntax is deliberately mathematical and friendly: f(x)=..., y=...,
+ * x², x³, xⁿ, nˣ, √x, √(...), |x|, 2x and 2π are accepted. Internally the
+ * parser uses a small AST; eval() and Function() are never used.
  */
 
-const FUNCTIONS = {
-  sin: Math.sin,
-  sen: Math.sin,
-  cos: Math.cos,
-  tan: Math.tan,
-  asin: Math.asin,
-  acos: Math.acos,
-  atan: Math.atan,
-  sinh: Math.sinh,
-  cosh: Math.cosh,
-  tanh: Math.tanh,
-  sqrt: Math.sqrt,
-  abs: Math.abs,
-  ln: Math.log,
-  log: Math.log10,
-  exp: Math.exp,
-  floor: Math.floor,
-  ceil: Math.ceil,
-  round: Math.round,
-  sign: Math.sign,
-  min: Math.min,
-  max: Math.max,
-};
+const FUNCTION_SPECS = Object.freeze({
+  sin: { fn: Math.sin, minArgs: 1, maxArgs: 1 },
+  cos: { fn: Math.cos, minArgs: 1, maxArgs: 1 },
+  tan: { fn: Math.tan, minArgs: 1, maxArgs: 1 },
+  asin: { fn: Math.asin, minArgs: 1, maxArgs: 1 },
+  acos: { fn: Math.acos, minArgs: 1, maxArgs: 1 },
+  atan: { fn: Math.atan, minArgs: 1, maxArgs: 1 },
+  sinh: { fn: Math.sinh, minArgs: 1, maxArgs: 1 },
+  cosh: { fn: Math.cosh, minArgs: 1, maxArgs: 1 },
+  tanh: { fn: Math.tanh, minArgs: 1, maxArgs: 1 },
+  sqrt: { fn: Math.sqrt, minArgs: 1, maxArgs: 1 },
+  abs: { fn: Math.abs, minArgs: 1, maxArgs: 1 },
+  ln: { fn: Math.log, minArgs: 1, maxArgs: 1 },
+  log: { fn: Math.log10, minArgs: 1, maxArgs: 1 },
+  exp: { fn: Math.exp, minArgs: 1, maxArgs: 1 },
+  floor: { fn: Math.floor, minArgs: 1, maxArgs: 1 },
+  ceil: { fn: Math.ceil, minArgs: 1, maxArgs: 1 },
+  round: { fn: Math.round, minArgs: 1, maxArgs: 1 },
+  sign: { fn: Math.sign, minArgs: 1, maxArgs: 1 },
+  min: { fn: Math.min, minArgs: 1, maxArgs: Infinity },
+  max: { fn: Math.max, minArgs: 1, maxArgs: Infinity },
+});
 
-const CONSTANTS = { pi: Math.PI, e: Math.E };
+const CONSTANTS = Object.freeze({ pi: Math.PI, e: Math.E });
+const SIMPLE_FUNCTIONS = 'sen|sin|cos|tan|asin|acos|atan|ln|log|exp|sqrt|abs';
 
-function normalize(input) {
-  let s = String(input).trim().toLowerCase();
+function stripDefinition(input) {
+  return String(input)
+    .trim()
+    .replace(/^\s*(?:f\s*\(\s*x\s*\)|y)\s*=\s*/i, '');
+}
 
-  // A GeoGebra-like convenience: users may paste/write the whole equation.
-  s = s.replace(/^\s*(?:f\s*\(\s*x\s*\)|y)\s*=\s*/i, '');
+export function normalizeExpression(input) {
+  let source = stripDefinition(input).toLowerCase();
 
-  // Common mathematical glyphs and superscripts.
-  s = s
+  source = source
     .replaceAll('π', 'pi')
     .replaceAll('−', '-')
     .replaceAll('×', '*')
@@ -52,80 +52,100 @@ function normalize(input) {
     .replaceAll('ⁿ', '^n')
     .replaceAll('ˣ', '^x');
 
-  // Allow notebook-style “sen x”, “ln x”, “√x” for a single simple atom.
-  s = s
-    .replace(/\b(sen|sin|cos|tan|asin|acos|atan|ln|log|exp|sqrt|abs)\s+([a-z0-9_.]+)/g, '$1($2)')
-    .replace(/√\s*\(([^)]+)\)/g, 'sqrt($1)')
+  // √(...) is converted by replacing only the operator, not by trying to
+  // regex-match the entire parenthesized body. This keeps nested expressions safe.
+  source = source
+    .replace(/√\s*\(/g, 'sqrt(')
     .replace(/√\s*([a-z0-9_.]+)/g, 'sqrt($1)')
+    .replace(new RegExp(`\\b(${SIMPLE_FUNCTIONS})\\s+([a-z0-9_.]+)`, 'g'), '$1($2)')
     .replace(/sen/g, 'sin')
     .replace(/\|([^|]+)\|/g, 'abs($1)')
     .replace(/\s+/g, '');
 
-  return s;
+  return source;
 }
 
 function tokenize(input) {
-  const s = normalize(input);
+  const source = normalizeExpression(input);
   const tokens = [];
   let i = 0;
-  while (i < s.length) {
-    const ch = s[i];
+
+  while (i < source.length) {
+    const ch = source[i];
+
     if (/\d|\./.test(ch)) {
       let j = i + 1;
-      while (j < s.length && /\d|\./.test(s[j])) j++;
-      if (/[eE]/.test(s[j] || '') && /[+\-\d]/.test(s[j + 1] || '')) {
+      while (j < source.length && /\d|\./.test(source[j])) j++;
+
+      if (/[eE]/.test(source[j] || '') && /[+\-\d]/.test(source[j + 1] || '')) {
         j++;
-        if (/[+\-]/.test(s[j])) j++;
-        while (j < s.length && /\d/.test(s[j])) j++;
+        if (/[+\-]/.test(source[j])) j++;
+        while (j < source.length && /\d/.test(source[j])) j++;
       }
-      const raw = s.slice(i, j);
+
+      const raw = source.slice(i, j);
       const value = Number(raw);
       if (!Number.isFinite(value)) throw new Error(`Número inválido: ${raw}`);
       tokens.push({ type: 'number', value, raw });
       i = j;
       continue;
     }
+
     if (/[a-z_]/.test(ch)) {
       let j = i + 1;
-      while (j < s.length && /[a-z0-9_]/.test(s[j])) j++;
-      tokens.push({ type: 'ident', value: s.slice(i, j) });
+      while (j < source.length && /[a-z0-9_]/.test(source[j])) j++;
+      tokens.push({ type: 'ident', value: source.slice(i, j) });
       i = j;
       continue;
     }
+
     if ('+-*/^%(),'.includes(ch)) {
       tokens.push({ type: ch, value: ch });
       i++;
       continue;
     }
+
     throw new Error(`Símbolo no reconocido: ${ch}`);
   }
 
-  // Implicit multiplication: 2x, 2(x+1), x(x+1), 2pi.
+  // Implicit multiplication: 2x, 2(x+1), x(x+1), 2pi, 2sin(x).
   const expanded = [];
-  const canEnd = (t) => t && (t.type === 'number' || t.type === 'ident' || t.type === ')');
-  const canStart = (t) => t && (t.type === 'number' || t.type === 'ident' || t.type === '(');
-  for (let k = 0; k < tokens.length; k++) {
-    const cur = tokens[k];
-    const prev = expanded.at(-1);
-    const prevIsFunction = prev?.type === 'ident' && Object.hasOwn(FUNCTIONS, prev.value);
-    if (canEnd(prev) && canStart(cur) && !(prevIsFunction && cur.type === '(')) {
+  const canEnd = token => token && (token.type === 'number' || token.type === 'ident' || token.type === ')');
+  const canStart = token => token && (token.type === 'number' || token.type === 'ident' || token.type === '(');
+
+  for (const current of tokens) {
+    const previous = expanded.at(-1);
+    const previousIsFunction = previous?.type === 'ident' && Object.hasOwn(FUNCTION_SPECS, previous.value);
+    if (canEnd(previous) && canStart(current) && !(previousIsFunction && current.type === '(')) {
       expanded.push({ type: '*', value: '*' });
     }
-    expanded.push(cur);
+    expanded.push(current);
   }
+
   expanded.push({ type: 'eof', value: '' });
   return expanded;
 }
 
+function validateArity(name, count) {
+  const spec = FUNCTION_SPECS[name];
+  if (!spec) throw new Error(`Función desconocida: ${name}`);
+  if (count < spec.minArgs || count > spec.maxArgs) {
+    const expected = spec.minArgs === spec.maxArgs
+      ? `${spec.minArgs}`
+      : `${spec.minArgs} o más`;
+    throw new Error(`${name} espera ${expected} argumento${spec.minArgs === 1 && spec.maxArgs === 1 ? '' : 's'}`);
+  }
+}
+
 export function compileExpression(input) {
   const tokens = tokenize(input);
-  let pos = 0;
-  const peek = () => tokens[pos];
-  const take = (type) => {
-    const t = tokens[pos];
-    if (t.type !== type) throw new Error(`Se esperaba “${type}”`);
-    pos++;
-    return t;
+  let position = 0;
+  const peek = () => tokens[position];
+  const take = type => {
+    const token = tokens[position];
+    if (token.type !== type) throw new Error(`Se esperaba “${type}”`);
+    position++;
+    return token;
   };
 
   function parseExpression() {
@@ -154,7 +174,7 @@ export function compileExpression(input) {
     return parsePower();
   }
 
-  // Right-associative exponentiation; exponent binds more tightly than unary minus.
+  // Exponentiation is right-associative and binds more tightly than unary minus.
   function parsePower() {
     let node = parsePrimary();
     if (peek().type === '^') {
@@ -165,14 +185,17 @@ export function compileExpression(input) {
   }
 
   function parsePrimary() {
-    const t = peek();
-    if (t.type === 'number') {
+    const token = peek();
+
+    if (token.type === 'number') {
       take('number');
-      return { type: 'number', value: t.value };
+      return { type: 'number', value: token.value };
     }
-    if (t.type === 'ident') {
+
+    if (token.type === 'ident') {
       take('ident');
-      const name = t.value;
+      const name = token.value;
+
       if (peek().type === '(') {
         take('(');
         const args = [];
@@ -184,82 +207,87 @@ export function compileExpression(input) {
           }
         }
         take(')');
-        if (!FUNCTIONS[name]) throw new Error(`Función desconocida: ${name}`);
+        validateArity(name, args.length);
         return { type: 'call', name, args };
       }
+
       if (name === 'x' || name === 'n') return { type: 'variable', name };
       if (Object.hasOwn(CONSTANTS, name)) return { type: 'number', value: CONSTANTS[name] };
       throw new Error(`Nombre desconocido: ${name}`);
     }
-    if (t.type === '(') {
+
+    if (token.type === '(') {
       take('(');
       const node = parseExpression();
       take(')');
       return node;
     }
+
     throw new Error('Expresión incompleta');
   }
 
   const ast = parseExpression();
   if (peek().type !== 'eof') throw new Error('Hay texto sobrante en la expresión');
 
-  const evalNode = (node, vars) => {
+  function evaluate(node, variables) {
     switch (node.type) {
-      case 'number': return node.value;
-      case 'variable': return vars[node.name];
+      case 'number':
+        return node.value;
+      case 'variable':
+        return variables[node.name];
       case 'unary': {
-        const v = evalNode(node.value, vars);
-        return node.op === '-' ? -v : v;
+        const value = evaluate(node.value, variables);
+        return node.op === '-' ? -value : value;
       }
       case 'binary': {
-        const a = evalNode(node.left, vars);
-        const b = evalNode(node.right, vars);
+        const left = evaluate(node.left, variables);
+        const right = evaluate(node.right, variables);
         switch (node.op) {
-          case '+': return a + b;
-          case '-': return a - b;
-          case '*': return a * b;
-          case '/': return a / b;
-          case '%': return a % b;
-          case '^': return a ** b;
+          case '+': return left + right;
+          case '-': return left - right;
+          case '*': return left * right;
+          case '/': return left / right;
+          case '%': return left % right;
+          case '^': return left ** right;
           default: return NaN;
         }
       }
       case 'call': {
-        const fn = FUNCTIONS[node.name];
-        return fn(...node.args.map(arg => evalNode(arg, vars)));
+        const spec = FUNCTION_SPECS[node.name];
+        return spec.fn(...node.args.map(arg => evaluate(arg, variables)));
       }
-      default: return NaN;
+      default:
+        return NaN;
     }
-  };
+  }
 
-  const evaluator = (x, n = 3) => {
-    const value = evalNode(ast, { x, n });
-    return Number(value);
-  };
+  const evaluator = (x, n = 3) => Number(evaluate(ast, { x, n }));
   evaluator.ast = ast;
-  evaluator.normalized = normalize(input);
+  evaluator.normalized = normalizeExpression(input);
   evaluator.usesN = /(^|[^a-z])n([^a-z]|$)/.test(evaluator.normalized);
   return evaluator;
 }
 
 export function prettyExpression(input) {
-  return String(input)
-    .trim()
-    .replace(/^\s*(?:f\s*\(\s*x\s*\)|y)\s*=\s*/i, '')
+  return stripDefinition(input)
     .replace(/\^2\b/g, '²')
     .replace(/\^3\b/g, '³')
     .replace(/\^n\b/g, 'ⁿ')
     .replace(/\^x\b/g, 'ˣ')
     .replace(/sin/g, 'sen')
     .replace(/exp\(x\)/g, 'eˣ')
-    .replace(/abs\(x\)/g, '|x|')
+    .replace(/sqrt\(([^()]*)\)/g, '√($1)')
+    .replace(/abs\(([^()]*)\)/g, '|$1|')
     .replace(/\*/g, '·');
 }
 
 export function formatNumber(value, maxDigits = 4) {
   if (!Number.isFinite(value)) return '—';
-  if (Math.abs(value) < 1e-12) value = 0;
-  const abs = Math.abs(value);
-  if (abs >= 1e6 || (abs > 0 && abs < 1e-4)) return value.toExponential(3).replace('+', '');
-  return new Intl.NumberFormat('es-EC', { maximumFractionDigits: maxDigits }).format(value);
+  let number = Number(value);
+  if (Math.abs(number) < 1e-12) number = 0;
+  const abs = Math.abs(number);
+  if (abs >= 1e6 || (abs > 0 && abs < 1e-4)) {
+    return number.toExponential(3).replace('+', '');
+  }
+  return new Intl.NumberFormat('es-EC', { maximumFractionDigits: maxDigits }).format(number);
 }
