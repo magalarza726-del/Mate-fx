@@ -1,0 +1,21 @@
+.offline-shell{position:absolute;inset:0;display:flex;background:#fff;overflow:hidden;font-family:system-ui,-apple-system,sans-serif}
+.offline-expressions{width:280px;flex:none;border-right:1px solid #dce4ef;display:flex;flex-direction:column;background:#fdfefe;min-width:0;overflow:hidden}
+.offline-expressions-heading{display:flex;justify-content:space-between;align-items:center;padding:14px 15px;border-bottom:1px solid #e6ebf2}
+.offline-expressions-heading b{font-size:15px;display:block}.offline-expressions-heading small{font-size:11px;color:#6d7b8e}
+.offline-expressions-heading button{border:0;border-radius:10px;background:#2f70bc;color:white;font-size:25px;width:36px;height:36px}
+.offline-expression-list{flex:1;overflow:auto;padding-top:9px}
+.offline-expression-row{padding:8px 9px;display:grid;grid-template-columns:12px 1fr 23px;gap:8px;align-items:center;border-bottom:1px solid #f1f3f5}
+.offline-expression-row input{min-width:0;border:1px solid #dbe3ed;border-radius:8px;font-size:13px;padding:10px 8px;outline:none;background:#fff}
+.offline-expression-row input:focus{border-color:#4685db;box-shadow:0 0 0 2px #4685db20}
+.offline-expression-row button{background:none;border:0;color:#9aa3ad;font-size:20px}.offline-color{height:12px;width:12px;border-radius:50%}
+.offline-expression-error{grid-column:2/-1;font-size:11px;color:#b23f39;display:none}
+.offline-expression-row.invalid .offline-expression-error{display:block}
+.offline-help{font-size:11px;color:#718094;line-height:1.5;padding:11px 13px;border-top:1px solid #e8edf4}
+.offline-help code{color:#2e6fb3;font-size:11px}.offline-help p{margin:8px 0 0}
+.offline-graph{flex:1;min-width:0;min-height:0;position:relative;background:white}
+.offline-graph canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+.offline-graph canvas:active{cursor:grabbing}
+.offline-graph-actions{position:absolute;right:12px;bottom:42px;display:flex;gap:5px}
+.offline-graph-actions button{width:34px;height:34px;background:white;border:1px solid #d7e0ea;border-radius:8px;font-size:20px;box-shadow:0 3px 12px #111b3020;color:#2d465f}
+.offline-graph-caption{position:absolute;left:10px;bottom:10px;color:#8492a1;font-size:10px;pointer-events:none}
+@media(max-width:720px){.offline-shell{flex-direction:column}.offline-graph{order:0;flex:1;min-height:130px;margin-top:88px}.offline-expressions{order:1;width:100%;height:39%;min-height:180px;border-right:0;border-top:1px solid #dce4ef}.offline-expressions-heading{padding:6px 12px}.offline-expression-row{padding:4px 8px}.offline-help{display:none}.offline-graph-actions{bottom:31px}.offline-graph-caption{bottom:6px}.offline-expression-list{padding-top:0}}

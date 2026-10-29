@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#202124" />
+  <title>nPrimos · Laboratorio de funciones</title>
+  <link rel="stylesheet" href="styles.css" /><link rel="stylesheet" href="offline.css" /><link rel="stylesheet" href="../shared/lab.css" />
+  <link rel="stylesheet" href="../desktop/datasets.css" />
+</head>
+<body data-gmr-lab="prime">
+  <div id="app">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <button class="icon-btn" id="projectsBtn" aria-label="Abrir proyectos" title="Proyectos">☰</button>
+        <div class="brand">
+          <span class="brand-mark">n</span><span>Primos</span>
+        </div>
+      </div>
+
+      <button class="project-pill" id="projectNameBtn" title="Cambiar nombre del proyecto">
+        <span class="project-dot"></span>
+        <span id="currentProjectName">Investigación 1</span>
+      </button>
+
+      <div class="top-actions">
+        <span class="save-status" id="saveStatus">Guardado</span>
+        <button class="primary-btn" id="newProjectBtn">＋ Nuevo proyecto</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="prime-toolbar" aria-label="Control de primos">
+        <div class="prime-title">
+          <strong>Primos</strong>
+          <span>puntos automáticos (n, pₙ)</span>
+        </div>
+        <label class="prime-input-wrap">
+          <span>n</span>
+          <input id="primeCountInput" type="number" min="25" max="10000" step="1" value="25" inputmode="numeric" />
+        </label>
+        <input id="primeCountSlider" class="prime-slider" type="range" min="25" max="10000" step="1" value="25" aria-label="Cantidad de primos" />
+        <button class="soft-btn" id="fitPrimesBtn" title="Ajustar la vista a los primos">⌂ Ajustar</button>
+        <button class="soft-btn" id="tableBtn" aria-pressed="false">▦ Tabla</button>
+      </section>
+
+      <div id="calculator" aria-label="Graficador matemático"></div>
+
+      <aside id="primeTablePanel" class="side-panel table-panel" aria-hidden="true">
+        <div class="panel-header">
+          <div>
+            <h2>Tabla de primos</h2>
+            <p id="tableSubtitle">Primeros 25 primos</p>
+          </div>
+          <button class="icon-btn light" id="closeTableBtn" aria-label="Cerrar tabla">×</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>n</th><th>pₙ</th></tr>
+            </thead>
+            <tbody id="primeTableBody"></tbody>
+          </table>
+        </div>
+      </aside>
+    </main>
+
+    <aside id="projectsPanel" class="projects-panel" aria-hidden="true">
+      <div class="panel-header">
+        <div>
+          <h2>Proyectos</h2>
+          <p>Cada proyecto guarda sus funciones, vista y cantidad de primos.</p>
+        </div>
+        <button class="icon-btn light" id="closeProjectsBtn" aria-label="Cerrar proyectos">×</button>
+      </div>
+
+      <div class="project-tools">
+        <button class="primary-btn grow" id="newProjectBtnPanel">＋ Nuevo</button>
+        <button class="soft-btn" id="exportBtn">Exportar</button>
+        <label class="soft-btn file-label">Importar<input id="importInput" type="file" accept="application/json,.json" hidden /></label>
+      </div>
+
+      <div id="projectList" class="project-list"></div>
+      <p class="storage-note">Los proyectos se guardan localmente en este navegador.</p>
+    </aside>
+
+    <div id="backdrop" class="backdrop" hidden></div>
+
+    <dialog id="nameDialog">
+      <form method="dialog" id="nameForm">
+        <h3 id="nameDialogTitle">Nuevo proyecto</h3>
+        <label>Nombre
+          <input id="nameInput" type="text" maxlength="80" autocomplete="off" required />
+        </label>
+        <div class="dialog-actions">
+          <button type="button" class="soft-btn" onclick="document.getElementById('nameDialog').close()">Cancelar</button>
+          <button value="default" class="primary-btn" id="nameConfirmBtn">Crear</button>
+        </div>
+      </form>
+    </dialog>
+  </div>
+
+  <script type="module" src="boot.js"></script>
+  <script type="module" src="../desktop/datasets.js"></script>
+</body>
+</html>

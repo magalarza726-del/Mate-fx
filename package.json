@@ -1,0 +1,27 @@
+{
+  "name": "galarza-math-research-desktop",
+  "version": "4.1.0",
+  "private": true,
+  "description": "Galarza Math Research para escritorio: Mate-fx, nPrimos, Desmos y CSV/XLSX",
+  "main": "desktop/main.cjs",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "test": "node --test tests/*.test.cjs",
+    "build:win": "electron-builder --win nsis portable",
+    "build:linux": "electron-builder --linux AppImage",
+    "build:mac": "electron-builder --mac dmg"
+  },
+  "dependencies": {"exceljs": "^4.4.0"},
+  "devDependencies": {"electron": "^35.0.0", "electron-builder": "^26.0.0"},
+  "build": {
+    "appId": "com.galarza.mathresearch",
+    "productName": "Galarza Math Research",
+    "files": ["desktop/**/*", "assets/**/*", "package.json", "README.md"],
+    "directories": {"output": "dist"},
+    "win": {"target": ["nsis", "portable"]},
+    "linux": {"target": ["AppImage"]},
+    "mac": {"target": ["dmg"]}
+  }
+}

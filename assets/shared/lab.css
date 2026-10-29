@@ -1,0 +1,164 @@
+:root{--gmr-top:#303238;--gmr-line:#d9dde3;--gmr-blue:#3478d5;--gmr-text:#252930;--gmr-soft:#f2f4f7;--gmr-muted:#68727e}
+html,body{height:100%;overflow:hidden}
+body.gmr-v2{margin:0;background:#fff;color:var(--gmr-text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.gmr-v2 button{touch-action:manipulation}
+.gmr-v2 .app-shell,.gmr-v2 #app{height:100%;height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:#fff}
+.gmr-v2 .topbar{display:none!important}
+.gmr-toolbar{height:51px;min-height:51px;display:flex;align-items:center;gap:8px;padding:0 10px;background:var(--gmr-top);color:white;border-bottom:1px solid #555b66;z-index:12}
+.gmr-toolbar button{border:0;color:inherit;flex-shrink:0}
+.gmr-home,.gmr-menu,.gmr-options{display:grid;place-items:center;width:37px;height:38px;border-radius:7px;background:transparent;font-size:21px}
+.gmr-toolbar button:hover,.gmr-toolbar button:focus-visible{background:#454954}
+.gmr-title{min-width:0;flex:1;display:flex;align-items:center;gap:8px;text-align:left;background:transparent;font-weight:550;font-size:15px;white-space:nowrap;overflow:hidden}
+.gmr-title span{overflow:hidden;text-overflow:ellipsis}
+.gmr-save{border:1px solid #696d75!important;background:#41444b;color:#e7edf5;border-radius:6px;padding:8px 12px;font-size:12px;font-weight:600}
+.gmr-v2 .workspace{position:relative;min-height:0;flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff;border:0;padding:0;gap:0}
+.gmr-graph-frame{position:relative;min-height:140px;flex:1;overflow:hidden;background:#fff}
+.gmr-graph-frame .stage-wrap,.gmr-graph-frame #calculator{position:absolute!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;min-height:0!important;max-width:none!important;overflow:hidden!important}
+.gmr-graph-frame .stage{inset:0}
+.gmr-graph-frame #graph{height:100%}
+.gmr-graph-frame .stage-title{left:9px;top:9px;min-width:0;padding:7px 10px;border-radius:7px;box-shadow:0 1px 6px #00000014;pointer-events:none}
+.gmr-graph-frame .stage-title strong{font:600 15px/1.2 system-ui,sans-serif;color:#d13e52;margin:0}
+.gmr-graph-frame .stage-title span{display:none}
+.gmr-graph-frame .angle-badge{left:9px;bottom:8px;padding:6px 9px;font-size:11px}
+.gmr-graph-frame .view-controls{right:10px;bottom:10px;border-radius:8px}
+.gmr-graph-frame .gesture-tip{display:none}
+.gmr-floating{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:3}
+.gmr-floating button{width:37px;height:37px;border:1px solid #d5d8df;border-radius:7px;background:#fff;color:#59636e;font-size:18px;display:grid;place-items:center;box-shadow:0 2px 9px #161f3016}
+.gmr-graph-frame .offline-graph-actions{right:10px;bottom:9px}
+.gmr-graph-frame .offline-graph-caption{left:10px;bottom:7px}
+.gmr-v2 .offline-shell{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden}
+.gmr-v2 .offline-shell .offline-graph{margin:0!important;position:absolute;inset:0;min-height:0;order:0;flex:1;width:100%}
+.gmr-actionbar{height:45px;min-height:45px;display:flex;align-items:center;gap:5px;padding:4px 9px;background:linear-gradient(#f8f9fb,#e6e9ed);border-top:1px solid #d7dbe1;border-bottom:1px solid #d1d6dd;z-index:4;overflow-x:auto;scrollbar-width:none}
+.gmr-actionbar::-webkit-scrollbar{display:none}
+.gmr-actionbar button{flex-shrink:0;display:flex;gap:5px;align-items:center;justify-content:center;border:0;border-radius:7px;background:transparent;padding:6px 8px;min-height:34px;color:#48515c;font-size:12px;font-weight:600}
+.gmr-actionbar button:active,.gmr-actionbar button.active{background:#d9e8fb;color:#2b69bb}
+.gmr-actionbar button[data-gmr-action="add"]{font-size:27px;padding:0 8px;font-weight:300}
+.gmr-actionbar .gmr-spacer{flex:1}
+.gmr-algebra{height:178px;min-height:45px;flex:none;position:relative;display:flex;flex-direction:column;overflow:hidden;background:#fff}
+.gmr-algebra[data-size="compact"]{height:83px}
+.gmr-algebra[data-size="expanded"]{height:min(44vh,350px)}
+.gmr-algebra-head{height:33px;min-height:33px;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid #e1e5ec;background:#f9fafb;color:#647080;font-size:11px;font-weight:700;letter-spacing:.05em}
+.gmr-algebra-head .gmr-grip{display:block;border:0;background:transparent;color:#77818e;font-size:16px;margin-left:auto;padding:1px 10px}
+.gmr-v2 .gmr-algebra .sidebar{display:block;flex:1;overflow:auto!important;padding:5px 10px!important;border:0!important;background:#fff!important;width:100%;height:auto!important;min-height:0}
+.gmr-v2 .gmr-algebra .sidebar>.control-section{padding:0!important;margin:0!important;border:0!important}
+.gmr-v2 .gmr-algebra .sidebar .section-label{display:none}
+.gmr-v2 .gmr-algebra .sidebar .function-input-wrap{border:0;box-shadow:none;border-radius:0;padding:5px 36px 5px 6px;min-height:48px;background:transparent}
+.gmr-v2 .gmr-algebra .sidebar .fx-prefix{font-size:18px;color:#db4357}
+.gmr-v2 .gmr-algebra .sidebar #functionInput{font-size:20px;font-family:Georgia,serif;color:#29394c}
+.gmr-v2 .gmr-algebra .sidebar .builder-meta{margin:0 4px}
+.gmr-v2 .gmr-algebra .sidebar .natural-samples{margin:6px 6px 0}
+.gmr-v2 .gmr-algebra .sidebar .natural-samples-head{display:none}
+.gmr-v2 .gmr-algebra .sidebar .function-history{margin:3px 4px}
+.gmr-v2 .gmr-algebra .sidebar .sample-chip{font-size:10px}
+.gmr-v2 .offline-expressions{display:flex!important;width:100%!important;max-width:none!important;min-height:0!important;flex:1;overflow:hidden!important;border:0!important;background:#fff!important;order:0!important}
+.gmr-v2 .offline-expressions-heading{display:none}
+.gmr-v2 .offline-expression-list{padding:0;min-height:0;overflow:auto}
+.gmr-v2 .offline-expression-row{min-height:51px;grid-template-columns:22px minmax(0,1fr) 28px;padding:4px 9px;gap:8px}
+.gmr-v2 .offline-expression-row input{border:0;font:500 16px Georgia,"Times New Roman",serif;border-radius:0;box-shadow:none;padding:7px 4px}
+.gmr-v2 .offline-expression-row input:focus{border-bottom:1px solid #4382d4;box-shadow:none}
+.gmr-v2 .offline-expression-row .offline-color{height:19px;width:19px;border-radius:50%;border:2px solid #ffffff;box-shadow:0 0 0 1px #b5c0cd}
+.gmr-v2 .offline-expression-row.is-hidden{opacity:.5}
+.gmr-v2 .offline-help{display:none!important}
+.gmr-v2 .offline-expression-row .offline-expression-error{font-size:11px}
+.gmr-v2 .gmr-keyboard{display:none;flex:none;background:#e8eaee;max-height:min(245px,37dvh);overflow:auto;box-shadow:0 -2px 7px #1c294219}
+.gmr-v2 .gmr-keyboard.is-open{display:block}
+.gmr-v2 .gmr-keyboard .math-builder{position:static!important;inset:auto!important;width:100%!important;margin:0!important;display:block;max-height:none;box-shadow:none;border:0;border-radius:0;background:#e8eaee}
+.gmr-v2 .gmr-keyboard .math-builder[hidden]{display:none!important}
+.gmr-v2 .gmr-keyboard .math-builder-head{background:#f9fafb;padding:5px 8px}
+.gmr-v2 .gmr-keyboard .math-pad{grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;padding:6px}
+.gmr-v2 .gmr-keyboard .math-key{min-height:43px;font-size:13px;border-radius:5px;border-color:#c9cdd5;box-shadow:0 1px 1px #22222213}
+.gmr-v2 .gmr-keyboard .builder-tip{display:none}
+.gmr-native-toggle{margin-left:auto;border:1px solid #d4dbe5;border-radius:6px;background:#fff;font-size:11px;color:#526172;padding:6px 8px}
+.gmr-prime-keys-header{display:flex;align-items:center;gap:8px;height:37px;padding:4px 10px;color:#546172;font-size:12px;font-weight:650}
+.gmr-prime-keys-header button{margin-left:auto;border:0;border-radius:5px;background:#fff;padding:5px 10px;color:#55616c}
+.gmr-key-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px;padding:4px 6px 8px}
+.gmr-key-grid button{min-height:39px;min-width:0;border:1px solid #c9cdd2;background:#fff;border-radius:4px;color:#20242a;font:17px Georgia,serif;padding:0 2px}
+.gmr-key-grid button[data-gmr-key="7"],.gmr-key-grid button[data-gmr-key="8"],.gmr-key-grid button[data-gmr-key="9"],.gmr-key-grid button[data-gmr-key="4"],.gmr-key-grid button[data-gmr-key="5"],.gmr-key-grid button[data-gmr-key="6"],.gmr-key-grid button[data-gmr-key="1"],.gmr-key-grid button[data-gmr-key="2"],.gmr-key-grid button[data-gmr-key="3"],.gmr-key-grid button[data-gmr-key="0"]{background:#d8dadd}
+.gmr-key-grid button[data-gmr-key="enter"]{background:var(--gmr-blue);color:white}
+.gmr-key-grid button:active{background:#b4ceee}
+.gmr-panel-shade{display:none;position:absolute;inset:0;background:#12203562;z-index:19}
+.gmr-panel-shade.is-visible{display:block}
+.gmr-drawer{position:absolute;z-index:20;right:8px;left:8px;bottom:8px;max-height:88%;background:#fff;box-shadow:0 10px 55px #0b172c60;border:1px solid #dbe0e8;border-radius:14px;display:none;flex-direction:column;overflow:hidden}
+.gmr-drawer.is-open{display:flex}
+.gmr-drawer-head{flex:none;display:flex;align-items:center;gap:10px;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #e0e4e9;background:#fff}
+.gmr-drawer-head strong{font-size:16px}
+.gmr-drawer-head button{background:#eef0f4;border:0;border-radius:8px;width:33px;height:33px;color:#59616a;font-size:22px}
+.gmr-drawer-body{padding:15px;overflow:auto;overscroll-behavior:contain}
+.gmr-drawer-body .control-section{display:block;padding:0 0 18px;margin:0 0 18px;border-bottom:1px solid #ebedf2}
+.gmr-drawer-body .section-label{display:flex!important}
+.gmr-drawer-body .inspector{display:block!important;position:static!important;right:auto!important;top:auto!important;bottom:auto!important;width:100%!important;max-width:none!important;box-shadow:none!important;overflow:visible!important;border:0!important;background:white!important;backdrop-filter:none!important}
+.gmr-drawer-body .inspector .inspector-head{padding:8px 3px 10px}
+.gmr-drawer-body .inspector .inspector-body{display:grid!important;padding:9px 0}
+.gmr-drawer-body .inspector .metric-grid{grid-template-columns:1fr 1fr}
+.gmr-drawer-body .inspector .metric-card{padding:12px}
+.gmr-drawer-body .inspector .metric-card small{font-size:11px}
+.gmr-drawer-body .inspector .metric-card strong{font-size:15px}
+.gmr-drawer-body .inspector .metric span{font-size:12px}
+.gmr-drawer-body .inspector .metric-card>span{font-size:12px}
+.gmr-v2 .prime-toolbar{position:static!important;transform:none!important;inset:auto!important;box-shadow:none!important;backdrop-filter:none!important;display:flex;flex-wrap:wrap;min-width:0;max-width:none;padding:0;border:0;gap:12px}
+.gmr-v2 .prime-toolbar .prime-title{min-width:100%;flex:auto}
+.gmr-v2 .prime-toolbar .prime-input-wrap{flex:0 0 auto}
+.gmr-v2 .prime-toolbar .prime-slider{min-width:140px;flex:1}
+.gmr-v2 .prime-toolbar #fitPrimesBtn,.gmr-v2 .prime-toolbar #tableBtn{display:none}
+.gmr-v2 .table-panel{z-index:23!important;top:7px!important;bottom:7px!important;right:7px!important;left:7px!important;width:auto!important;max-width:none!important;transform:translateX(105%)!important;border-radius:12px!important;box-shadow:0 8px 35px #121c2a43;pointer-events:none!important}
+.gmr-v2 .table-panel.open{transform:translateX(0)!important;opacity:1;pointer-events:auto!important}
+.gmr-v2 .table-panel .table-wrap{overflow:auto!important}
+.gmr-v2 .table-panel th,.gmr-v2 .table-panel td{font-size:12px}
+.gmr-v2 .projects-panel{z-index:35;top:0}
+.gmr-v2 #backdrop{z-index:34}
+.gmr-v2 #nameDialog{z-index:40}
+.gmr-v2 #nameDialog::backdrop{background:#17233888}
+.gmr-v2 .gmr-algebra #offline-add{display:none}
+.gmr-v2 .gmr-algebra .math-keyboard-toggle{background:#eef2f8}
+.gmr-v2 .gmr-algebra .function-input-wrap:focus-within{border:0;box-shadow:none}
+.gmr-v2 .gmr-algebra .linear-shadow-input{display:none!important}
+@media(min-width:780px){
+ .gmr-v2 .workspace{display:grid;grid-template-columns:minmax(260px,315px) minmax(0,1fr);grid-template-rows:minmax(0,1fr) 45px}
+ .gmr-graph-frame{grid-column:2;grid-row:1;min-height:0}
+ .gmr-actionbar{grid-column:2;grid-row:2}
+ .gmr-algebra,.gmr-algebra[data-size="compact"],.gmr-algebra[data-size="expanded"]{grid-column:1;grid-row:1/3;height:100%;max-height:none;border-right:1px solid #d6dbe3;min-height:0}
+ .gmr-keyboard.is-open{position:absolute;left:315px;right:0;bottom:45px;z-index:10;border-top:1px solid #ccd4dd;max-height:250px}
+ .gmr-graph-frame .stage-title{left:16px;top:15px}
+ .gmr-drawer{left:auto;width:360px;right:13px;top:10px;bottom:10px;max-height:none}
+ .gmr-v2 .gmr-keyboard .math-pad{grid-template-columns:repeat(8,minmax(0,1fr))}
+ .gmr-v2 .gmr-algebra .sidebar{padding:12px!important}
+}
+@media(max-width:380px){.gmr-actionbar{gap:2px;padding:3px 5px}.gmr-actionbar button{padding:6px 5px;font-size:11px}.gmr-toolbar{gap:3px;padding:0 6px}.gmr-save{padding:7px}.gmr-algebra{height:157px}.gmr-key-grid button{min-height:35px;font-size:14px}}
+@media(max-height:620px){.gmr-v2 .gmr-algebra{height:126px}.gmr-v2 .gmr-algebra[data-size="expanded"]{height:36vh}.gmr-v2 .gmr-keyboard{max-height:205px}.gmr-v2 .gmr-keyboard .math-key{min-height:34px}.gmr-key-grid button{min-height:32px}}
+
+
+/* v3: filas numeradas y editor matemático bidimensional, inspirado en Desmos */
+.gmr-v2 .gmr-algebra .offline-expression-row{position:relative;padding-left:42px;border-bottom:1px solid #e5e7eb;min-height:66px}
+.gmr-v2 .offline-expression-row::before{content:attr(data-index);position:absolute;top:0;left:0;bottom:0;width:32px;display:flex;align-items:flex-start;justify-content:center;padding-top:13px;background:#f3f4f6;color:#6f7680;font:13px system-ui}
+.gmr-v2 .offline-expression-row:focus-within::before{background:#2e73d1;color:white}
+.gmr-v2 .offline-expression-row .offline-color{margin-left:0}
+.gmr-v2 .offline-expression-row math-field{display:block;min-width:0;width:100%;font-size:19px;line-height:1.35;--caret-color:#3176d5;--selection-background-color:#dceafe;border:0;background:#fff;overflow:hidden}
+.gmr-v2 .offline-expression-row input.gmr-linear-shadow{display:none!important}
+.gmr-v2 .offline-expression-row .offline-expression-error{grid-column:2/-1;white-space:normal}
+.gmr-v2 .gmr-algebra .sidebar .function-input-wrap:has(math-field){min-height:64px}
+.gmr-v2 .gmr-algebra .sidebar math-field{flex:1;min-width:0;width:100%;font-size:21px;min-height:45px;--caret-color:#3276da;--selection-background-color:#dceafe}
+.gmr-v2 .gmr-keyboard .math-key{font-family:Georgia,serif;font-size:15px}
+.gmr-v2 .gmr-keyboard .math-builder-tabs .math-builder-tab{font-family:system-ui;font-size:13px}
+.gmr-v2 .gmr-keyboard .math-pad .math-key:active{background:#bdd6f9}
+.gmr-v2 .gmr-graph-frame .stage{touch-action:none;overscroll-behavior:contain}
+.gmr-v2 .gmr-graph-frame canvas{touch-action:none;overscroll-behavior:contain}
+.gmr-v2 .gmr-toolbar .gmr-title{white-space:nowrap}
+.gmr-v2 .gmr-algebra{overscroll-behavior:contain}
+@media(max-width:779px){
+ .gmr-v2 .gmr-algebra{height:205px}
+ .gmr-v2 .gmr-algebra[data-size="compact"]{height:83px}
+ .gmr-v2 .gmr-algebra[data-size="expanded"]{height:min(46dvh,370px)}
+ .gmr-v2 .gmr-keyboard.is-open{max-height:min(245px,38dvh)}
+ .gmr-v2 .gmr-algebra .sidebar #mathFunctionInput{font-size:20px}
+}
+
+/* Desmos original muestra su propio teclado 2D y lista de expresiones en teléfonos */
+.gmr-v2.gmr-real-desmos .gmr-graph-frame{flex:1;min-height:0;background:#fff}
+.gmr-v2.gmr-real-desmos .gmr-algebra,.gmr-v2.gmr-real-desmos .gmr-keyboard,.gmr-v2.gmr-real-desmos .gmr-floating{display:none!important}
+.gmr-v2.gmr-real-desmos .gmr-actionbar [data-gmr-action="add"],.gmr-v2.gmr-real-desmos .gmr-actionbar [data-gmr-action="toggle-keyboard"],.gmr-v2.gmr-real-desmos .gmr-actionbar [data-gmr-action="algebra-size"]{display:none!important}
+.gmr-v2.gmr-real-desmos .gmr-graph-frame #calculator,.gmr-v2.gmr-real-desmos .gmr-desmos-host{position:absolute!important;inset:0!important;width:100%!important;height:100%!important}
+.gmr-v2.gmr-real-desmos .gmr-desmos-host{z-index:4;background:#fff}
+.gmr-v2 .gmr-actionbar [data-gmr-action="engine"]{border:1px solid #abbdd6;background:#fff;border-radius:8px;color:#236cbb;font-weight:800}
+.gmr-status{position:absolute;left:8px;top:8px;z-index:9;background:#f1f8ffed;border:1px solid #b8d2ec;color:#35516b;border-radius:8px;padding:8px 10px;font:12px system-ui;max-width:90%}
+.gmr-status:empty{display:none}
+@media(min-width:780px){.gmr-v2.gmr-real-desmos .workspace{display:flex;flex-direction:column}.gmr-v2.gmr-real-desmos .gmr-graph-frame{width:100%;flex:1}.gmr-v2.gmr-real-desmos .gmr-actionbar{width:100%;flex:none}}
