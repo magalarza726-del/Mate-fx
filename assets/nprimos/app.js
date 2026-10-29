@@ -158,8 +158,10 @@
     // Tras mover el graficador al nuevo panel, vuelve a dimensionarlo y encuádrarlo.
     requestAnimationFrame(() => requestAnimationFrame(() => {
       calculator.resize();
-      if (currentProject?.hasPrimes) fitPrimeViewport();
-      else if (!validBounds(calculator.getState()?.graph?.viewport)) calculator.setMathBounds(DEFAULT_BOUNDS);
+      if (!validBounds(calculator.getState()?.graph?.viewport)) {
+        if (currentProject?.hasPrimes) fitPrimeViewport();
+        else calculator.setMathBounds(DEFAULT_BOUNDS);
+      }
     }));
   }
 
@@ -211,7 +213,8 @@
     catch (error) { console.warn('Estado anterior no válido; vista nueva:', error); calculator.setBlank(); }
     // El proyecto de ejemplo trae las dos funciones solo en su primera apertura.
     if (project.hasPrimes && project.id === EXAMPLE_ID && !state) seedInitialResearch();
-    if (project.hasPrimes) setPrimeCount(project.primeCount || 10000, {save:false,fit});
+    const shouldFit = fit && (!project.state || !validBounds(project.state?.graph?.viewport));
+    if (project.hasPrimes) setPrimeCount(project.primeCount || 10000, {save:false,fit:shouldFit});
     else { clearPrimeExpressions(); els.primeCountInput.value = '0'; els.primeCountSlider.value = '0'; }
     setTableOpen(Boolean(project.showTable) && Boolean(project.hasPrimes), {save:false});
     document.body.dataset.primeProject = project.hasPrimes ? 'example' : 'blank';
