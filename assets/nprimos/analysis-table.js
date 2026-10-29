@@ -28,9 +28,10 @@ function nextOrdinal(items){
 function normalizeExpressions(){
   const c=state.calculator;if(!c)return;
   const items=c.getState()?.expressions?.list||[];
-  let next=nextOrdinal(items);
+  let next=nextOrdinal(items),changed=false;
   for(const item of items){
     const id=String(item.id||'');if(!id||id.startsWith('__'))continue;
+    if(item.type==='expression'&&!String(item.latex||'').trim()&&!state.known.has(id)) continue;
     if(item.type==='table' || (item.type==='expression' && item.latex && !functionRegex.test(item.latex) && !state.known.has(id))) {
       if(item.type==='table'){
         if(!item.secret){try{c.setExpression({id,secret:true})}catch(e){console.warn('No se pudo ocultar tabla en Desmos',e)}}
@@ -39,15 +40,16 @@ function normalizeExpressions(){
       const latex=String(item.latex||'').trim();
       // A parameter (a=...) remains a hidden dependency; a formula is assigned f_i(x).
       if(/^(?!y\s*=)[a-zA-Z](?:_\{[^}]+\})?\s*=/.test(latex)) {
-        try{c.setExpression({id,secret:true})}catch(_){}
+        try{c.setExpression({id,secret:true});changed=true}catch(_){}
       }else if(latex&&!/^(?:\(|\\left\()/.test(latex)) {
         let body=latex.replace(/^y\s*=/,'');
-        try{c.setExpression({id,latex:`f_{${next++}}(x)=${body}`,secret:false})}catch(_){}
+        try{c.setExpression({id,latex:`f_{${next++}}(x)=${body}`,secret:false});changed=true}catch(_){}
       }
     }
     state.known.add(id);
   }
   updateSoon(140);
+  if(changed)setTimeout(()=>window.__gmrSaveNPrimos?.(),250);
 }
 function storeKnown(){
   state.known=new Set((state.calculator?.getState()?.expressions?.list||[]).map(x=>String(x.id||'')));

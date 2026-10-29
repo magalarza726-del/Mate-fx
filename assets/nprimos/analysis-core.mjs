@@ -33,7 +33,7 @@ function unwrapLatexFractions(s) {
 }
 
 export function desmosToNumeric(latex) {
-  let s=String(latex||'').replace(/^\s*(?:(?:[a-zA-Z]|\\[a-zA-Z]+)(?:_\{[^}]+\})?\s*\(\s*x\s*\)|y)\s*=\s*/,'');
+  let s=String(latex||'').replace(/^\s*(?:(?:[a-zA-Z]|\\[a-zA-Z]+)(?:_\{[^}]+\})?\s*(?:\\left)?\(\s*x\s*(?:\\right)?\)|y)\s*=\s*/,'');
   s=s.replace(/\\left|\\right/g,'').replace(/\\operatorname\{([^{}]+)\}/g,'$1');
   s=unwrapLatexFractions(s);
   if(s===null)return null;

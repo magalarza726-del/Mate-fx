@@ -10,6 +10,7 @@ for(const [latex,x,expected] of [
   ['f_{1}(x)=-0.4+1.052^{x}',100,-.4+1.052**100],
   ['f(x)=x^{\\frac{1000}{707}}+x^{\\frac{1}{8}}',2,2**(1000/707)+2**(1/8)],
   ['g(x)=x(\\ln(x)+\\ln(\\ln(x))-1)',10,10*(Math.log(10)+Math.log(Math.log(10))-1)],
+  ['f_{2}\\left(x\\right)=2x',3,6],
 ]) {
   const fn=numericFunction(latex);assert.ok(fn,latex);
   assert.ok(Math.abs(fn(x)-expected)<1e-8,latex);
