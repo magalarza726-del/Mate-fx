@@ -83,3 +83,17 @@ El repositorio incluye `index.html` en su raíz y `.github/workflows/pages.yml`,
 Si es la primera vez que habilitas Pages: abre **GitHub → Mate-fx → Settings → Pages → Build and deployment → Source → GitHub Actions**. Se ejecuta el flujo al subir cambios a `main`; también puedes lanzarlo desde Actions.
 
 En GitHub Pages puedes subir archivos **CSV y XLSX**, elegir las columnas X/Y y representar puntos mediante la API oficial de Desmos. El XLSX se interpreta **en el navegador** con ExcelJS 4.4.0 servido desde CDN; el fichero no se envía a nuestro servidor. Desmos y la carga del lector XLSX requieren conexión. El análisis local de las dos interfaces se mantiene.
+
+
+## Actualización 4.3 · Tabla de investigación
+
+En **nPrimos**, las tablas de datos (incluidos los 10 000 primos del ejemplo y las series CSV/XLSX) se grafican como expresiones `secret`, para que el editor izquierdo muestre únicamente funciones, sin ocultar los puntos del plano. El botón rojo **Ver tabla** aparece sobre el botón azul **Datos CSV / Excel**.
+
+- Tablas vinculadas a los datos importados y a las columnas X/Y elegidas (encabezados originales preservados).
+- Cada función definida como `f(x)`, `g(x)`, `f_{1}(x)`, etc. se identifica por su nombre. Las expresiones nuevas sin nombre se convierten a `f_{i}(x)=...` cuando el usuario termina de escribir.
+- **Error en Y:** `E=|f_i(X)-Y|`. **Error en X:** se resuelve numéricamente `f_i(X_estimado)=Y` y `E=|X_estimado-X|`, eligiendo la solución cercana al dato si existen varias. Los resultados que no pueden calcularse se muestran como `—`.
+- **Error porcentual:** `%E=100·E/|valor real|`, con exactamente tres decimales. Si el valor real vale cero, el porcentaje es indefinido y se muestra `—`.
+- Ordenar al pulsar las cabeceras, mover columnas mediante ‹ › o arrastrando, filtros mínimos y máximos por columna, 50–1000 filas por página y exportación CSV del análisis filtrado y ordenado.
+- Análisis local sin ejecutar código dinámico del usuario. Se reconocen las expresiones que admite el parser matemático seguro de Mate-fx. Las expresiones muy avanzadas de Desmos no se evalúan falsamente: muestran `—` con un aviso.
+
+Pruebas: `node tests/analysis-core.test.mjs`.

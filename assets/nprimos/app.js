@@ -202,7 +202,7 @@
     // Se regeneran al entrar, sin depender de enormes expresiones serializadas.
     if (result.expressions?.list) {
       result.expressions.list = result.expressions.list.filter(e =>
-        !String(e.id || '').startsWith('__np_') && !String(e.id || '').startsWith('__np_table_'));
+        !String(e.id || '').startsWith('__np_') && !String(e.id || '').startsWith('__np_table_') && String(e.id || '') !== 'gmr_dataset_desktop');
     }
     return result;
   }
@@ -299,7 +299,7 @@
       ]);
       else for(const id of ['__np_n','__np_p','__np_points'])try{calculator.removeExpression({id})}catch(_){}
     }
-    if (els.primeTablePanel.classList.contains('open')) renderPrimeTable(count);
+    window.dispatchEvent(new Event('gmr:analysis-refresh'));
     if (options.fit) fitPrimeViewport();
     if (options.save !== false) saveCurrentProject();
   }
@@ -326,7 +326,7 @@
     els.primeTablePanel.setAttribute('aria-hidden', String(!open));
     els.tableBtn.setAttribute('aria-pressed', String(open));
     currentProject.showTable = open;
-    if (open && currentProject.hasPrimes) renderPrimeTable(currentProject.primeCount || 25);
+    if (open) window.dispatchEvent(new Event('gmr:analysis-refresh'));
     if (options.save !== false) saveCurrentProject();
   }
 

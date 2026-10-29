@@ -18,6 +18,7 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
   const $=id=>overlay.querySelector('#'+id);
   const status=t=>$('ds-status').textContent=t;
   const calc=()=>lab==='mate'?window.__matefxCalculator:window.__nPrimosCalculator;
+  window.__gmrGetDatasetSelection=()=>dataset?{dataset,xColumn:$('ds-x').value,yColumn:$('ds-y').value,points:points.slice()}:null;
   const number=value=>{
     if(typeof value==='number')return Number.isFinite(value)?value:NaN;
     let s=String(value??'').trim().replace(/\s/g,'');if(!s)return NaN;
@@ -46,6 +47,8 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     const x=$('ds-x').value,y=Number($('ds-y').value);points=[];
     dataset.rows.forEach((row,i)=>{const vx=x==='__index__'?i+1:number(row[+x]),vy=number(row[y]);if(Number.isFinite(vx)&&Number.isFinite(vy))points.push([vx,vy])});
     $('ds-plot').disabled=$('ds-fit').disabled=points.length===0;
+    dataset.xColumn=x;dataset.yColumn=String(y);
+    window.dispatchEvent(new CustomEvent('gmr:dataset-selection',{detail:{lab,dataset,xColumn:x,yColumn:String(y)}}));
     status(`${points.length} puntos válidos de ${dataset.rows.length} filas. Selección: X=${$('ds-x').selectedOptions[0]?.textContent}, Y=${$('ds-y').selectedOptions[0]?.textContent}.`);
     preview();
   }
@@ -59,7 +62,10 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     }
     const idx=document.createElement('option');idx.value='__index__';idx.textContent='Número de fila';$('ds-x').prepend(idx);
     const numeric=data.headers.map((_,i)=>({i,n:data.rows.slice(0,100).filter(row=>Number.isFinite(number(row[i]))).length})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n);
-    $('ds-x').value=numeric.length>=2?String(numeric[0].i):'__index__';$('ds-y').value=String(numeric.length>=2?numeric[1].i:numeric[0]?.i??0);
+    $('ds-x').value=data.xColumn!==undefined?String(data.xColumn):(numeric.length>=2?String(numeric[0].i):'__index__');
+    $('ds-y').value=data.yColumn!==undefined?String(data.yColumn):String(numeric.length>=2?numeric[1].i:numeric[0]?.i??0);
+    if(!$('ds-x').selectedOptions.length)$('ds-x').value='__index__';
+    if(!$('ds-y').selectedOptions.length)$('ds-y').value=String(numeric[0]?.i??0);
     $('ds-export').disabled=$('ds-export-json').disabled=$('ds-remove').disabled=false;
     const table=document.createElement('table'),tr=document.createElement('tr');
     data.headers.forEach(s=>{const th=document.createElement('th');th.textContent=s;tr.append(th)});table.append(tr);
@@ -68,7 +74,9 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     if (options.notify !== false) window.dispatchEvent(new CustomEvent('gmr:dataset-imported',{detail:{lab,dataset:data}}));
   }
   function resetDataset() {
-    dataset=null;points=[];
+    try{(lastCalculator||calc())?.removeExpression({id:'gmr_dataset_desktop'})}catch(_){}
+    lastCalculator=null;dataset=null;points=[];
+    window.dispatchEvent(new CustomEvent('gmr:dataset-selection',{detail:{lab,dataset:null,xColumn:'__index__',yColumn:0}}));
     $('ds-filename').textContent='Sin archivo';
     ['ds-export','ds-export-json','ds-plot','ds-fit','ds-remove'].forEach(k=>$(k).disabled=true);
     ['ds-x','ds-y'].forEach(k=>{$(k).replaceChildren();$(k).disabled=true});
@@ -104,11 +112,11 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     try{
       lastCalculator=c;
       const strings=n=>points.map(p=>String(+p[n].toPrecision(12)));
-      c.setExpression({type:'table',id,columns:[
+      c.setExpression({type:'table',id,secret:true,columns:[
         {latex:'x_{datos}',values:strings(0)},
         {latex:'y_{datos}',values:strings(1),color:'#2d70db',points:true,lines:$('ds-lines').value==='1'}
       ]});
-      status(`✓ ${points.length} puntos incorporados en la tabla de Desmos. Puedes editarlos desde el panel de expresiones.`);
+      status(`✓ ${points.length} puntos graficados en Desmos. La tabla se consulta desde el botón rojo «Ver tabla».`);
     }catch(e){status('No fue posible graficar: '+e.message)}
   }
   function fit(){
@@ -225,7 +233,10 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
   };
   $('ds-plot').onclick=plot;$('ds-fit').onclick=fit;
   $('ds-remove').onclick=()=>{try{(lastCalculator||calc())?.removeExpression({id});lastCalculator=null;status('Tabla de datos eliminada del graficador.');resetDataset();window.dispatchEvent(new CustomEvent('gmr:dataset-removed',{detail:{lab}}))}catch(e){status(e.message)}};
-  ['ds-x','ds-y','ds-lines'].forEach(id=>$(id).addEventListener('change',recalc));
+  ['ds-x','ds-y','ds-lines'].forEach(id=>$(id).addEventListener('change',()=>{recalc();
+    if(lab==='prime')window.dispatchEvent(new CustomEvent('gmr:dataset-imported',{detail:{lab,dataset}}));
+    if(lastCalculator===calc()&&points.length)plot();
+  }));
   $('ds-api').value=localStorage.getItem('gmr:desmos:key')||'';
   $('ds-save-key').onclick=()=>{const key=$('ds-api').value.trim();if(key)localStorage.setItem('gmr:desmos:key',key);else localStorage.removeItem('gmr:desmos:key');status('Clave guardada localmente. Reinicia la aplicación para aplicarla.')};
 }
