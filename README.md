@@ -65,3 +65,13 @@ Solo se usa la biblioteca estándar de Python para CSV; para XLSX se puede insta
 ### Alcance y estado de prueba
 
 Se han verificado el contenido del APK y las pruebas de lectura CSV. **No se ha compilado ni instalado un EXE en esta sesión**, así que esta entrega es el proyecto fuente listo para instalar dependencias y ejecutar, no un binario Windows certificado. El código recuperado del APK se mantiene sin autorización para sublicenciar a terceros; revisa derechos de los materiales integrados antes de distribuir públicamente.
+
+## GitHub Pages (versión web)
+
+**Sitio:** https://magalarza726-del.github.io/Mate-fx/
+
+Abre la portada y elige **Mate-fx** o **nPrimos**. El selector **Datos CSV / Excel** funciona en el navegador: importa CSV y XLSX, permite seleccionar columnas X/Y, muestra una vista previa y grafica puntos en Desmos cuando el motor oficial está activo.
+
+La versión web no necesita Electron ni Python. Para XLSX, ExcelJS 4.4 se carga desde una CDN (el archivo se procesa localmente en tu navegador, sin enviarse a un servidor). La API oficial de Desmos requiere Internet y una clave vigente.
+
+**Despliegue automático:** `.github/workflows/pages.yml` publica el contenido web en cada push a `main`. Si es la primera publicación, configura una vez **Settings → Pages → Build and deployment → Source → GitHub Actions**. La URL solamente se considera publicada cuando el workflow y GitHub Pages confirman el despliegue.
