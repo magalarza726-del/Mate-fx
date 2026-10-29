@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#081225"><title>Galarza Math Research</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#071325;color:#eff7ff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(#62a8ff08 1px,transparent 1px),linear-gradient(90deg,#62a8ff08 1px,transparent 1px);background-size:29px 29px}
+body:after{content:"";position:fixed;inset:-20%;background:radial-gradient(circle at 30% 20%,#2252a033,transparent 44%),radial-gradient(circle at 85% 75%,#127b7330,transparent 35%);pointer-events:none}
+main{position:relative;z-index:1;width:min(920px,100%);margin:auto;padding:clamp(24px,6vw,52px) 21px 40px}
+.brand{display:flex;gap:13px;align-items:center}.mark{width:49px;height:49px;background:linear-gradient(150deg,#3a9bff,#38cab9);border-radius:15px;display:grid;place-items:center;font-family:Georgia,serif;color:#061223;font-size:30px;font-weight:bold;box-shadow:0 14px 35px #1c8cf044}.brand strong{font-size:15px;letter-spacing:.08em;text-transform:uppercase}.brand small{display:block;color:#8fa7c5;font-size:12px;margin-top:3px}
+.eyebrow{display:inline-block;margin-top:60px;color:#72d6e0;letter-spacing:.16em;text-transform:uppercase;font-size:11px;font-weight:750}
+h1{font-size:clamp(35px,6vw,62px);letter-spacing:-.055em;line-height:1.08;margin:14px 0 18px;max-width:770px}h1 em{color:#7fbeff;font-style:normal}
+.intro{color:#a8bad0;font-size:15px;line-height:1.75;max-width:590px;margin-bottom:36px}
+.deck{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:19px}
+a.card{position:relative;display:flex;flex-direction:column;min-height:290px;text-decoration:none;color:inherit;overflow:hidden;border-radius:23px;border:1px solid #54729370;background:linear-gradient(130deg,#142843e3,#0e213bd9);padding:23px;transition:transform .2s,border-color .2s,box-shadow .2s}
+a.card:nth-child(2){background:linear-gradient(130deg,#183633e6,#122a36e6)}
+a.card:active{transform:scale(.985)}a.card:hover{transform:translateY(-4px);border-color:#5ea7fe;box-shadow:0 15px 40px #020b1933}
+.cardtop{display:flex;justify-content:space-between;align-items:center}.tag{color:#9cd0ff;border:1px solid #6ea4d752;background:#639fe810;border-radius:100px;padding:6px 11px;font-size:10px;font-weight:700;letter-spacing:.08em}
+.arrow{font-size:26px;color:#bad3ed}.visual{flex:1;display:grid;place-items:center;min-height:140px}.visual svg{width:100%;height:145px;filter:drop-shadow(0 8px 22px #2d9afd2b)}
+.card h2{font-size:24px;margin:0 0 8px;letter-spacing:-.035em}.card p{font-size:13px;line-height:1.5;color:#a7bbd1;margin:0}
+footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#738aa8;font-size:11px;margin-top:28px}.dot{color:#40dec0;margin-right:7px}
+@media(max-width:640px){main{padding:25px 18px 30px}.eyebrow{margin-top:37px}.deck{grid-template-columns:1fr;gap:14px}a.card{min-height:235px;padding:18px}.visual{min-height:100px}.visual svg{height:108px}.intro{margin-bottom:25px}.card h2{font-size:22px}}
+</style></head><body><main>
+<div class="brand"><div class="mark">∑</div><div><strong>Galarza Math Research</strong><small>Laboratorio matemático personal</small></div></div>
+<div class="eyebrow">Explora · Experimenta · Descubre</div>
+<h1>Investiga las matemáticas <em>desde otra perspectiva.</em></h1>
+<p class="intro">Dos laboratorios independientes en una sola aplicación. Formula hipótesis, experimenta con funciones y explora patrones numéricos, con herramientas locales y el graficador Desmos (con conexión).</p>
+<div class="deck">
+<a href="assets/matefx/index.html" class="card"><div class="cardtop"><span class="tag">01 / GEOMETRÍA</span><span class="arrow">↗</span></div>
+<div class="visual"><svg viewBox="0 0 360 145" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M32 118H337M164 137V10" stroke="#56728f" stroke-width="1.5"/><path d="M164 118L271 30L56 118Z" fill="#4c9fff19" stroke="#5fabff" stroke-width="2"/><path d="M56 118C92 42 232 3 271 30" stroke="#54e1cc" stroke-width="3" stroke-linecap="round"/><path d="M164 118L271 30" stroke="#91c7ff" stroke-width="2"/><circle cx="164" cy="118" r="5" fill="#9fcfff"/><circle cx="271" cy="30" r="6" fill="#45e9ca"/><circle cx="56" cy="118" r="5" fill="#75a9ff"/><text x="282" y="24" fill="#9edbe2" font-size="13">f(x)</text><text x="293" y="133" fill="#a4bad4" font-size="12">x</text></svg></div>
+<h2>Mate-fx</h2><p>Funciones sobre números naturales, geometría variable, áreas y conexiones visuales.</p></a>
+<a href="assets/nprimos/index.html" class="card"><div class="cardtop"><span class="tag">02 / NÚMEROS PRIMOS</span><span class="arrow">↗</span></div>
+<div class="visual"><svg viewBox="0 0 360 145" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M30 115H340M48 130V14" stroke="#507784" stroke-width="1.5"/><path d="M48 114C86 98 105 92 142 72S219 54 267 28 320 15 331 11" stroke="#49c9ab" stroke-width="2.8" stroke-linecap="round"/><path d="M48 114C110 104 159 65 216 62S287 29 331 24" stroke="#8eb8ff" stroke-dasharray="5 7" stroke-width="1.5"/><g fill="#54e9c5"><circle cx="64" cy="110" r="4"/><circle cx="84" cy="105" r="4"/><circle cx="104" cy="97" r="4"/><circle cx="126" cy="86" r="4"/><circle cx="148" cy="79" r="4"/><circle cx="174" cy="66" r="4"/><circle cx="198" cy="63" r="4"/><circle cx="224" cy="52" r="4"/><circle cx="260" cy="40" r="4"/><circle cx="294" cy="24" r="4"/><circle cx="327" cy="13" r="4"/></g><text x="10" y="14" fill="#9edbe2" font-size="11">pₙ</text><text x="338" y="132" fill="#a4bad4" font-size="11">n</text></svg></div>
+<h2>nPrimos</h2><p>Analiza hasta 10 000 primos, investiga aproximaciones y compara el error.</p></a>
+</div><footer><span><span class="dot">●</span>Motores locales · Desmos con Internet</span><span>Galarza Math Research · Web + Escritorio 4.1</span></footer>
+</main></body></html>
