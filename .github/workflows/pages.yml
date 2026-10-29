@@ -1,0 +1,46 @@
+name: Publicar Mate-fx en GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener fuentes
+        uses: actions/checkout@v4
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Preparar sitio web
+        run: |
+          mkdir -p public
+          cp -R assets public/assets
+          cp index.html public/index.html
+          touch public/.nojekyll
+          test -f public/assets/matefx/index.html
+          test -f public/assets/nprimos/index.html
+          test -f public/assets/desktop/datasets.js
+      - name: Subir archivos estáticos
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
