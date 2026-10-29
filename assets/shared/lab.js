@@ -181,7 +181,7 @@ function showSettings(){
   const p=el('div','',
     '<p><strong>Galarza Math Research</strong> · interfaz matemática 2.0.</p>'+
     '<p>La gráfica, las expresiones y las herramientas funcionan sin red. Los proyectos se guardan en el dispositivo.</p>'+
-    '<p>Desliza un dedo para mover la gráfica y utiliza dos dedos para acercar o alejar.</p>'
+    '<p>Arrastra para mover la gráfica y utiliza la rueda del ratón o el gesto de zoom para acercar o alejar.</p>'
   );
   p.style.cssText='font-size:13px;color:#576371;line-height:1.55';
   projectHost.append(p);
@@ -204,7 +204,7 @@ if(isMate) {
   if(inspector.classList.contains('collapsed')){$('inspectorToggle').click()}
   const mathBuilder=$('mathBuilder');
   keyboard.appendChild(mathBuilder);
-  const native=el('button','gmr-native-toggle','ABC · teclado Android');
+  const native=el('button','gmr-native-toggle','ABC · teclado físico');
   native.type='button';
   mathBuilder.querySelector('.math-builder-head')?.appendChild(native);
   native.addEventListener('click',()=>nativeKeyboard($('functionInput')));
@@ -245,7 +245,7 @@ if(isMate) {
   if(offlineExpressions){
   dock.appendChild(offlineExpressions);
   keyboard.innerHTML=`
-  <div class="gmr-prime-keys-header"><span>Teclado matemático</span><button type="button" data-gmr-native="true">ABC · Android</button></div>
+  <div class="gmr-prime-keys-header"><span>Teclado matemático</span><button type="button" data-gmr-native="true">ABC · físico</button></div>
   <div class="gmr-key-grid"></div>`;
   const keys=['x','y','^2','^','7','8','9','/','sin(','cos(',
               '(' ,')','<','>','4','5','6','*','left','right',
@@ -571,4 +571,3 @@ if(!isMate){
   }
   updateEngineButton();
 }
-
