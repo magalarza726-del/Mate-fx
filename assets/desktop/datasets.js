@@ -101,6 +101,57 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     row.push(cell);if(row.some(v=>v.trim()))all.push(row);
     if(all.length<2)throw Error('Archivo sin datos suficientes');return all;
   }
+
+  // En GitHub Pages el lector XLSX corre en el navegador, sin Electron.
+  let excelLoader;
+  function loadExcelJS(){
+    if(window.ExcelJS?.Workbook)return Promise.resolve(window.ExcelJS);
+    if(excelLoader)return excelLoader;
+    excelLoader=new Promise((resolve,reject)=>{
+      const urls=['https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js','https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js'];
+      const tryUrl=i=>{
+        if(i>=urls.length){excelLoader=null;reject(Error('No se pudo cargar el lector XLSX: comprueba tu conexión.'));return}
+        const el=document.createElement('script');
+        el.src=urls[i];el.async=true;
+        el.onload=()=>window.ExcelJS?.Workbook?resolve(window.ExcelJS):tryUrl(i+1);
+        el.onerror=()=>tryUrl(i+1);
+        document.head.append(el);
+      };
+      tryUrl(0);
+    });
+    return excelLoader;
+  }
+  function textCell(cell){
+    const v=cell.value;
+    if(v==null)return '';
+    if(v instanceof Date)return v.toISOString();
+    if(typeof v==='object'){
+      if('result' in v)return String(v.result??'');
+      if('text' in v)return String(v.text??'');
+      if(Array.isArray(v.richText))return v.richText.map(t=>t.text||'').join('');
+      return String(cell.text||'');
+    }
+    return String(v);
+  }
+  async function parseExcel(file){
+    if(file.size>20*1024*1024)throw Error('El archivo supera 20 MB');
+    const ExcelJS=await loadExcelJS(),workbook=new ExcelJS.Workbook();
+    await workbook.xlsx.load(await file.arrayBuffer());
+    const sheet=workbook.worksheets.find(w=>w.actualRowCount>0);
+    if(!sheet)throw Error('El libro no contiene hojas con datos');
+    const cols=Math.min(sheet.columnCount||0,50);
+    if(!cols)throw Error('No hay columnas en la hoja');
+    const headers=Array.from({length:cols},(_,j)=>textCell(sheet.getRow(1).getCell(j+1))||'Columna '+(j+1));
+    const rows=[];
+    for(let i=2;i<=Math.min(sheet.rowCount,10001);i++){
+      const row=sheet.getRow(i);
+      if(!row.hasValues)continue;
+      const cells=Array.from({length:cols},(_,j)=>textCell(row.getCell(j+1)));
+      if(cells.some(v=>v.trim()))rows.push(cells);
+    }
+    if(!rows.length)throw Error('No hay registros debajo de la cabecera');
+    return {filename:file.name,headers,rows,sheet:sheet.name};
+  }
   trigger.onclick=()=>{overlay.hidden=false;preview()};
   $('ds-close').onclick=()=>overlay.hidden=true;
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.hidden=true});
@@ -113,7 +164,8 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
         input.onchange=async()=>{
           try{
             const file=input.files?.[0];if(!file)return;
-            if(file.name.toLowerCase().endsWith('.xlsx')){status('Para Excel XLSX, abre con Electron (npm start).');return}
+            if(file.size>20*1024*1024)throw Error('El archivo supera 20 MB');
+            if(file.name.toLowerCase().endsWith('.xlsx')){status('Importando hoja XLSX…');populate(await parseExcel(file));return}
             const all=parseCsv(await file.text());populate({filename:file.name,headers:all[0],rows:all.slice(1),sheet:''});
           }catch(e){status('Error: '+e.message)}
         };input.click();
