@@ -1,3 +1,13 @@
+## Actualización 4.2 · Proyectos limpios, CSV y vista segura (GitHub Pages)
+
+- **Ejemplo · 10 000 números primos** incluido como plantilla de muestra en nPrimos. Sus puntos se representan en Desmos en bloques de 500, conservando las aproximaciones y el análisis de valores. Desde **Proyectos → CSV** se descargan sus 10 000 pares `(n, p_n)`.
+- **Nuevo proyecto** empieza en blanco: sin funciones, sin primos y sin hojas de cálculo. **Añadir números primos** es opcional.
+- **Cambiar el nombre** desde el icono de lápiz de cada proyecto o pulsando su nombre.
+- **Exportar CSV** disponible por proyecto (para proyectos vacíos, únicamente cabecera `x;y`), así como **Exportar JSON** para respaldar todos los proyectos. Las tablas CSV/XLSX importadas se vinculan al proyecto actual y se restauran al volver a abrirlo.
+- **Ejemplo: agua saturada A-4** disponible en el importador CSV/Excel, elaborado a partir del XLSX suministrado (76 registros, 13 columnas, unidades conservadas). Selecciona `T (°C)` para X y `Psat (kPa)` para Y, o cualquier otro par numérico. La tabla se entrega en `assets/examples/agua_saturada_A4.csv`.
+- **Viewport válido** al abrir proyectos: se normalizan estados previos de Desmos sin descartar fórmulas y se reencuadra después de cargar el panel para evitar la advertencia de viewport inválido.
+- El aviso **Desmos Trial Key** corresponde a las condiciones de la API de Desmos; para producción necesitas una clave autorizada de Desmos. La app no oculta ni elimina ese aviso por medios no autorizados.
+
 # Galarza Math Research 4.1 · Escritorio
 
 Versión de escritorio **reconstruida desde los archivos web incluidos en el APK v4.0** de Galarza Math Research. Conserva los dos laboratorios originales (Mate-fx y nPrimos) y agrega importación de datos mediante CSV/XLSX para el graficador oficial de Desmos.
@@ -66,12 +76,10 @@ Solo se usa la biblioteca estándar de Python para CSV; para XLSX se puede insta
 
 Se han verificado el contenido del APK y las pruebas de lectura CSV. **No se ha compilado ni instalado un EXE en esta sesión**, así que esta entrega es el proyecto fuente listo para instalar dependencias y ejecutar, no un binario Windows certificado. El código recuperado del APK se mantiene sin autorización para sublicenciar a terceros; revisa derechos de los materiales integrados antes de distribuir públicamente.
 
-## GitHub Pages (versión web)
+## Publicación en GitHub Pages
 
-**Sitio:** https://magalarza726-del.github.io/Mate-fx/
+El repositorio incluye `index.html` en su raíz y `.github/workflows/pages.yml`, que publica solamente los recursos web de `assets/` (sin Electron, npm, Python ni datos privados). El sitio está previsto para `https://magalarza726-del.github.io/Mate-fx/`.
 
-Abre la portada y elige **Mate-fx** o **nPrimos**. El selector **Datos CSV / Excel** funciona en el navegador: importa CSV y XLSX, permite seleccionar columnas X/Y, muestra una vista previa y grafica puntos en Desmos cuando el motor oficial está activo.
+Si es la primera vez que habilitas Pages: abre **GitHub → Mate-fx → Settings → Pages → Build and deployment → Source → GitHub Actions**. Se ejecuta el flujo al subir cambios a `main`; también puedes lanzarlo desde Actions.
 
-La versión web no necesita Electron ni Python. Para XLSX, ExcelJS 4.4 se carga desde una CDN (el archivo se procesa localmente en tu navegador, sin enviarse a un servidor). La API oficial de Desmos requiere Internet y una clave vigente.
-
-**Despliegue automático:** `.github/workflows/pages.yml` publica el contenido web en cada push a `main`. Si es la primera publicación, configura una vez **Settings → Pages → Build and deployment → Source → GitHub Actions**. La URL solamente se considera publicada cuando el workflow y GitHub Pages confirman el despliegue.
+En GitHub Pages puedes subir archivos **CSV y XLSX**, elegir las columnas X/Y y representar puntos mediante la API oficial de Desmos. El XLSX se interpreta **en el navegador** con ExcelJS 4.4.0 servido desde CDN; el fichero no se envía a nuestro servidor. Desmos y la carga del lector XLSX requieren conexión. El análisis local de las dos interfaces se mantiene.

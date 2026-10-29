@@ -136,3 +136,12 @@ tbody tr:hover { background: #f7f9fb; }
   .prime-input-wrap input { width: 76px; }
   .table-panel { top: 120px; }
 }
+
+/* Plantillas de investigación 4.2: un proyecto nuevo no crea datos automáticamente. */
+#enablePrimesBtn{display:none; font-size:12px; padding:6px 10px; margin-top:4px}
+#primeTools.is-empty #enablePrimesBtn{display:inline-flex}
+#primeTools.is-empty .prime-input-wrap, #primeTools.is-empty .prime-slider, #primeTools.is-empty #fitPrimesBtn{display:none}
+#primeTools.is-empty .prime-title{min-width:230px}
+.project-actions .mini-btn[data-action="csv"]{width:42px;font-size:10px;font-weight:800;color:#207647}
+.project-actions .mini-btn[data-action="rename"]{font-size:18px}
+@media(max-width:620px){#primeTools.is-empty .prime-title{min-width:180px}}

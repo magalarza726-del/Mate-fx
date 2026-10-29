@@ -30,16 +30,17 @@
     </header>
 
     <main class="workspace">
-      <section class="prime-toolbar" aria-label="Control de primos">
+      <section class="prime-toolbar" id="primeTools" aria-label="Control de primos">
         <div class="prime-title">
           <strong>Primos</strong>
-          <span>puntos automáticos (n, pₙ)</span>
+          <span>Puntos (n, pₙ) · solo proyectos activados</span>
+          <button id="enablePrimesBtn" class="soft-btn" type="button">＋ Añadir números primos</button>
         </div>
         <label class="prime-input-wrap">
           <span>n</span>
-          <input id="primeCountInput" type="number" min="25" max="10000" step="1" value="25" inputmode="numeric" />
+          <input id="primeCountInput" type="number" min="1" max="10000" step="1" value="0" inputmode="numeric" />
         </label>
-        <input id="primeCountSlider" class="prime-slider" type="range" min="25" max="10000" step="1" value="25" aria-label="Cantidad de primos" />
+        <input id="primeCountSlider" class="prime-slider" type="range" min="1" max="10000" step="1" value="0" aria-label="Cantidad de primos" />
         <button class="soft-btn" id="fitPrimesBtn" title="Ajustar la vista a los primos">⌂ Ajustar</button>
         <button class="soft-btn" id="tableBtn" aria-pressed="false">▦ Tabla</button>
       </section>
@@ -76,7 +77,7 @@
 
       <div class="project-tools">
         <button class="primary-btn grow" id="newProjectBtnPanel">＋ Nuevo</button>
-        <button class="soft-btn" id="exportBtn">Exportar</button>
+        <button class="soft-btn" id="exportBtn" title="Copia completa de los proyectos como JSON">Exportar JSON</button>
         <label class="soft-btn file-label">Importar<input id="importInput" type="file" accept="application/json,.json" hidden /></label>
       </div>
 

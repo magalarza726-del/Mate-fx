@@ -28,14 +28,14 @@
   function getPrimeCount() {
     const input = document.getElementById('primeCountInput');
     const raw = Number.parseInt(input?.value || '25', 10);
-    return Math.min(10000, Math.max(25, Number.isFinite(raw) ? raw : 25));
+    return Number.isFinite(raw) ? Math.min(10000, Math.max(0, raw)) : 0;
   }
 
   function getPrimeValues(count) {
     // Lee directamente la lista que nPrimos ya inyecta en Desmos.
+    if (typeof window.__gmrPrimeValues === 'function') return window.__gmrPrimeValues(count);
     const helper = getHelper('__primes_source__', 'P_{primos}');
-    const values = Array.isArray(helper?.listValue) ? helper.listValue : [];
-    return values.slice(0, count);
+    return Array.isArray(helper?.listValue) ? helper.listValue.slice(0,count) : [];
   }
 
   function getFunctionDefinitions() {
@@ -93,6 +93,19 @@
 
   function getFunctionValues(definitions, count) {
     return definitions.map(def => {
+      // Los datos se distribuyen en tablas de 500 puntos. Sus columnas n_i
+      // también son listas que Desmos evalúa por lotes: f(n_i), g(n_i), etc.
+      // Esto evita recalcular una expresión descomunal con los 10 000 índices.
+      if (count > 1000 && document.body.dataset.graphEngine === 'desmos') {
+        const values=[];
+        for(let chunk=0;chunk<Math.ceil(count/500);chunk++) {
+          const length=Math.min(500,count-chunk*500);
+          const helper=getHelper(`fn:${def.id}:${chunk}`,`${def.name}(n_{${chunk}})`);
+          const partial=Array.isArray(helper?.listValue)?helper.listValue:[];
+          for(let i=0;i<length;i++)values.push(partial[i]);
+        }
+        return {...def,values};
+      }
       const helper = getHelper(`fn:${def.id}`, `${def.name}(N_{primos})`);
       const values = Array.isArray(helper?.listValue) ? helper.listValue.slice(0, count) : [];
       return { ...def, values };
@@ -152,6 +165,12 @@
     const subtitle = document.getElementById('tableSubtitle');
 
     if (!calculator || !tbody || !thead || !panel?.classList.contains('open')) return;
+    if (document.body.dataset.primeProject === 'blank') {
+      thead.innerHTML='<tr><th>Proyecto sin datos</th></tr>';
+      tbody.replaceChildren();
+      if (subtitle) subtitle.textContent='Importa un CSV/XLSX o añade primos para comenzar.';
+      return;
+    }
 
     ensureTableStyle();
 
@@ -166,7 +185,7 @@
       return;
     }
 
-    const signature = `${count}|${definitions.map(d => `${d.id}:${d.latex}`).join('|')}|${functions.map(f => f.values.slice(0, 4).join(',')).join('|')}`;
+    const signature = `${count}|${definitions.map(d => `${d.id}:${d.latex}`).join('|')}|${functions.map(f => f.values.filter(Number.isFinite).length+':'+f.values.slice(0,4).join(',')+':'+f.values.slice(-4).join(',')).join('|')}`;
     const expectedCells = 2 + functions.length * 3;
     const currentCells = tbody.firstElementChild?.children?.length || 0;
     if (lastSignature === signature && currentCells === expectedCells) return;

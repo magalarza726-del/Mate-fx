@@ -6,13 +6,13 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
   const overlay=document.createElement('div');overlay.className='gmr-data-overlay';overlay.hidden=true;
   overlay.innerHTML=`<section class="gmr-data-dialog" role="dialog" aria-modal="true" aria-label="Datos de investigación">
   <div class="gmr-data-top"><div><h2>Importar datos a la gráfica</h2><p>Selecciona un CSV o XLSX y decide qué columna utilizar en cada eje.</p></div><button id="ds-close" aria-label="Cerrar">×</button></div>
-  <div class="gmr-data-controls"><button class="gmr-data-primary" id="ds-open">Abrir archivo CSV / XLSX</button><button class="gmr-data-secondary" id="ds-export" disabled>Exportar JSON</button><small id="ds-filename">Sin archivo</small></div>
+  <div class="gmr-data-controls"><button class="gmr-data-primary" id="ds-open">Abrir archivo CSV / XLSX</button><button class="gmr-data-secondary" id="ds-sample">Ejemplo: agua saturada A-4</button><button class="gmr-data-secondary" id="ds-export" disabled>Exportar CSV</button><button class="gmr-data-secondary" id="ds-export-json" disabled>JSON</button><small id="ds-filename">Sin archivo</small></div>
   <div class="gmr-data-controls"><label>Eje X<select id="ds-x" disabled></select></label><label>Eje Y<select id="ds-y" disabled></select></label><label>Estilo<select id="ds-lines"><option value="0">Solo puntos</option><option value="1">Puntos y líneas</option></select></label></div>
   <div class="gmr-data-controls"><button class="gmr-data-primary" id="ds-plot" disabled>Graficar en Desmos</button><button class="gmr-data-secondary" id="ds-fit" disabled>Encuadrar puntos</button><button class="gmr-data-secondary" id="ds-remove" disabled>Eliminar gráfica</button></div>
   <p id="ds-status" class="gmr-data-info" role="status">Carga un archivo para obtener una vista previa y graficar los puntos.</p>
   <canvas id="ds-preview" class="gmr-data-preview" width="800" height="180"></canvas><div id="ds-table" class="gmr-data-table"></div>
   <div class="gmr-data-controls"><label>Clave personal de Desmos<input id="ds-api" placeholder="Clave API (opcional para probar)" autocomplete="off"></label><button class="gmr-data-secondary" id="ds-save-key">Guardar clave</button></div>
-  <span class="gmr-data-tip">Hasta 10 000 filas · Se ignoran filas con coordenadas no numéricas · La vista previa funciona sin Internet. Desmos requiere conexión y una API key válida. Si cambias la clave, reinicia la aplicación.</span>
+  <span class="gmr-data-tip">Hasta 10 000 filas · ExcelJS se carga desde CDN para archivos XLSX · Se ignoran filas con coordenadas no numéricas · La vista previa funciona sin Internet. Desmos requiere conexión y una API key válida. Si cambias la clave, reinicia la aplicación.</span>
   </section>`;
   document.body.append(overlay);
   const $=id=>overlay.querySelector('#'+id);
@@ -49,7 +49,7 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     status(`${points.length} puntos válidos de ${dataset.rows.length} filas. Selección: X=${$('ds-x').selectedOptions[0]?.textContent}, Y=${$('ds-y').selectedOptions[0]?.textContent}.`);
     preview();
   }
-  function populate(data){
+  function populate(data, options = {}){
     if(!data?.headers?.length||!Array.isArray(data.rows))throw Error('El archivo no tiene encabezados.');
     dataset=data;
     $('ds-filename').textContent=`${data.filename}: ${data.rows.length} filas`;
@@ -60,12 +60,40 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     const idx=document.createElement('option');idx.value='__index__';idx.textContent='Número de fila';$('ds-x').prepend(idx);
     const numeric=data.headers.map((_,i)=>({i,n:data.rows.slice(0,100).filter(row=>Number.isFinite(number(row[i]))).length})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n);
     $('ds-x').value=numeric.length>=2?String(numeric[0].i):'__index__';$('ds-y').value=String(numeric.length>=2?numeric[1].i:numeric[0]?.i??0);
-    $('ds-export').disabled=$('ds-remove').disabled=false;
+    $('ds-export').disabled=$('ds-export-json').disabled=$('ds-remove').disabled=false;
     const table=document.createElement('table'),tr=document.createElement('tr');
     data.headers.forEach(s=>{const th=document.createElement('th');th.textContent=s;tr.append(th)});table.append(tr);
     data.rows.slice(0,8).forEach(r=>{const tr=document.createElement('tr');r.forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td)});table.append(tr)});
     $('ds-table').replaceChildren(table);recalc();
+    if (options.notify !== false) window.dispatchEvent(new CustomEvent('gmr:dataset-imported',{detail:{lab,dataset:data}}));
   }
+  function resetDataset() {
+    dataset=null;points=[];
+    $('ds-filename').textContent='Sin archivo';
+    ['ds-export','ds-export-json','ds-plot','ds-fit','ds-remove'].forEach(k=>$(k).disabled=true);
+    ['ds-x','ds-y'].forEach(k=>{$(k).replaceChildren();$(k).disabled=true});
+    $('ds-table').replaceChildren();
+    status('Proyecto sin datos. Importa un CSV/XLSX o utiliza el archivo de ejemplo.');
+    preview();
+  }
+  function csvCell(v) {
+    const s=String(v??''); return /[;"\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+  }
+  function exportCsv(data) {
+    const rows=[data.headers,...data.rows];
+    const body='\uFEFF'+rows.map(r=>r.map(csvCell).join(';')).join('\r\n')+'\r\n';
+    const b=new Blob([body],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(b),a=document.createElement('a');
+    a.href=url;a.download=(data.filename||'investigacion').replace(/\.(xlsx|xls|csv|json)$/i,'')+'.csv';
+    a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  window.addEventListener('gmr:project-switched', e=>{
+    if(e.detail?.lab!==lab)return;
+    if(e.detail.dataset)populate(e.detail.dataset,{notify:false}); else resetDataset();
+  });
+  if(lab==='prime')window.dispatchEvent(new CustomEvent('gmr:dataset-request',{
+    detail:{lab,respond:d=>{if(d)populate(d,{notify:false});else resetDataset();}}
+  }));
   const id='gmr_dataset_desktop';
   function plot(){
     if(!points.length)return;
@@ -101,55 +129,62 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     row.push(cell);if(row.some(v=>v.trim()))all.push(row);
     if(all.length<2)throw Error('Archivo sin datos suficientes');return all;
   }
-
-  // En GitHub Pages el lector XLSX corre en el navegador, sin Electron.
-  let excelLoader;
+  // GitHub Pages no dispone del proceso Node.js de Electron. Se utiliza
+  // ExcelJS en el navegador para importar XLSX sin enviar archivos a servidores.
+  let excelJsPromise;
   function loadExcelJS(){
     if(window.ExcelJS?.Workbook)return Promise.resolve(window.ExcelJS);
-    if(excelLoader)return excelLoader;
-    excelLoader=new Promise((resolve,reject)=>{
-      const urls=['https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js','https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js'];
-      const tryUrl=i=>{
-        if(i>=urls.length){excelLoader=null;reject(Error('No se pudo cargar el lector XLSX: comprueba tu conexión.'));return}
-        const el=document.createElement('script');
-        el.src=urls[i];el.async=true;
-        el.onload=()=>window.ExcelJS?.Workbook?resolve(window.ExcelJS):tryUrl(i+1);
-        el.onerror=()=>tryUrl(i+1);
-        document.head.append(el);
+    if(excelJsPromise)return excelJsPromise;
+    excelJsPromise=new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      const sources=[
+        'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
+        'https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js'
+      ];
+      let index=0;
+      const next=()=>{
+        if(index>=sources.length){excelJsPromise=null;reject(new Error('No se pudo descargar el lector de Excel. Comprueba tu conexión.'));return}
+        script.src=sources[index++];
       };
-      tryUrl(0);
+      script.onload=()=>window.ExcelJS?.Workbook?resolve(window.ExcelJS):next();
+      script.onerror=next;
+      document.head.append(script);
+      next();
     });
-    return excelLoader;
+    return excelJsPromise;
   }
-  function textCell(cell){
-    const v=cell.value;
+  function excelCellValue(cell){
+    const v=cell?.value;
     if(v==null)return '';
     if(v instanceof Date)return v.toISOString();
     if(typeof v==='object'){
       if('result' in v)return String(v.result??'');
       if('text' in v)return String(v.text??'');
-      if(Array.isArray(v.richText))return v.richText.map(t=>t.text||'').join('');
+      if('richText' in v)return v.richText.map(x=>x.text||'').join('');
+      if('error' in v)return String(v.error||'');
       return String(cell.text||'');
     }
     return String(v);
   }
-  async function parseExcel(file){
-    if(file.size>20*1024*1024)throw Error('El archivo supera 20 MB');
-    const ExcelJS=await loadExcelJS(),workbook=new ExcelJS.Workbook();
+  async function parseXlsx(file){
+    if(file.size>20*1024*1024)throw Error('El archivo excede el límite de 20 MB');
+    const ExcelJS=await loadExcelJS();
+    const workbook=new ExcelJS.Workbook();
     await workbook.xlsx.load(await file.arrayBuffer());
-    const sheet=workbook.worksheets.find(w=>w.actualRowCount>0);
-    if(!sheet)throw Error('El libro no contiene hojas con datos');
-    const cols=Math.min(sheet.columnCount||0,50);
-    if(!cols)throw Error('No hay columnas en la hoja');
-    const headers=Array.from({length:cols},(_,j)=>textCell(sheet.getRow(1).getCell(j+1))||'Columna '+(j+1));
+    const sheet=workbook.worksheets.find(s=>s.actualRowCount>0);
+    if(!sheet)throw Error('El libro no contiene hojas con datos.');
+    const ncols=Math.min(sheet.columnCount||0,50);
+    if(!ncols)throw Error('La hoja seleccionada no tiene columnas.');
+    const headers=Array.from({length:ncols},(_,i)=>excelCellValue(sheet.getRow(1).getCell(i+1))||`Columna ${i+1}`);
     const rows=[];
-    for(let i=2;i<=Math.min(sheet.rowCount,10001);i++){
+    const end=Math.min(sheet.rowCount,10001);
+    for(let i=2;i<=end;i++){
       const row=sheet.getRow(i);
       if(!row.hasValues)continue;
-      const cells=Array.from({length:cols},(_,j)=>textCell(row.getCell(j+1)));
+      const cells=Array.from({length:ncols},(_,j)=>excelCellValue(row.getCell(j+1)));
       if(cells.some(v=>v.trim()))rows.push(cells);
     }
-    if(!rows.length)throw Error('No hay registros debajo de la cabecera');
+    if(!rows.length)throw Error('La hoja no contiene registros debajo de la cabecera.');
     return {filename:file.name,headers,rows,sheet:sheet.name};
   }
   trigger.onclick=()=>{overlay.hidden=false;preview()};
@@ -164,21 +199,32 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
         input.onchange=async()=>{
           try{
             const file=input.files?.[0];if(!file)return;
-            if(file.size>20*1024*1024)throw Error('El archivo supera 20 MB');
-            if(file.name.toLowerCase().endsWith('.xlsx')){status('Importando hoja XLSX…');populate(await parseExcel(file));return}
+            if(file.size>20*1024*1024)throw Error('El archivo excede el límite de 20 MB');
+            if(file.name.toLowerCase().endsWith('.xlsx')){status('Leyendo Excel en el navegador…');populate(await parseXlsx(file));return}
             const all=parseCsv(await file.text());populate({filename:file.name,headers:all[0],rows:all.slice(1),sheet:''});
           }catch(e){status('Error: '+e.message)}
         };input.click();
       }
     }catch(e){status('No se pudo cargar el archivo: '+e.message)}
   };
-  $('ds-export').onclick=async()=>{
+  $('ds-export-json').onclick=async()=>{
     if(!dataset)return;
     try{if(desktop)await desktop.exportDataset(dataset);
     else{const b=new Blob([JSON.stringify(dataset,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='investigacion.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}}catch(e){status(e.message)}
   };
+  $('ds-export').onclick=()=>{if(dataset)exportCsv(dataset)};
+  $('ds-sample').onclick=async()=>{
+    try {
+      const url=new URL('../examples/agua_saturada_A4.csv', import.meta.url);
+      const response=await fetch(url);
+      if(!response.ok)throw Error('No se pudo leer la tabla de ejemplo');
+      const all=parseCsv(await response.text());
+      populate({filename:'agua_saturada_A4.csv',headers:all[0],rows:all.slice(1),sheet:'Tabla A-4'});
+      status('Ejemplo cargado: tabla A-4 de agua saturada. Elige temperatura T (°C) como X y Psat (kPa) como Y.');
+    }catch(error){status(error.message)}
+  };
   $('ds-plot').onclick=plot;$('ds-fit').onclick=fit;
-  $('ds-remove').onclick=()=>{try{(lastCalculator||calc())?.removeExpression({id});lastCalculator=null;status('Tabla de datos eliminada del graficador.')}catch(e){status(e.message)}};
+  $('ds-remove').onclick=()=>{try{(lastCalculator||calc())?.removeExpression({id});lastCalculator=null;status('Tabla de datos eliminada del graficador.');resetDataset();window.dispatchEvent(new CustomEvent('gmr:dataset-removed',{detail:{lab}}))}catch(e){status(e.message)}};
   ['ds-x','ds-y','ds-lines'].forEach(id=>$(id).addEventListener('change',recalc));
   $('ds-api').value=localStorage.getItem('gmr:desmos:key')||'';
   $('ds-save-key').onclick=()=>{const key=$('ds-api').value.trim();if(key)localStorage.setItem('gmr:desmos:key',key);else localStorage.removeItem('gmr:desmos:key');status('Clave guardada localmente. Reinicia la aplicación para aplicarla.')};
