@@ -34,7 +34,9 @@ function normalizeExpressions(){
     if(item.type==='expression'&&!String(item.latex||'').trim()&&!state.known.has(id)) continue;
     if(item.type==='table' || (item.type==='expression' && item.latex && !functionRegex.test(item.latex) && !state.known.has(id))) {
       if(item.type==='table'){
-        if(!item.secret){try{c.setExpression({id,secret:true})}catch(e){console.warn('No se pudo ocultar tabla en Desmos',e)}}
+        // El API no garantiza `secret` en tablas; ocultamos tablas comunes
+        // como listas de puntos, preservando sus valores cuando son numéricos.
+        hideLegacyTable(item);
         state.known.add(id);continue;
       }
       const latex=String(item.latex||'').trim();
@@ -51,14 +53,33 @@ function normalizeExpressions(){
   updateSoon(140);
   if(changed)setTimeout(()=>window.__gmrSaveNPrimos?.(),250);
 }
+function hideLegacyTable(item){
+  if(!state.calculator || item.secret===true)return;
+  const xcol=item.columns?.[0],ycol=item.columns?.[1];
+  if(!Array.isArray(xcol?.values)||!Array.isArray(ycol?.values))return;
+  const pts=[];
+  for(let i=0;i<Math.min(xcol.values.length,ycol.values.length);i++){
+    const x=readNumber(xcol.values[i]),y=readNumber(ycol.values[i]);
+    if(Number.isFinite(x)&&Number.isFinite(y))pts.push([x,y]);
+  }
+  if(!pts.length)return;
+  const id=String(item.id||'table');
+  state.calculator.removeExpression({id});
+  for(let i=0;i<Math.ceil(pts.length/250);i++){
+    const chunk=pts.slice(i*250,(i+1)*250);
+    state.calculator.setExpression({id:'__gmr_legacy_'+id+'_'+i,
+      latex:`([${chunk.map(p=>p[0]).join(',')}],[${chunk.map(p=>p[1]).join(',')}])`,
+      secret:true,color:ycol.color||'#2d70b3',points:true,lines:false});
+  }
+}
 function storeKnown(){
   state.known=new Set((state.calculator?.getState()?.expressions?.list||[]).map(x=>String(x.id||'')));
   // Legacy tables, point lists and auxiliary parameters keep affecting the plot,
   // but the left Desmos editor displays user functions only.
   for(const e of state.calculator?.getState()?.expressions?.list||[]) {
     const nonFunction=e.type==='expression' && e.latex && !functionRegex.test(e.latex);
-    if((e.type==='table'||nonFunction)&&!e.secret)
-      try{state.calculator.setExpression({id:e.id,secret:true})}catch(_){}
+    if(e.type==='table')hideLegacyTable(e);
+    else if(nonFunction&&!e.secret)try{state.calculator.setExpression({id:e.id,secret:true})}catch(_){}
   }
 }
 function updateSoon(ms=130){clearTimeout(state.scheduled);state.scheduled=setTimeout(refresh,ms)}

@@ -87,7 +87,7 @@ En GitHub Pages puedes subir archivos **CSV y XLSX**, elegir las columnas X/Y y 
 
 ## Actualización 4.3 · Tabla de investigación
 
-En **nPrimos**, las tablas de datos (incluidos los 10 000 primos del ejemplo y las series CSV/XLSX) se grafican como expresiones `secret`, para que el editor izquierdo muestre únicamente funciones, sin ocultar los puntos del plano. El botón rojo **Ver tabla** aparece sobre el botón azul **Datos CSV / Excel**.
+En **nPrimos**, las tablas de datos (incluidos los 10 000 primos del ejemplo y las series CSV/XLSX) se grafican como listas de puntos mediante expresiones `secret`, para que el editor izquierdo muestre únicamente funciones, sin ocultar los puntos del plano. El botón rojo **Ver tabla** aparece sobre el botón azul **Datos CSV / Excel**.
 
 - Tablas vinculadas a los datos importados y a las columnas X/Y elegidas (encabezados originales preservados).
 - Cada función definida como `f(x)`, `g(x)`, `f_{1}(x)`, etc. se identifica por su nombre. Las expresiones nuevas sin nombre se convierten a `f_{i}(x)=...` cuando el usuario termina de escribir.

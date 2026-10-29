@@ -71,10 +71,11 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     data.headers.forEach(s=>{const th=document.createElement('th');th.textContent=s;tr.append(th)});table.append(tr);
     data.rows.slice(0,8).forEach(r=>{const tr=document.createElement('tr');r.forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td)});table.append(tr)});
     $('ds-table').replaceChildren(table);recalc();
+    if(lab==='prime' && document.body.dataset.graphEngine==='desmos' && points.length) plot();
     if (options.notify !== false) window.dispatchEvent(new CustomEvent('gmr:dataset-imported',{detail:{lab,dataset:data}}));
   }
   function resetDataset() {
-    try{(lastCalculator||calc())?.removeExpression({id:'gmr_dataset_desktop'})}catch(_){}
+    removePlots();
     lastCalculator=null;dataset=null;points=[];
     window.dispatchEvent(new CustomEvent('gmr:dataset-selection',{detail:{lab,dataset:null,xColumn:'__index__',yColumn:0}}));
     $('ds-filename').textContent='Sin archivo';
@@ -102,7 +103,14 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
   if(lab==='prime')window.dispatchEvent(new CustomEvent('gmr:dataset-request',{
     detail:{lab,respond:d=>{if(d)populate(d,{notify:false});else resetDataset();}}
   }));
-  const id='gmr_dataset_desktop';
+  const id='__gmr_data_plot_';
+  let renderedChunks=0;
+  function removePlots(){
+    const c=lastCalculator||calc();if(!c)return;
+    for(let i=0;i<Math.max(40,renderedChunks);i++)try{c.removeExpression({id:id+i})}catch(_){}
+    try{c.removeExpression({id:'gmr_dataset_desktop'})}catch(_){}
+    renderedChunks=0;
+  }
   function plot(){
     if(!points.length)return;
     const c=calc();
@@ -111,11 +119,18 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     }
     try{
       lastCalculator=c;
-      const strings=n=>points.map(p=>String(+p[n].toPrecision(12)));
-      c.setExpression({type:'table',id,secret:true,columns:[
-        {latex:'x_{datos}',values:strings(0)},
-        {latex:'y_{datos}',values:strings(1),color:'#2d70db',points:true,lines:$('ds-lines').value==='1'}
-      ]});
+      removePlots();
+      const chunkSize=250;
+      const required=Math.ceil(points.length/chunkSize);
+      for(let chunk=0;chunk<required;chunk++){
+        const subset=points.slice(chunk*chunkSize,(chunk+1)*chunkSize);
+        const xs=subset.map(p=>String(+p[0].toPrecision(12)));
+        const ys=subset.map(p=>String(+p[1].toPrecision(12)));
+        c.setExpression({id:id+chunk,secret:true,
+          latex:`([${xs.join(',')}],[${ys.join(',')}])`,
+          color:'#2d70db',points:true,lines:$('ds-lines').value==='1'});
+      }
+      renderedChunks=required;
       status(`✓ ${points.length} puntos graficados en Desmos. La tabla se consulta desde el botón rojo «Ver tabla».`);
     }catch(e){status('No fue posible graficar: '+e.message)}
   }
@@ -232,7 +247,7 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     }catch(error){status(error.message)}
   };
   $('ds-plot').onclick=plot;$('ds-fit').onclick=fit;
-  $('ds-remove').onclick=()=>{try{(lastCalculator||calc())?.removeExpression({id});lastCalculator=null;status('Tabla de datos eliminada del graficador.');resetDataset();window.dispatchEvent(new CustomEvent('gmr:dataset-removed',{detail:{lab}}))}catch(e){status(e.message)}};
+  $('ds-remove').onclick=()=>{try{removePlots();lastCalculator=null;status('Tabla de datos eliminada del graficador.');resetDataset();window.dispatchEvent(new CustomEvent('gmr:dataset-removed',{detail:{lab}}))}catch(e){status(e.message)}};
   ['ds-x','ds-y','ds-lines'].forEach(id=>$(id).addEventListener('change',()=>{recalc();
     if(lab==='prime')window.dispatchEvent(new CustomEvent('gmr:dataset-imported',{detail:{lab,dataset}}));
     if(lastCalculator===calc()&&points.length)plot();

@@ -202,7 +202,7 @@
     // Se regeneran al entrar, sin depender de enormes expresiones serializadas.
     if (result.expressions?.list) {
       result.expressions.list = result.expressions.list.filter(e =>
-        !String(e.id || '').startsWith('__np_') && !String(e.id || '').startsWith('__np_table_') && String(e.id || '') !== 'gmr_dataset_desktop');
+        !String(e.id || '').startsWith('__np_') && !String(e.id || '').startsWith('__np_table_') && String(e.id || '') !== 'gmr_dataset_desktop' && !String(e.id || '').startsWith('__gmr_data_plot_'));
     }
     return result;
   }
@@ -223,7 +223,10 @@
 
   function clearPrimeExpressions() {
     ['__np_n','__np_p','__np_points'].forEach(id => {try {calculator.removeExpression({id})} catch(_){}});
-    for (let i=0;i<25;i++) try {calculator.removeExpression({id:'__np_table_'+i})} catch(_) {}
+    for (let i=0;i<50;i++) {
+      try {calculator.removeExpression({id:'__np_table_'+i})} catch(_) {}
+      try {calculator.removeExpression({id:'__np_plot_'+i})} catch(_) {}
+    }
     tableRenderedCount = 0;
     els.primeTableBody.replaceChildren();
     els.tableSubtitle.textContent = 'Proyecto sin datos';
@@ -268,9 +271,9 @@
     els.primeCountSlider.value = count;
     currentProject.primeCount = count;
 
-    // Dividir los 10 000 puntos en tablas moderadas evita una sola expresión
-    // gigantesca que puede bloquear Desmos y contaminar el estado persistente.
-    const CHUNK = 500;
+    // Usar expresiones secretas de puntos es el mecanismo documentado en la API
+    // Desmos para mantener el dibujo SIN mostrar tablas en el panel izquierdo.
+    const CHUNK = 250;
     const required = Math.ceil(count / CHUNK);
     if (document.body.dataset.graphEngine === 'local') {
       const nList = Array.from({length:count}, (_,i)=>i+1).join(',');
@@ -285,12 +288,15 @@
         const first=chunk*CHUNK, last=Math.min(count,first+CHUNK);
         const xs=[],ys=[];
         for(let i=first;i<last;i++){xs.push(String(i+1));ys.push(String(allPrimes[i]));}
-        calculator.setExpression({type:'table',id:'__np_table_'+chunk,secret:true,columns:[
-          {latex:`n_{${chunk}}`,values:xs},
-          {latex:`p_{${chunk}}`,values:ys,color:Desmos.Colors.RED,points:true,lines:false}
-        ]});
+        calculator.setExpression({id:'__np_plot_'+chunk,
+          latex:`([${xs.join(',')}],[${ys.join(',')}])`,
+          secret:true,color:Desmos.Colors.RED,points:true,lines:false});
       }
-      for (let chunk=required;chunk<25;chunk++) try {calculator.removeExpression({id:'__np_table_'+chunk})}catch(_){}
+      for (let chunk=0;chunk<50;chunk++) {
+        // Limpiar tablas de la versión anterior aunque no coincida el número de puntos.
+        try{calculator.removeExpression({id:'__np_table_'+chunk})}catch(_){}
+        if(chunk>=required)try{calculator.removeExpression({id:'__np_plot_'+chunk})}catch(_){}
+      }
       // Mantener N_primos para el análisis de funciones solo cuando sea manejable.
       // Los 10 000 valores reales se consultan directamente desde allPrimes.
       if (count<=1000) calculator.setExpressions([
