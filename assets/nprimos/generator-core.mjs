@@ -79,7 +79,11 @@ export function makeTerm(kind,maxAbsX,rng=Math.random,decimals=3,maxInteger=9999
   const normalizedScale=Math.max(1,Math.min(integerLimit(maxInteger),Math.round(scale/4)));
   let p=0;
   if(kind==='power')p=choice(params,rng);
-  if(['exp','xexp','sin','cos','xsin'].includes(kind))p=rand(-12,12,rng)*normalizedScale/scale;
+  if(['exp','xexp','sin','cos','xsin'].includes(kind)){
+    const target=Number.isFinite(rng.trendRate)?rng.trendRate:0;
+    const seeded=target!==0&&rng()<.72;
+    p=(seeded?target*rand(.45,1.65,rng):rand(-12,12,rng)/scale)*normalizedScale;
+  }
   if(['reciprocal','xover'].includes(kind))p=rand(.15,.85,rng)*scale*(rng()<.5?1:-1);
   p=constrainNumber(p,decimals,maxInteger);
   if(['exp','xexp','sin','cos','xsin'].includes(kind)&&p===0){
@@ -91,6 +95,19 @@ export function makeTerm(kind,maxAbsX,rng=Math.random,decimals=3,maxInteger=9999
   if(kind==='power'&&p===0)p=1;
   return {kind,uses,p,...(['exp','xexp','sin','cos','xsin'].includes(kind)?{scale:normalizedScale}:{})};
 }
+/** Approximate data growth for steering proposed exponential rates. */
+export function inferTrend(points){
+  const sorted=points.filter(p=>Number.isFinite(p[0])&&Number.isFinite(p[1])).slice().sort((a,b)=>a[0]-b[0]);
+  if(sorted.length<5)return {rate:0,direction:0};
+  const k=Math.max(2,Math.floor(sorted.length*.15));
+  const avg=segment=>segment.reduce((a,b)=>a+b[1],0)/segment.length;
+  const first=avg(sorted.slice(0,k)),last=avg(sorted.slice(-k));
+  const dx=sorted[sorted.length-1][0]-sorted[0][0];
+  const direction=Math.sign(last-first);
+  const rate=dx>0&&first>0&&last>0?Math.log(last/first)/dx:0;
+  return {rate:Number.isFinite(rate)?Math.max(-1,Math.min(1,rate)):0,direction};
+}
+
 export function makeCandidate(config,maxAbsX,rng=Math.random,elite=null){
   const maxTerms=Math.max(1,Math.min(3,Math.floor(config.maxTerms)));
   const maxX=Math.max(1,Math.min(2,Math.floor(config.maxX)));
@@ -102,6 +119,8 @@ export function makeCandidate(config,maxAbsX,rng=Math.random,elite=null){
   if(composition==='pair_plus'&&maxTerms<3)throw Error('La forma f₁·f₂ + f₃ exige exactamente 3 términos.');
   const decimals=decimalLimit(config.decimals);
   const maxInteger=integerLimit(config.maxInteger);
+  const originalRng=rng;
+  if(Number.isFinite(config.trendRate)&&config.trendRate!==0){rng=()=>originalRng();rng.trendRate=config.trendRate;}
   let terms;
   if(elite?.terms?.length&&rng()<.72){
     terms=elite.terms.filter(t=>options.some(o=>o.kind===t.kind)).map(t=>({...t})).slice(0,maxTerms);
@@ -205,6 +224,60 @@ export function isNonDegenerate(model,points){
   const magnitude=Math.max(1,...results.map(Math.abs));
   return Math.max(...results)-Math.min(...results)>magnitude*1e-9;
 }
+/** Independent accuracy and end-of-range trend diagnostics on observed points. */
+export function additionalMetrics(model,points){
+  const rows=points.filter(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]));
+  if(!rows.length)return {nmae:Infinity,trendPenalty:Infinity};
+  const real=rows.map(p=>p[1]),range=Math.max(...real)-Math.min(...real);
+  const denominator=Math.max(range,1e-12);
+  let sum=0;
+  for(const [x,y] of rows){
+    const p=predict(model,x);if(!Number.isFinite(p))return {nmae:Infinity,trendPenalty:Infinity};
+    sum+=Math.abs(y-p);
+  }
+  const nmae=100*sum/rows.length/denominator;
+  const ordered=rows.slice().sort((a,b)=>a[0]-b[0]);
+  const n=Math.max(2,Math.floor(ordered.length*.15));
+  const tail=ordered.slice(-n),prior=ordered.slice(-2*n,-n);
+  const average=(items,fn)=>items.reduce((s,a)=>s+fn(a),0)/items.length;
+  const observed=average(tail,p=>p[1])-average(prior,p=>p[1]);
+  let trendPenalty=0;
+  if(Math.abs(observed)>0.05*denominator){
+    const predicted=average(tail,p=>predict(model,p[0]))-average(prior,p=>predict(model,p[0]));
+    const deficit=Math.abs(predicted-observed)/Math.abs(observed);
+    trendPenalty=35*Math.min(3,Math.max(0,deficit-.35));
+  }
+  return {nmae,trendPenalty};
+}
+export function rankingScore(metrics){
+  return metrics.mape+0.25*metrics.nmae+metrics.trendPenalty;
+}
+export function acceptableFit(metrics,limit=20){
+  const threshold=Math.max(1,Math.min(100,Number(limit)||20));
+  return Number.isFinite(metrics.mape)&&metrics.mape<=threshold&&
+    Number.isFinite(metrics.nmae)&&metrics.nmae<=Math.max(threshold,15)&&
+    metrics.trendPenalty<=12&&metrics.coverage>=.95;
+}
+/** Improve fitted, quantized coefficients against the actual ranking score. */
+export function refineModel(model,points,ranges=[]){
+  if(!model?.coefs?.length)return model;
+  const step=10**(-decimalLimit(model.decimals));
+  let best=model,bestScore=rankingScore(scoreModel(best,points,ranges));
+  for(const frac of [.5,.12]){
+    for(let i=0;i<model.coefs.length;i++){
+      const base=best.coefs[i],delta=Math.max(step,Math.abs(base)*frac);
+      for(const sign of [-1,1]){
+        const c=constrainNumber(base+sign*delta,model.decimals,model.maxInteger);
+        if(c===base)continue;
+        const candidate={...best,coefs:best.coefs.map((v,j)=>i===j?c:v)};
+        const objective=rankingScore(scoreModel(candidate,points,ranges));
+        if(objective<bestScore){best=candidate;bestScore=objective}
+      }
+    }
+  }
+  return best;
+}
+
 export function scoreModel(model,points,ranges){
   let total=0,valid=0,invalid=0;
   const intervals=ranges.map(range=>({min:Number(range.min),max:Number(range.max),total:0,count:0,invalid:0}));
@@ -220,7 +293,8 @@ export function scoreModel(model,points,ranges){
   const coverage=(valid+invalid)>0?valid/(valid+invalid):0;
   const mape=valid?total/valid:Infinity;
   const perRange=intervals.map(r=>r.invalid>0||r.count===0?null:r.total/r.count);
-  return {mape:invalid>0?Infinity:mape,coverage,perRange};
+  const extra=additionalMetrics(model,points);
+  return {mape:invalid>0?Infinity:mape,coverage,perRange,...extra};
 }
 function latexTerm(term,decimals){
   const p=fmt(term.p,decimals);

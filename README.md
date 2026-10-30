@@ -137,3 +137,9 @@ Tres composiciones: **suma** f₁ + f₂ + f₃, **producto** f₁ · f₂ · f�
 - **Rendimiento:** la actualización visual del historial se limita durante iteraciones rápidas, para evitar ordenar decenas de miles de filas continuamente.
 
 La agregación en los extremos compartidos de dos intervalos no duplica las observaciones. Los valores no definidos se excluyen de los promedios; el historial anterior permanece intacto hasta que el usuario elija borrarlo.
+
+
+### v5.0: Calidad del ajuste
+El generador distingue «Mejor candidata (sin ajuste aceptable)» de «Ajuste aceptable». El umbral MAPE es configurable entre 1 y 100 % (predeterminado 20). Para declarar aceptable también exige NMAE (MAE normalizado por el rango real) ≤ max(15 %, umbral MAPE), penalización por tendencia ≤12 y cobertura ≥95 %. Estas condiciones son heurísticas, no garantizan una ley física ni extrapolación fiable. En datos casi constantes, la normalización por rango puede resultar inestable.
+
+La búsqueda estima la dirección y una tasa de crecimiento para explorar exponentes positivos/negativos, preserva opciones aleatorias, refina coeficientes redondeados mediante pasos discretos y clasifica por MAPE + 0,25×NMAE + penalización de tendencia. Guarda las métricas en CSV e historial; los proyectos antiguos aparecen con «calidad no evaluada» y conservan sus datos. Los límites numéricos existentes siguen aplicándose.

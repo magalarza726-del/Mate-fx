@@ -1,4 +1,4 @@
-import {makeCandidate,fitCandidate,scoreModel,modelToLatex,subsample,chosenFamilies,isNonDegenerate} from './generator-core.mjs';
+import {makeCandidate,fitCandidate,scoreModel,modelToLatex,subsample,chosenFamilies,isNonDegenerate,inferTrend,refineModel,rankingScore,acceptableFit} from './generator-core.mjs';
 let session=null;
 const pause=()=>{if(session)session.paused=true};
 const tick=()=>{
@@ -8,17 +8,19 @@ const tick=()=>{
     s.done++;
     const elite=s.config.generational&&s.elites.length&&Math.random()<.8?s.elites[Math.floor(Math.random()*Math.min(6,s.elites.length))].model:null;
     const shape=makeCandidate(s.config,s.maxAbsX,Math.random,elite);
-    const model=fitCandidate(shape,s.fitPoints,s.config.decimals,s.config.maxInteger);
-    if(!model||!isNonDegenerate(model,s.scorePoints))continue;
+    const fitted=fitCandidate(shape,s.fitPoints,s.config.decimals,s.config.maxInteger);
+    if(!fitted||!isNonDegenerate(fitted,s.scorePoints))continue;
+    const model=refineModel(fitted,s.fitPoints,s.config.ranges);
     const scoring=scoreModel(model,s.scorePoints,s.config.ranges);
     if(!Number.isFinite(scoring.mape))continue;
     const latex=modelToLatex(model);if(!latex||s.seen.has(latex))continue;
     s.seen.add(latex);
-    const item={iteration:s.done,decimals:model.decimals,maxInteger:model.maxInteger,composition:model.composition,families:chosenFamilies(s.config),latex,mape:scoring.mape,perRange:scoring.perRange,ranges:s.config.ranges,model};
+    const score=rankingScore(scoring),acceptable=acceptableFit(scoring,s.config.qualityThreshold);
+    const item={iteration:s.done,rank:score,nmae:scoring.nmae,trendPenalty:scoring.trendPenalty,acceptable,qualityThreshold:s.config.qualityThreshold||20,decimals:model.decimals,maxInteger:model.maxInteger,composition:model.composition,families:chosenFamilies(s.config),latex,mape:scoring.mape,perRange:scoring.perRange,ranges:s.config.ranges,model};
     batch.push(item);
-    if(!s.best||item.mape<s.best.mape)s.best=item;
+    if(!s.best||item.rank<s.best.rank)s.best=item;
     if(s.config.generational){
-      s.elites.push(item);s.elites.sort((a,b)=>a.mape-b.mape);s.elites.length=Math.min(s.elites.length,12);
+      s.elites.push(item);s.elites.sort((a,b)=>a.rank-b.rank);s.elites.length=Math.min(s.elites.length,12);
     }
   }
   postMessage({type:'progress',done:s.done,total:s.config.n,batch,best:s.best});
@@ -33,7 +35,9 @@ onmessage=e=>{
   if(type==='start'){
     const {points,config}=e.data;
     const maxAbsX=Math.max(1,...points.map(p=>Math.abs(p[0])));
-    session={config,done:0,best:null,seen:new Set(),elites:[],paused:false,maxAbsX,fitPoints:subsample(points,350),scorePoints:points};
+    const trend=inferTrend(points);
+    const informedConfig={...config,trendRate:trend.rate};
+    session={config:informedConfig,done:0,best:null,seen:new Set(),elites:[],paused:false,maxAbsX,fitPoints:subsample(points,350),scorePoints:points};
     postMessage({type:'started',total:config.n});setTimeout(tick,0);
   }
 };

@@ -220,15 +220,15 @@ function intervalRow(min='',max=''){
 function segmentConfig(){return [...document.querySelectorAll('#gmr-intervals .gmr-segment')].map(row=>{const inputs=row.querySelectorAll('input');return {min:Number(inputs[0].value),max:Number(inputs[1].value)}})}
 function historyRows(){
   const body=$('gmr-gen-history');body.replaceChildren();
-  const sorted=[...state.history].sort((a,b)=>a.mape-b.mape).slice(0,80);
+  const sorted=[...state.history].sort((a,b)=>(a.rank??a.mape)-(b.rank??b.mape)).slice(0,80);
   const nSegments=Math.max(segmentConfig().length,...state.history.map(h=>(h.ranges||[]).length),0);
   $('gmr-gen-count').textContent=state.history.length.toLocaleString('es-EC')+' funciones válidas guardadas';
   for(const h of sorted){
-    const tr=document.createElement('tr');const cells=[h.iteration,h.decimals??'—',h.maxInteger??'—',formLabel(h.composition),(h.families||[]).map(f=>familyNames[f]||f).join(', ')||'Todas',nfmt(h.mape)+' %',...Array.from({length:nSegments},(_,i)=>{const r=h.ranges?.[i],v=h.perRange?.[i];return r?(nfmt(r.min)+'–'+nfmt(r.max)+': '+(v==null?'—':nfmt(v)+' %')):'—'}),h.latex];
+    const tr=document.createElement('tr');const cells=[h.iteration,h.decimals??'—',h.maxInteger??'—',formLabel(h.composition),(h.families||[]).map(f=>familyNames[f]||f).join(', ')||'Todas',nfmt(h.mape)+' %',h.nmae==null?'—':nfmt(h.nmae)+' %',h.trendPenalty==null?'—':nfmt(h.trendPenalty),h.acceptable==null?'Histórico':h.acceptable?'Aceptable':'No aceptable',...Array.from({length:nSegments},(_,i)=>{const r=h.ranges?.[i],v=h.perRange?.[i];return r?(nfmt(r.min)+'–'+nfmt(r.max)+': '+(v==null?'—':nfmt(v)+' %')):'—'}),h.latex];
     for(const v of cells){const td=document.createElement('td');td.textContent=String(v);tr.append(td)}
     const action=document.createElement('td');const b=document.createElement('button');b.className='gmr-apply';b.textContent='Añadir a Desmos';b.onclick=()=>applyToDesmos(h.latex);action.append(b);tr.append(action);body.append(tr);
   }
-  const head=$('gmr-gen-history-head');head.replaceChildren();['Iteración','Decimales','Límite entero','Estructura','Tendencias','MAPE global',...Array.from({length:nSegments},(_,i)=>`Tramo ${i+1} (X / %E)`),'Función','Acción'].forEach(label=>{const th=document.createElement('th');th.textContent=label;head.append(th)});
+  const head=$('gmr-gen-history-head');head.replaceChildren();['Iteración','Decimales','Límite entero','Estructura','Tendencias','MAPE global','NMAE (%)','Penalización de tendencia','Calidad',...Array.from({length:nSegments},(_,i)=>`Tramo ${i+1} (X / %E)`),'Función','Acción'].forEach(label=>{const th=document.createElement('th');th.textContent=label;head.append(th)});
 }
 function showGenStatus(label){
   $('gmr-gen-status').textContent=label;$('gmr-gen-progress').value=state.done;
@@ -237,9 +237,11 @@ function showGenStatus(label){
   $('gmr-gen-start').disabled=state.running;
   $('gmr-gen-pause').disabled=!state.running||state.paused;
   $('gmr-gen-resume').disabled=!state.running||!state.paused;
-  if(state.best){$('gmr-gen-best').innerHTML=`<strong>Mejor función encontrada · error medio ${safe(nfmt(state.best.mape))} %</strong><div><code>${safe(state.best.latex)}</code></div><button class="gmr-research-btn success" id="gmr-gen-apply-best" type="button">Añadir mejor a Desmos</button>`;
+  if(state.best){const quality=state.best.acceptable===true?'Ajuste aceptable':state.best.acceptable===false?'Mejor candidata (sin ajuste aceptable)':'Mejor candidata histórica (calidad no evaluada)';
+    $('gmr-gen-best').classList.toggle('gmr-best-warning',state.best.acceptable!==true);
+    $('gmr-gen-best').innerHTML=`<strong>${safe(quality)} · MAPE ${safe(nfmt(state.best.mape))} %</strong><div>MAE normalizado: ${state.best.nmae==null?'—':safe(nfmt(state.best.nmae))+' %'} · Penalización de tendencia: ${state.best.trendPenalty==null?'—':safe(nfmt(state.best.trendPenalty))}</div><div><code>${safe(state.best.latex)}</code></div><button class="gmr-research-btn success" id="gmr-gen-apply-best" type="button">Añadir candidata a Desmos</button>`;
     $('gmr-gen-apply-best').onclick=()=>applyToDesmos(state.best.latex);
-  }else{$('gmr-gen-best').textContent=state.running?'Buscando la primera función válida de esta generación…':'Todavía no hay una función ganadora en esta generación.';}
+  }else{$('gmr-gen-best').classList.remove('gmr-best-warning');$('gmr-gen-best').textContent=state.running?'Buscando la primera función válida de esta generación…':'Todavía no hay una función ganadora en esta generación.';}
 }
 function applyToDesmos(latex){
   const calc=window.__nPrimosCalculator;if(!calc)return;
@@ -252,15 +254,15 @@ function applyToDesmos(latex){
 }
 function exportHistory(){
   const count=Math.max(segmentConfig().length,...state.history.map(h=>(h.ranges||[]).length),0);
-  const heads=['iteracion','decimales_maximos','limite_parte_entera','forma_funcion','tendencias_habilitadas','MAPE_global_%',...Array.from({length:count},(_,i)=>['tramo_'+(i+1)+'_x_min','tramo_'+(i+1)+'_x_max','tramo_'+(i+1)+'_MAPE_%']).flat(),'funcion_latex'];
-  const rows=[heads,...state.history.map(item=>[item.iteration,item.decimals??'',item.maxInteger??'',item.composition||'sum',(item.families||[]).join('|'),item.mape,...Array.from({length:count},(_,i)=>[item.ranges?.[i]?.min??'',item.ranges?.[i]?.max??'',item.perRange?.[i]??'']).flat(),item.latex])];
+  const heads=['iteracion','decimales_maximos','limite_parte_entera','forma_funcion','tendencias_habilitadas','MAPE_global_%','MAE_normalizado_%','penalizacion_tendencia','calidad','umbral_MAPE_%',...Array.from({length:count},(_,i)=>['tramo_'+(i+1)+'_x_min','tramo_'+(i+1)+'_x_max','tramo_'+(i+1)+'_MAPE_%']).flat(),'funcion_latex'];
+  const rows=[heads,...state.history.map(item=>[item.iteration,item.decimals??'',item.maxInteger??'',item.composition||'sum',(item.families||[]).join('|'),item.mape,item.nmae??'',item.trendPenalty??'',item.acceptable==null?'sin_evaluar':item.acceptable?'aceptable':'no_aceptable',item.qualityThreshold??'',...Array.from({length:count},(_,i)=>[item.ranges?.[i]?.min??'',item.ranges?.[i]?.max??'',item.perRange?.[i]??'']).flat(),item.latex])];
   const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(';')).join('\r\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.download='historial_funciones_'+state.project+'.csv';a.href=url;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 async function refreshProjectHistory(){
   const p=project();state.project=p.id;
   const snapshotId=p.id,history=await loadHistory(p.id);if(project().id!==snapshotId)return;
-  state.history=history;if(!state.hasStartedRun)state.best=history.filter(a=>Number.isFinite(a.mape)).sort((a,b)=>a.mape-b.mape)[0]||null;
+  state.history=history;if(!state.hasStartedRun)state.best=history.filter(a=>Number.isFinite(a.mape)).sort((a,b)=>(a.rank??a.mape)-(b.rank??b.mape))[0]||null;
   historyRows();showGenStatus('Proyecto: '+p.name);
 }
 function stopGenerator(){if(state.worker){state.worker.terminate();state.worker=null}state.running=false;state.paused=false}
@@ -271,7 +273,7 @@ function runGenerator(){
   if(!families.length){showGenStatus('Selecciona al menos una tendencia: logarítmica, exponencial, polinómica o trigonométrica.');return}
   const composition=document.querySelector('input[name="gmr-gen-composition"]:checked')?.value||'sum';
   if(composition==='pair_plus'&&Number($('gmr-gen-terms').value)<3){showGenStatus('La estructura f₁·f₂ + f₃ necesita exactamente tres términos.');return}
-  const config={n:Math.max(1,Math.min(100000,Number($('gmr-gen-n').value)||100)),generational:$('gmr-gen-learning').checked,maxTerms:Number($('gmr-gen-terms').value),maxX:Number($('gmr-gen-xs').value),constant:$('gmr-gen-c').checked,decimals:Number($('gmr-gen-decimals').value),maxInteger:Number($('gmr-gen-max-integer').value),families,composition,ranges};
+  const config={n:Math.max(1,Math.min(100000,Number($('gmr-gen-n').value)||100)),generational:$('gmr-gen-learning').checked,maxTerms:Number($('gmr-gen-terms').value),maxX:Number($('gmr-gen-xs').value),constant:$('gmr-gen-c').checked,decimals:Number($('gmr-gen-decimals').value),maxInteger:Number($('gmr-gen-max-integer').value),qualityThreshold:Number($('gmr-gen-quality').value),families,composition,ranges};
   stopGenerator();const thisProject=project().id;state.startedProject=thisProject;state.done=0;state.total=config.n;state.running=true;state.paused=false;state.best=null;state.hasStartedRun=true;
   // Preserve prior runs in the history, but evaluate 'best' only for this run.
   state.worker=new Worker(new URL('./generator-worker.mjs',import.meta.url),{type:'module'});
@@ -285,7 +287,7 @@ function runGenerator(){
       state.history.push(...items);
       // Persist each completed batch under this run's stable project and iteration IDs.
       state.pendingWrites=state.pendingWrites.then(()=>persistBatch(items,thisProject));
-      if(data.best&&(!state.best||data.best.mape<state.best.mape))state.best={...data.best,iteration:data.best.iteration+iterationOffset};
+      if(data.best&&(!state.best||(data.best.rank??data.best.mape)<(state.best.rank??state.best.mape)))state.best={...data.best,iteration:data.best.iteration+iterationOffset};
       showGenStatus('Buscando funciones…');if(Date.now()-state.lastHistoryPaint>450){state.lastHistoryPaint=Date.now();historyRows()}
     }else if(data.type==='complete'){historyRows();state.done=data.done;state.running=false;state.paused=false;showGenStatus('Finalizado: '+data.done+' iteraciones.');worker.terminate();if(state.worker===worker)state.worker=null}
     else if(data.type==='paused'){showGenStatus('Pausado · puedes reanudar la búsqueda.')}
@@ -320,9 +322,9 @@ function setupGenerator(){
   <div class="gmr-generator-settings gmr-numeric-settings">
   <label>Decimales máximos <select id="gmr-gen-decimals"><option value="0">0 · enteros</option><option value="1">1 decimal</option><option value="2">2 decimales</option><option value="3" selected>3 decimales</option></select></label>
   <label>Magnitud máxima (parte entera) <select id="gmr-gen-max-integer"><option value="9">Unidades (0–9)</option><option value="99">Decenas (0–99)</option><option value="999">Centenas (0–999)</option><option value="9999" selected>Miles (0–9999)</option></select></label>
-  </div><p class="gmr-research-note">El límite se aplica a coeficientes, exponentes, factores internos y constante; también a números negativos por su valor absoluto. Los valores observados y el cálculo de error conservan su precisión original.</p>
+  <label>MAPE máximo para declarar ajuste aceptable (%) <input id="gmr-gen-quality" type="number" min="1" max="100" step="1" value="20"></label></div><p class="gmr-research-note">Un ajuste se considera aceptable si también cumple el límite de MAE normalizado, sigue la tendencia final de los datos y tiene suficiente cobertura. El umbral del MAPE por defecto es 20 %. No equivale a una garantía de predicción.</p><p class="gmr-research-note">El límite se aplica a coeficientes, exponentes, factores internos y constante; también a números negativos por su valor absoluto. Los valores observados y el cálculo de error conservan su precisión original.</p>
   <div class="gmr-research-buttons"><button class="gmr-research-btn success" id="gmr-gen-start">Iniciar n iteraciones</button><button class="gmr-research-btn secondary" id="gmr-gen-pause">Pausar</button><button class="gmr-research-btn secondary" id="gmr-gen-resume">Reanudar</button><button class="gmr-research-btn danger" id="gmr-gen-stop">Detener</button><button class="gmr-research-btn" id="gmr-gen-export">Exportar historial CSV</button><button class="gmr-research-btn danger" id="gmr-gen-clear-history">Limpiar historial</button></div><div class="gmr-status-line" style="margin-top:12px"><progress id="gmr-gen-progress" max="1" value="0"></progress><span id="gmr-gen-progress-label">0 / 0</span><strong id="gmr-gen-status">Listo</strong></div></div>
-  <div id="gmr-gen-best" class="gmr-best">Todavía no hay una función ganadora.</div><div class="gmr-research-group"><strong>Historial · mejores funciones</strong><small id="gmr-gen-count"></small><div class="gmr-history"><table><thead><tr id="gmr-gen-history-head"></tr></thead><tbody id="gmr-gen-history"></tbody></table></div><p class="gmr-research-note">Se muestran las 80 funciones de menor error. El historial completo se conserva por proyecto en el navegador y se puede exportar en CSV.</p></div>`;
+  <div id="gmr-gen-best" class="gmr-best gmr-best-warning">Todavía no hay una función ganadora.</div><div class="gmr-research-group"><strong>Historial · mejores funciones</strong><small id="gmr-gen-count"></small><div class="gmr-history"><table><thead><tr id="gmr-gen-history-head"></tr></thead><tbody id="gmr-gen-history"></tbody></table></div><p class="gmr-research-note">Se muestran las 80 funciones de menor error. El historial completo se conserva por proyecto en el navegador y se puede exportar en CSV.</p></div>`;
   const points=snapshot()?.source?.points||[],xs=points.map(p=>p[0]);const min=xs.length?Math.min(...xs):0,max=xs.length?Math.max(...xs):100;
   const delta=(max-min)/3;for(let i=0;i<3;i++)intervalRow(+(min+i*delta).toPrecision(6),+(i===2?max:min+(i+1)*delta).toPrecision(6));
   $('gmr-add-interval').onclick=()=>intervalRow(min,max);

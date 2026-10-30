@@ -53,3 +53,5 @@ body:has(.gmr-research-overlay:not([hidden])) :is(#np-view-table,#np-dashboard-b
 #gmr-bars-options .gmr-research-note{margin-bottom:0}
 .gmr-series-control[hidden],#gmr-bars-options[hidden],.gmr-bars-metric-control[hidden]{display:none!important}
 @media(max-width:680px){.gmr-dashboard-tabs{display:grid;grid-template-columns:1fr}.gmr-dashboard-tabs button{text-align:left}}
+
+.gmr-best-warning{background:#fff7ed;border-left-color:#e7a23a}
