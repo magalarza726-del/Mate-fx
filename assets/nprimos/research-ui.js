@@ -4,8 +4,8 @@ const $=id=>document.getElementById(id);
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nfmt=v=>Number.isFinite(v)?v.toLocaleString('es-EC',{maximumFractionDigits:4}):'—';
 const colors=['#2672ba','#e47c37','#269767','#aa51b3','#dd4e68','#e2af32','#31465e','#26a8b5','#a47c35'];
-const state={project:'',history:[],best:null,worker:null,running:false,paused:false,done:0,total:0,seriesSelected:new Set(['y']),axis:'x',chartType:'line',normalize:false,ranges:[],currentPoints:[],startedProject:'',pendingWrites:Promise.resolve()};
-const snapshot=()=>window.__gmrResearchSnapshot?.('y')||null;
+const state={project:'',history:[],best:null,worker:null,running:false,paused:false,done:0,total:0,seriesSelected:new Set(['y']),axis:'x',errorAxis:'y',chartType:'line',normalize:false,ranges:[],currentPoints:[],startedProject:'',pendingWrites:Promise.resolve()};
+const snapshot=()=>window.__gmrResearchSnapshot?.(state.errorAxis)||null;
 const project=()=>window.__gmrActiveProject?.()||{id:'default',name:'Investigación'};
 function newButton(id,title,color){const b=document.createElement('button');b.id=id;b.type='button';b.textContent=title;document.body.appendChild(b);return b}
 function dialog(id,title){
@@ -17,9 +17,9 @@ function dialog(id,title){
 function chartSeries(snap){
   const available=[{key:'x',name:snap.source.xName+' (real)',get:r=>r.x},{key:'y',name:snap.source.yName+' (real)',get:r=>r.y}];
   snap.functions.forEach((fn,i)=>{
-    available.push({key:'f'+i,name:fn.label+' (calculado)',get:r=>r.values[i]?.estimate});
-    available.push({key:'e'+i,name:'E de '+fn.label,get:r=>r.values[i]?.error});
-    available.push({key:'p'+i,name:'%E de '+fn.label,get:r=>r.values[i]?.percent});
+    available.push({key:'f'+i,name:fn.label+(state.errorAxis==='x'?'⁻¹(Y) (calculado)':'(X) (calculado)'),get:r=>r.values[i]?.estimate});
+    available.push({key:'e'+i,name:'E en '+state.errorAxis.toUpperCase()+' de '+fn.label,get:r=>r.values[i]?.error});
+    available.push({key:'p'+i,name:'%E en '+state.errorAxis.toUpperCase()+' de '+fn.label,get:r=>r.values[i]?.percent});
   });return available;
 }
 function chartView(){
@@ -87,11 +87,12 @@ function setupChart(){
   const box=dialog('np-dashboard-panel','Dash Boards · Investigación matemática');
   box.querySelector('.gmr-research-body').innerHTML=`<div class="gmr-research-grid"><section class="gmr-research-side">
     <div class="gmr-research-group"><strong>Columnas para comparar</strong><div id="gmr-chart-series" class="gmr-series-list"></div></div>
-    <div class="gmr-research-group"><strong>Eje horizontal y representación</strong><label>Eje X <select id="gmr-chart-x"></select></label><label>Gráfico <select id="gmr-chart-type"><option value="line">Líneas</option><option value="scatter">Dispersión</option></select></label><label><span>Normalizar series 0–100 %</span><input id="gmr-chart-normalize" type="checkbox"></label></div>
+    <div class="gmr-research-group"><strong>Ejes y representación</strong><label>Error respecto de <select id="gmr-chart-error-axis"><option value="y">Y · vertical</option><option value="x">X · horizontal</option></select></label><label>Eje X <select id="gmr-chart-x"></select></label><label>Gráfico <select id="gmr-chart-type"><option value="line">Líneas</option><option value="scatter">Dispersión</option></select></label><label><span>Normalizar series 0–100 %</span><input id="gmr-chart-normalize" type="checkbox"></label></div>
     <div class="gmr-research-group"><strong>Filtrar eje horizontal</strong><label>Mínimo <input type="number" step="any" id="gmr-chart-min" placeholder="Todos"></label><label>Máximo <input type="number" step="any" id="gmr-chart-max" placeholder="Todos"></label></div>
     <button id="gmr-chart-png" class="gmr-research-btn">Exportar gráfico PNG</button></section>
     <section class="gmr-chart-wrap"><canvas id="gmr-dashboard-canvas" role="img" aria-label="Gráfico comparativo de datos y errores"></canvas><div id="gmr-chart-legend" class="gmr-legend"></div><p id="gmr-chart-status" class="gmr-research-note"></p></section></div>`;
   $('gmr-chart-x').onchange=e=>{state.axis=e.target.value;drawChart()};
+  $('gmr-chart-error-axis').onchange=e=>{state.errorAxis=e.target.value;chartView()};
   $('gmr-chart-type').onchange=e=>{state.chartType=e.target.value;drawChart()};
   $('gmr-chart-normalize').onchange=e=>{state.normalize=e.target.checked;drawChart()};
   for(const id of ['gmr-chart-min','gmr-chart-max'])$(id).addEventListener('input',drawChart);
