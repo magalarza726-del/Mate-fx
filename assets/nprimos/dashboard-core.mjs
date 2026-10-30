@@ -2,7 +2,7 @@
 export function equalSegments(points, count=3) {
   const values=points.map(p=>p[0]).filter(Number.isFinite);
   if(!values.length)return [];
-  const lo=Math.min(...values),hi=Math.max(...values),n=Math.min(20,Math.max(1,Math.trunc(count)||3));
+  const lo=Math.min(...values),hi=Math.max(...values),n=Math.min(100,Math.max(1,Math.trunc(count)||3));
   if(lo===hi)return [{min:lo,max:hi}];
   return Array.from({length:n},(_,i)=>({min:lo+(hi-lo)*i/n,max:lo+(hi-lo)*(i+1)/n}));
 }

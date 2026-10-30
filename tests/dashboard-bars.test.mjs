@@ -16,4 +16,16 @@ assert.deepEqual(segmentSummary(snap,ranges,'errors','error','y').groups.map(g=>
 assert.deepEqual(segmentSummary(snap,ranges,'actual','percent','y').groups[0].values,[15,17,14.5]);
 assert.deepEqual(segmentSummary(snap,ranges,'actual','percent','y').groups[1].values,[35,34,35]);
 assert.equal(equalSegments(snap.source.points,3).length,3);
+// Regression: up to 100 equal sections, even with sparse observations.
+const hundred=equalSegments(snap.source.points,100);
+assert.equal(hundred.length,100);
+assert.equal(hundred[0].min,0);
+assert.equal(hundred.at(-1).max,3);
+assert.equal(equalSegments(snap.source.points,101).length,100);
+const hundredErrors=segmentSummary(snap,hundred,'errors','percent','y');
+assert.equal(hundredErrors.groups.length,100);
+assert.equal(hundredErrors.groups.reduce((sum,g)=>sum+g.counts[0],0),4);
+const hundredActual=segmentSummary(snap,hundred,'actual','percent','y');
+assert.equal(hundredActual.groups.length,100);
+assert.equal(hundredActual.groups.reduce((sum,g)=>sum+g.counts[0],0),4);
 console.log('OK: barras por tramos, doble conteo evitado, real frente a calculado');

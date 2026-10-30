@@ -140,9 +140,13 @@ function drawBarChart(){
       const x=center-total/2+i*width,yy=ypos(v);
       ctx.fillStyle=colors[i%colors.length];ctx.fillRect(x,Math.min(zero,yy),Math.max(1,width-2),Math.max(1,Math.abs(yy-zero)));
     });
-    ctx.fillStyle='#475569';ctx.textAlign='center';ctx.save();ctx.translate(center,H-bottom+12);
-    if(groups.length>6)ctx.rotate(-Math.PI/5);
-    ctx.fillText(g.label,0,0);ctx.restore();
+    // Draw all the bars, but only enough X labels to remain legible at 100 sections.
+    const labelFrequency=Math.max(1,Math.ceil(groups.length/Math.max(4,Math.floor(plotW/75))));
+    if(j%labelFrequency===0||j===groups.length-1){
+      ctx.fillStyle='#475569';ctx.textAlign='center';ctx.save();ctx.translate(center,H-bottom+12);
+      if(groups.length>6)ctx.rotate(-Math.PI/5);
+      ctx.fillText(g.label,0,0);ctx.restore();
+    }
   });ctx.textAlign='start';
   const nonEmpty=groups.filter(g=>g.counts.some(n=>n>0)).length;
   stat.textContent=(mode==='errors'?'Error '+(metric==='percent'?'porcentual':'absoluto')+' promedio':'Media por tramo: real frente a calculado')+
@@ -160,7 +164,7 @@ function setupChart(){
     <div class="gmr-research-group gmr-series-control"><strong>Ejes y representación</strong><label>Error respecto de <select id="gmr-chart-error-axis"><option value="y">Y · vertical</option><option value="x">X · horizontal</option></select></label><label>Eje X <select id="gmr-chart-x"></select></label><label>Gráfico <select id="gmr-chart-type"><option value="line">Líneas</option><option value="scatter">Dispersión</option></select></label><label><span>Normalizar series 0–100 %</span><input id="gmr-chart-normalize" type="checkbox"></label></div>
     <div id="gmr-bars-options" class="gmr-research-group" hidden><strong>Configurar barras por secciones</strong>
       <label>División <select id="gmr-bar-segment-source"><option value="generator">Tramos del generador</option><option value="equal">Tramos iguales</option></select></label>
-      <label>Secciones iguales <input type="number" id="gmr-bar-count" min="1" max="20" value="3"></label>
+      <label>Secciones iguales <input type="number" id="gmr-bar-count" min="1" max="100" value="3"></label>
       <label class="gmr-bars-metric-control">Medir error <select id="gmr-bar-metric"><option value="percent">%E medio</option><option value="error">E absoluto medio</option></select></label>
       <label>Respecto de <select id="gmr-bar-axis"><option value="y">Y · vertical</option><option value="x">X · horizontal</option></select></label>
       <p class="gmr-research-note" id="gmr-bar-explanation">Los promedios se calculan con todas las observaciones válidas de cada tramo, no con una muestra.</p>
@@ -170,7 +174,7 @@ function setupChart(){
     <section class="gmr-chart-wrap"><canvas id="gmr-dashboard-canvas" role="img" aria-label="Gráfico comparativo de datos y errores"></canvas><div id="gmr-chart-legend" class="gmr-legend"></div><p id="gmr-chart-status" class="gmr-research-note"></p></section></div>`;
   box.querySelectorAll('[data-tab]').forEach(tab=>tab.addEventListener('click',()=>setDashboardTab(tab.dataset.tab)));
   $('gmr-bar-segment-source').onchange=e=>{state.segmentMode=e.target.value;$('gmr-bar-count').disabled=state.segmentMode!=='equal';drawChart()};
-  $('gmr-bar-count').onchange=e=>{state.barSegments=Math.max(1,Math.min(20,Number(e.target.value)||3));drawChart()};
+  $('gmr-bar-count').onchange=e=>{state.barSegments=Math.max(1,Math.min(100,Math.trunc(Number(e.target.value))||3));e.target.value=state.barSegments;drawChart()};
   $('gmr-bar-metric').onchange=e=>{state.barMetric=e.target.value;drawChart()};
   $('gmr-bar-axis').onchange=e=>{state.errorAxis=e.target.value;$('gmr-chart-error-axis').value=e.target.value;chartView()};
   $('gmr-chart-x').onchange=e=>{state.axis=e.target.value;drawChart()};
