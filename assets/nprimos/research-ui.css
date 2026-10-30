@@ -33,7 +33,7 @@
 @media(max-width:860px){.gmr-research-grid{grid-template-columns:1fr}.gmr-generator-settings{grid-template-columns:1fr 1fr}#gmr-dashboard-canvas{height:310px}}
 @media(max-width:600px){#np-dashboard-btn{bottom:192px;right:9px}#np-generator-btn{bottom:248px;right:9px}.gmr-research-overlay{padding:5px}.gmr-research-body{padding:10px}.gmr-generator-settings{grid-template-columns:1fr}.gmr-research-heading{padding:9px 12px}}
 
-/* Preferencias de tendencias y forma global de las funciones. */
+/* Búsqueda dirigida: casillas de tendencias y composición, adaptadas a escritorio/móvil. */
 .gmr-family-choices{display:grid;grid-template-columns:repeat(4,minmax(125px,1fr));gap:6px 12px}
 .gmr-composition-choices{display:flex;flex-wrap:wrap;gap:7px 14px}
 .gmr-family-choices label,.gmr-composition-choices label{display:inline-flex;justify-content:flex-start;align-items:center;gap:8px;cursor:pointer;border:1px solid #d5e1ec;border-radius:8px;padding:8px 10px;background:#fff;margin:0}
@@ -43,8 +43,7 @@
 @media(max-width:800px){.gmr-family-choices{grid-template-columns:repeat(2,minmax(130px,1fr))}.gmr-composition-choices{flex-direction:column}}
 @media(max-width:430px){.gmr-family-choices{grid-template-columns:1fr}}
 
-
-/* Los botones del gráfico no deben cubrir la tabla de investigación. */
+/* Los botones de acción pertenecen al gráfico, no a las ventanas de análisis. */
 body:has(#primeTablePanel.open) :is(#np-view-table,#np-dashboard-btn,#np-generator-btn,.gmr-data-open),
 body:has(.gmr-research-overlay:not([hidden])) :is(#np-view-table,#np-dashboard-btn,#np-generator-btn,.gmr-data-open){display:none!important}
 .gmr-dashboard-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:13px;border-bottom:1px solid #dce6f1;padding-bottom:12px}
@@ -55,3 +54,15 @@ body:has(.gmr-research-overlay:not([hidden])) :is(#np-view-table,#np-dashboard-b
 @media(max-width:680px){.gmr-dashboard-tabs{display:grid;grid-template-columns:1fr}.gmr-dashboard-tabs button{text-align:left}}
 
 .gmr-best-warning{background:#fff7ed;border-left-color:#e7a23a}
+/* Envolventes exponenciales: módulo independiente del generador tradicional. */
+#np-envelope-btn{position:fixed;right:14px;bottom:307px;z-index:4201;border:0;border-radius:12px;padding:12px 15px;background:#7053b7;color:#fff;font:700 13px system-ui;cursor:pointer;box-shadow:0 7px 20px #0002}
+#np-envelope-btn:hover{background:#523998}
+body:has(#primeTablePanel.open) #np-envelope-btn,body:has(.gmr-research-overlay:not([hidden])) #np-envelope-btn{display:none!important}
+#np-envelope-panel .gmr-research-body{display:flex;flex-direction:column;gap:10px}
+#env-preview{display:block;width:100%;height:290px;background:#fff;border:1px solid #dce5ef;border-radius:8px}
+#np-envelope-panel .env-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:9px}
+#np-envelope-panel .env-best-card{min-width:0;background:#ecf8f3;border:1px solid #c5e7d5;border-radius:8px;padding:10px}
+#np-envelope-panel .env-best-card h3{font-size:14px;margin:0 0 5px}
+#np-envelope-panel .env-best-card p{margin:4px 0 8px}
+#np-envelope-panel .env-best-card code{display:block;overflow-wrap:anywhere;margin:5px 0;font-size:12px}
+@media(max-width:600px){#np-envelope-btn{right:9px;bottom:305px}#env-preview{height:210px}}

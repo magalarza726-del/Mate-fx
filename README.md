@@ -105,7 +105,6 @@ En **nPrimos**, sobre el botón rojo de la tabla aparecen dos herramientas:
 
 - **Ver Dash Boards (amarillo)**: comparar columnas X/Y observadas, cada `fᵢ(x)` calculada, su error absoluto `E` y `%E`. Las series se seleccionan por casillas; admite gráfico de líneas/dispersión, eje X seleccionable (X, Y, índice), normalización individual 0–100 %, recorte por valores del eje horizontal y exportación PNG. Se alimenta de las mismas columnas y fórmulas que la tabla de investigación.
 - **Generador de funciones (verde)**: crear hasta `n` estructuras de función mediante búsqueda aleatoria y aprendizaje generacional opcional (selección/mutación de mejores candidatas), con pausa, reanudación y parada. Los coeficientes se ajustan por mínimos cuadrados; se clasifica por MAPE global en Y. Porcentajes no definidos (Y=0) se excluyen y funciones fuera del dominio se descartan.
-- **Precisión decimal del generador (0–3)**: permite limitar los decimales de exponentes, factores internos, coeficientes y constante. El redondeo ocurre antes de calcular y guardar los errores: el MAPE representa la función realmente mostrada. Los datos originales no se modifican. El historial CSV incluye el límite utilizado.
 - **Restricciones del generador**: 1–3 términos `hᵢ(x)`; cada uno usa como máximo 1 o 2 `x` (configurable), y constante `+c` opcional. Incluye términos `x`, `x^p`, `ln(x)`, `sqrt(x)`, `e^(kx)`, `sin(kx)`, `x ln(x)`, `x^x`, `x e^(kx)`, etc. Se combinan sin `eval` ni ejecución de código libre.
 - **Tramos configurables**: edición de rangos X mínimo/máximo y MAPE por tramo; cada resultado conserva los rangos usados. Cada función válida se almacena por proyecto mediante IndexedDB y el historial completo puede exportarse a CSV. Se pueden enviar funciones elegidas a Desmos como `f₁(x)`, `f₂(x)`, etc.
 - **Operación**: la generación corre en Web Worker para mantener la interfaz utilizable; los lotes ceden control para procesar pausa y reanudación. La persistencia de historial no implica ejecución en segundo plano después de cerrar la pestaña. Desmos requiere internet, pero las evaluaciones del generador son locales.
@@ -115,31 +114,47 @@ Pruebas: `node --test tests/analysis-core.test.mjs tests/expression-registry.tes
 **Precisión del historial:** el ajuste utiliza una muestra representativa de hasta 350 filas para mantener rápidas las iteraciones, pero el MAPE global y por tramos se evalúa sobre **todas las filas importadas**; la media registrada no se basa en una muestra.
 
 
-### Generador de funciones · límites numéricos
+## Mate-fx 4.7: límites numéricos en el generador
 
-En **Límites de los números generados**, junto a **Iniciar n iteraciones**, se configuran los **decimales máximos** (0, 1, 2, 3) y la **parte entera máxima** (9 unidades, 99 decenas, 999 centenas, 9999 miles). Aplican a coeficientes, exponentes, parámetros internos y constante, también si son negativos. El ajuste se cuantiza y limita antes de medir el MAPE; los datos originales se conservan. Una nueva generación reinicia la *mejor función actual* sin borrar el historial del proyecto. El historial y su CSV incluyen las dos restricciones para cada resultado.
+Los controles **Decimales máximos** (0, 1, 2, 3) y **Magnitud máxima (parte entera)** (unidades 0–9, decenas 0–99, centenas 0–999, miles 0–9999) están situados inmediatamente antes del botón **Iniciar n iteraciones**. Se aplican a los literales de las funciones generadas, incluidos coeficientes, exponentes, escalas y constantes; el signo no consume cifras. Los coeficientes ajustados se redondean y limitan antes de evaluar el error.
+
+Cada nueva generación reinicia la mejor función actual y conserva el historial de investigaciones. El historial registra ambos límites y permite exportar CSV.
+
+Pruebas: `node tests/generator-magnitude.test.mjs` y `python tests/smoke-generator-v47.py` (con Playwright/Chromium instalados).
 
 
 ### Generador 4.8 · tendencias y composición
 
-Casillas combinables: **Logarítmicas** (ln(x), ln(1+x), x ln(x)), **Exponenciales** (e^(kx), x e^(kx), x^x), **Polinómicas** (x, x^n con exponentes enteros positivos) y **Trigonométricas** (sin(kx), cos(kx), x sin(kx)). Desmarcar todas bloquea el inicio. El aprendizaje generacional solo reutiliza términos de las familias seleccionadas.
+Casillas combinables: **Logarítmicas** (`ln(x)`, `ln(1+x)`, `x ln(x)`), **Exponenciales** (`e^(kx)`, `x e^(kx)`, `x^x`), **Polinómicas** (`x`, `x^n`, con exponentes enteros positivos), y **Trigonométricas** (`sin(kx)`, `cos(kx)`, `x sin(kx)`). Si todas están desmarcadas, no se inicia la generación. Las funciones evolutivas heredan exclusivamente las familias permitidas.
 
-Tres composiciones: **suma** f₁ + f₂ + f₃, **producto** f₁ · f₂ · f₃ y **mixta** f₁ · f₂ + f₃. El número de términos admisible es de 1 a 3 para suma/producto; la mixta requiere exactamente 3. La constante opcional +c se suma al resultado final en cualquier forma. Se ajusta un solo coeficiente efectivo para cada producto porque los coeficientes individuales de factores multiplicativos no se pueden identificar unívocamente con los datos. Cada función conserva la composición y las tendencias utilizadas en el historial y en la exportación CSV.
+Tres composiciones: `suma` (f₁ + f₂ + f₃), `producto` (f₁ · f₂ · f₃), `mixta` (f₁ · f₂ + f₃). El número de términos va de 1 a 3 para suma/producto, mientras que la mixta requiere exactamente 3; la interfaz lo fija automáticamente. La constante opcional `+c` se añade al final de cualquiera de las tres. El ajuste por mínimos cuadrados utiliza un coeficiente efectivo para cada producto y uno adicional para el tercer término de la mezcla: ajustar coeficientes individuales de factores multiplicativos sería no identificable (muchas descomposiciones equivalentes). Cada generación guarda las tendencias habilitadas y la composición en el historial CSV, junto con los errores por tramos y límites numéricos.
 
+## Mate-fx 4.9 · Generación estable e investigación por tramos
 
-## Mate-fx 4.9 · Generación estable y dashboards por tramos
+- **Tasas exponentiales y trigonométricas:** ahora se escriben como `e^{p·x/s}` o `sin(p·x/s)` usando un divisor entero visible `s` permitido por la magnitud seleccionada. De esa forma se conserva un parámetro no nulo incluso con 0–1 decimales; el término sigue contando una sola aparición de `x`.
+- **Función útil, no repetida:** se rechazan candidatas cuya predicción no varía en las observaciones y se deduplican fórmulas idénticas dentro de cada generación. El historial previo se conserva hasta que el usuario lo borre.
+- **Ajuste relativo:** el cálculo de coeficientes usa mínimos cuadrados ponderados hacia el error relativo para acercar el ajuste al criterio posterior de evaluación MAPE. Se calculan los errores sobre los coeficientes realmente redondeados.
+- **Limpiar historial:** botón rojo dentro del generador, requiere confirmación y elimina únicamente las funciones guardadas del proyecto activo (IndexedDB y respaldo local). Detiene primero la generación y espera que termine de guardarse el último lote. No elimina el CSV, las investigaciones ni las funciones ya copiadas a Desmos.
+- **Dashboard en pestañas:** «Comparar series» (líneas/puntos), «Errores por tramos» (barras agrupadas con %E medio o E medio) y «Real vs. calculado» (barras con medias de las observaciones y las predicciones por tramo). Usa los intervalos del generador o de 1 a 20 secciones iguales.
+- **Controles flotantes:** los botones verde, amarillo, rojo y azul se ocultan al abrir la tabla de investigación o un dashboard, para no tapar datos.
+- **Pruebas:** `node tests/agua-stress.test.mjs`, `node tests/dashboard-bars.test.mjs`, `node tests/generator-fixes.test.mjs` y `python tests/ui-v49-browser.py` además de las pruebas anteriores.
 
-- **Escala X para tasas:** las funciones exponenciales y trigonométricas usan parámetros visibles del tipo \`e^{p·x/s}\`, donde tanto \`p\` como \`s\` cumplen el límite de decimales y magnitud. Esto evita redondear tasas pequeñas a cero y convertir funciones en constantes.
-- **Candidatas distintas:** no se guardan curvas degeneradas ni fórmulas LaTeX repetidas dentro de una generación. Los coeficientes se ajustan mediante mínimos cuadrados ponderados por error relativo para acercarse al objetivo MAPE.
-- **Limpiar historial:** botón con confirmación dentro del generador. Borra únicamente el historial de la investigación activa (IndexedDB o almacenamiento local), después de detener y guardar los últimos cambios; no borra proyectos, datos ni funciones copiadas a Desmos.
-- **Dash Boards con pestañas:** Comparar series; Errores por tramos (%E o error absoluto promedio por función); Real vs. calculado (barras de medias por tramo). Se emplean los tramos editados en el generador o 1–20 intervalos iguales.
-- **Interfaz:** los cuatro botones flotantes se ocultan mientras la tabla de investigación o un dashboard están abiertos.
-- **Rendimiento:** la actualización visual del historial se limita durante iteraciones rápidas, para evitar ordenar decenas de miles de filas continuamente.
+El promedio de error por tramos omite predicciones no definidas y valores con error porcentual no definido (valor real cero); el conteo de filas se indica por tramo. Los límites de tramos contiguos no cuentan el punto fronterizo dos veces.
 
-La agregación en los extremos compartidos de dos intervalos no duplica las observaciones. Los valores no definidos se excluyen de los promedios; el historial anterior permanece intacto hasta que el usuario elija borrarlo.
+### v5.0 · Selección por calidad de ajuste
 
+El generador distingue **Mejor candidata (sin ajuste aceptable)** de **Ajuste aceptable**. El umbral MAPE (1–100 %, por defecto 20 %) es configurable en «Límites de los números generados». La aceptación además requiere MAE normalizado (por el rango observado) no mayor que `max(15, umbral MAPE)` y penalización de tendencia ≤12, con cobertura ≥95 %. Estos valores son heurísticos, no garantizan una ley física ni una predicción fuera del dominio medido. En datos de rango prácticamente nulo la métrica normalizada puede ser inestable.
 
-### v5.0: Calidad del ajuste
-El generador distingue «Mejor candidata (sin ajuste aceptable)» de «Ajuste aceptable». El umbral MAPE es configurable entre 1 y 100 % (predeterminado 20). Para declarar aceptable también exige NMAE (MAE normalizado por el rango real) ≤ max(15 %, umbral MAPE), penalización por tendencia ≤12 y cobertura ≥95 %. Estas condiciones son heurísticas, no garantizan una ley física ni extrapolación fiable. En datos casi constantes, la normalización por rango puede resultar inestable.
+La clasificación mantiene MAPE como criterio principal, acompañado de 0,25 × NMAE y una penalización explícita si la pendiente de los últimos puntos observados difiere marcadamente de la predicha. La búsqueda infiere la dirección y una tasa inicial de crecimiento a partir de los datos para proponer exponenciales positivas/negativas según corresponda, conserva la exploración aleatoria y permite pequeñas correcciones discretas de coeficientes después del ajuste inicial. Todos los números de la fórmula publicada siguen respetando el límite de decimales y de magnitud. El historial guarda `MAPE`, `NMAE`, penalización, umbral y calidad, además del resto de sus metadatos originales; las entradas anteriores aparecen como «Histórico» si carecen de esas métricas.
 
-La búsqueda estima la dirección y una tasa de crecimiento para explorar exponentes positivos/negativos, preserva opciones aleatorias, refina coeficientes redondeados mediante pasos discretos y clasifica por MAPE + 0,25×NMAE + penalización de tendencia. Guarda las métricas en CSV e historial; los proyectos antiguos aparecen con «calidad no evaluada» y conservan sus datos. Los límites numéricos existentes siguen aplicándose.
+Pruebas: `node tests/generator-quality-v50.test.mjs`, `node tests/agua-quality-v50.test.mjs` y los demás `tests/*.test.mjs`.
+
+### v5.1 · Acotación exponencial (módulo independiente)
+
+Nuevo botón **◈ Acotación exponencial** en el graficador de nPrimos. Busca dos exponenciales positivas que encierren **todas las observaciones del tramo correspondiente**. Ofrece exponentes compartidos o independientes; centro aritmético, geométrico, armónico o comparación automática; modo global o por tramos configurados en el Generador; vista previa, métricas MAPE y ancho relativo de la envolvente; historial por proyecto, exportación CSV y envío de las tres curvas a Desmos.
+
+**n = número máximo TOTAL de intentos de búsqueda** (1 a 100 000) y no se multiplica por número de tramos. Por ejemplo, n=1000 y tres tramos significa 1000 intentos distribuidos entre los tres. La ejecución en Web Worker permite pausar, reanudar y detener la búsqueda. Los resultados del historial son mejoras obtenidas durante la búsqueda, no una fila por cada intento inválido o repetido. Al iniciar otra búsqueda, la mejor envolvente de esa ejecución empieza vacía y el historial anterior sigue disponible.
+
+El módulo solo acepta valores Y positivos; los intervalos acotan los puntos medidos, **no todos los valores intermedios ni futuros**. Las restricciones de decimales y magnitud se aplican a coeficientes y parámetros; si no es posible construir una pareja de cotas bajo esas restricciones, el sistema lo informa y no inventa resultados. La clasificación de candidatas combina MAPE del centro y un término adicional de anchura relativa, que también se informa por separado. Para tramos, las curvas publicadas en Desmos incluyen una restricción de dominio.
+
+Pruebas: `node tests/envelope-core.test.mjs`, `node tests/envelope-agua.test.mjs`, `python tests/envelope-browser.py`.
