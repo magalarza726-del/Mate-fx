@@ -76,6 +76,7 @@
   let renamingProjectId = null;
   window.__gmrPrimeValues = count => allPrimes.slice(0, Math.min(MAX_PRIMES, Math.max(0, Number(count) || 0))); 
 
+  window.__gmrActiveProject=()=>({id:currentProject?.id||'sin-proyecto',name:currentProject?.name||'Investigación'});
   init();
 
   function init() {

@@ -15,5 +15,6 @@ else{
    await import('./analysis-table.js');
    await import('./app.js');
    await import('../shared/lab.js');
+   await import('./research-ui.js');
  }catch(error){await offline(error)}
 }

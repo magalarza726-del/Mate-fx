@@ -97,3 +97,16 @@ En **nPrimos**, las tablas de datos (incluidos los 10 000 primos del ejemplo y l
 - Análisis local sin ejecutar código dinámico del usuario. Se reconocen las expresiones que admite el parser matemático seguro de Mate-fx. Las expresiones muy avanzadas de Desmos no se evalúan falsamente: muestran `—` con un aviso.
 
 Pruebas: `node tests/analysis-core.test.mjs`.
+
+
+## Actualización 4.5 · Dash Boards y generador de funciones
+
+En **nPrimos**, sobre el botón rojo de la tabla aparecen dos herramientas:
+
+- **Ver Dash Boards (amarillo)**: comparar columnas X/Y observadas, cada `fᵢ(x)` calculada, su error absoluto `E` y `%E`. Las series se seleccionan por casillas; admite gráfico de líneas/dispersión, eje X seleccionable (X, Y, índice), normalización individual 0–100 %, recorte por valores del eje horizontal y exportación PNG. Se alimenta de las mismas columnas y fórmulas que la tabla de investigación.
+- **Generador de funciones (verde)**: crear hasta `n` estructuras de función mediante búsqueda aleatoria y aprendizaje generacional opcional (selección/mutación de mejores candidatas), con pausa, reanudación y parada. Los coeficientes se ajustan por mínimos cuadrados; se clasifica por MAPE global en Y. Porcentajes no definidos (Y=0) se excluyen y funciones fuera del dominio se descartan.
+- **Restricciones del generador**: 1–3 términos `hᵢ(x)`; cada uno usa como máximo 1 o 2 `x` (configurable), y constante `+c` opcional. Incluye términos `x`, `x^p`, `ln(x)`, `sqrt(x)`, `e^(kx)`, `sin(kx)`, `x ln(x)`, `x^x`, `x e^(kx)`, etc. Se combinan sin `eval` ni ejecución de código libre.
+- **Tramos configurables**: edición de rangos X mínimo/máximo y MAPE por tramo; cada resultado conserva los rangos usados. Cada función válida se almacena por proyecto mediante IndexedDB y el historial completo puede exportarse a CSV. Se pueden enviar funciones elegidas a Desmos como `f₁(x)`, `f₂(x)`, etc.
+- **Operación**: la generación corre en Web Worker para mantener la interfaz utilizable; los lotes ceden control para procesar pausa y reanudación. La persistencia de historial no implica ejecución en segundo plano después de cerrar la pestaña. Desmos requiere internet, pero las evaluaciones del generador son locales.
+
+Pruebas: `node --test tests/analysis-core.test.mjs tests/expression-registry.test.mjs tests/generator-core.test.mjs`. La prueba de interfaz aislada es `python tests/research-inline-browser-test.py` (requiere Playwright y Chromium).

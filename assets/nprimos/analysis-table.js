@@ -198,6 +198,15 @@ function downloadAnalysis(){
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
   const a=document.createElement('a');a.href=url;a.download='analisis_'+currentTableLabel.replace(/[^a-z\d_-]+/gi,'_')+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
+
+// Shared snapshot: dashboards and search evaluate the same selected columns and
+// named Desmos functions as the investigation table, without copying datasets.
+window.__gmrResearchSnapshot=(mode='y')=>{
+  const source=dataSource();
+  const functions=definitions();
+  return {source,functions,mode,rows:buildRows(source.points,functions,mode)};
+};
+
 function setup(){
   const calc=calculatorReady();if(!calc){setTimeout(setup,100);return}state.calculator=calc;
   const button=document.createElement('button');button.type='button';button.id='np-view-table';button.textContent='▦ Ver tabla';button.setAttribute('aria-controls','primeTablePanel');
