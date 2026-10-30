@@ -153,8 +153,8 @@ function applyToDesmos(latex){
 }
 function exportHistory(){
   const count=Math.max(segmentConfig().length,...state.history.map(h=>(h.ranges||[]).length),0);
-  const heads=['iteracion','MAPE_global_%',...Array.from({length:count},(_,i)=>['tramo_'+(i+1)+'_x_min','tramo_'+(i+1)+'_x_max','tramo_'+(i+1)+'_MAPE_%']).flat(),'funcion_latex'];
-  const rows=[heads,...state.history.map(item=>[item.iteration,item.mape,...Array.from({length:count},(_,i)=>[item.ranges?.[i]?.min??'',item.ranges?.[i]?.max??'',item.perRange?.[i]??'']).flat(),item.latex])];
+  const heads=['iteracion','decimales_maximos','MAPE_global_%',...Array.from({length:count},(_,i)=>['tramo_'+(i+1)+'_x_min','tramo_'+(i+1)+'_x_max','tramo_'+(i+1)+'_MAPE_%']).flat(),'funcion_latex'];
+  const rows=[heads,...state.history.map(item=>[item.iteration,item.decimals??'',item.mape,...Array.from({length:count},(_,i)=>[item.ranges?.[i]?.min??'',item.ranges?.[i]?.max??'',item.perRange?.[i]??'']).flat(),item.latex])];
   const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(';')).join('\r\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.download='historial_funciones_'+state.project+'.csv';a.href=url;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
@@ -168,7 +168,7 @@ function stopGenerator(){if(state.worker){state.worker.terminate();state.worker=
 function runGenerator(){
   const snap=snapshot();if(!snap||snap.source.points.length<5){showGenStatus('Importa una tabla con al menos 5 puntos válidos antes de iniciar.');return}
   const ranges=segmentConfig();if(!ranges.length||ranges.some(r=>!Number.isFinite(r.min)||!Number.isFinite(r.max)||r.min>r.max)){showGenStatus('Revisa los tramos: mínimo debe ser menor o igual al máximo.');return}
-  const config={n:Math.max(1,Math.min(100000,Number($('gmr-gen-n').value)||100)),generational:$('gmr-gen-learning').checked,maxTerms:Number($('gmr-gen-terms').value),maxX:Number($('gmr-gen-xs').value),constant:$('gmr-gen-c').checked,ranges};
+  const config={n:Math.max(1,Math.min(100000,Number($('gmr-gen-n').value)||100)),generational:$('gmr-gen-learning').checked,maxTerms:Number($('gmr-gen-terms').value),maxX:Number($('gmr-gen-xs').value),constant:$('gmr-gen-c').checked,decimals:Number($('gmr-gen-decimals').value),ranges};
   stopGenerator();const thisProject=project().id;state.startedProject=thisProject;state.done=0;state.total=config.n;state.running=true;state.paused=false;
   state.worker=new Worker(new URL('./generator-worker.mjs',import.meta.url),{type:'module'});
   const worker=state.worker;
@@ -196,9 +196,10 @@ function setupGenerator(){
     <label>N.º de iteraciones (n) <input type="number" id="gmr-gen-n" min="1" max="100000" value="1000"></label>
     <label>Máximo de términos <select id="gmr-gen-terms"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option></select></label>
     <label>Máximo de x por término <select id="gmr-gen-xs"><option value="1">1</option><option value="2" selected>2</option></select></label>
+    <label>Máximo de decimales en la función <select id="gmr-gen-decimals"><option value="0">0 · solo enteros</option><option value="1">1 decimal</option><option value="2">2 decimales</option><option value="3" selected>3 decimales</option></select></label>
     <label>Aprendizaje generacional <input type="checkbox" id="gmr-gen-learning" checked></label>
     <label>Permitir constante +c <input type="checkbox" id="gmr-gen-c" checked></label>
-  </div><p class="gmr-research-note">Estructura: h₁(x) + h₂(x) + h₃(x) + c. Cada hᵢ contiene 1–2 apariciones de x, independientemente del número de términos. Se ajustan los coeficientes por mínimos cuadrados y se compara el error relativo medio en Y (MAPE). Las filas con Y=0 no permiten porcentaje y se excluyen del promedio.</p></div>
+  </div><p class="gmr-research-note">Estructura: h₁(x) + h₂(x) + h₃(x) + c. Cada hᵢ contiene 1–2 apariciones de x, independientemente del número de términos. Los coeficientes y parámetros se redondean al máximo de decimales elegido ANTES de evaluar y guardar cada función; los datos y errores mantienen su precisión original. Se ajustan los coeficientes por mínimos cuadrados y se compara el error relativo medio en Y (MAPE). Las filas con Y=0 no permiten porcentaje y se excluyen del promedio.</p></div>
   <div class="gmr-research-group"><strong>Tramos editables de X (para error relativo promedio)</strong><div id="gmr-intervals" class="gmr-segments"></div><button class="gmr-research-btn secondary" type="button" id="gmr-add-interval">＋ Añadir tramo</button></div>
   <div class="gmr-research-group"><div class="gmr-research-buttons"><button class="gmr-research-btn success" id="gmr-gen-start">Iniciar n iteraciones</button><button class="gmr-research-btn secondary" id="gmr-gen-pause">Pausar</button><button class="gmr-research-btn secondary" id="gmr-gen-resume">Reanudar</button><button class="gmr-research-btn danger" id="gmr-gen-stop">Detener</button><button class="gmr-research-btn" id="gmr-gen-export">Exportar historial CSV</button></div><div class="gmr-status-line" style="margin-top:12px"><progress id="gmr-gen-progress" max="1" value="0"></progress><span id="gmr-gen-progress-label">0 / 0</span><strong id="gmr-gen-status">Listo</strong></div></div>
   <div id="gmr-gen-best" class="gmr-best">Todavía no hay una función ganadora.</div><div class="gmr-research-group"><strong>Historial · mejores funciones</strong><small id="gmr-gen-count"></small><div class="gmr-history"><table><thead><tr id="gmr-gen-history-head"></tr></thead><tbody id="gmr-gen-history"></tbody></table></div><p class="gmr-research-note">Se muestran las 80 funciones de menor error. El historial completo se conserva por proyecto en el navegador y se puede exportar en CSV.</p></div>`;

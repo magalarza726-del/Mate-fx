@@ -7,7 +7,20 @@ export const BASIS = Object.freeze([
   {kind:'xover',uses:2},{kind:'xsin',uses:2}
 ]);
 const params=[0.125,0.25,0.5,0.75,1,1.25,1.5,2,2.5,3];
-const fmt=n=>Number(n.toPrecision(6)).toString();
+// Limite de decimales de los literales de cada funcion generada.
+export function decimalLimit(value=3){
+  const n=Number(value);
+  return Number.isFinite(n)?Math.max(0,Math.min(3,Math.trunc(n))):3;
+}
+export function roundNumber(value,decimals=3){
+  if(!Number.isFinite(value))return NaN;
+  const rounded=Number(value.toFixed(decimalLimit(decimals)));
+  return Object.is(rounded,-0)?0:rounded;
+}
+const fmt=(n,decimals=3)=>{
+  const rounded=roundNumber(n,decimals);
+  return Number.isFinite(rounded)?String(rounded):'NaN';
+};
 const choice=(items,rng)=>items[Math.floor(rng()*items.length)];
 const rand=(a,b,rng)=>a+(b-a)*rng();
 const bounded=n=>Number.isFinite(n)&&Math.abs(n)<1e140?n:NaN;
@@ -31,7 +44,7 @@ export function basisValue(term,x){
     default:return NaN;
   }
 }
-export function makeTerm(kind,maxAbsX,rng=Math.random){
+export function makeTerm(kind,maxAbsX,rng=Math.random,decimals=3){
   const uses=BASIS.find(a=>a.kind===kind)?.uses;
   if(!uses)throw Error('Tipo de término desconocido');
   const scale=Math.max(1,maxAbsX);
@@ -39,23 +52,27 @@ export function makeTerm(kind,maxAbsX,rng=Math.random){
   if(kind==='power')p=choice(params,rng);
   if(['exp','xexp','sin','cos','xsin'].includes(kind))p=rand(-5,5,rng)/scale;
   if(['reciprocal','xover'].includes(kind))p=rand(.15,.85,rng)*scale*(rng()<.5?1:-1);
+  p=roundNumber(p,decimals);
+  // x^0 deja de depender de x.
+  if(kind==='power'&&p===0)p=1;
   return {kind,uses,p};
 }
 export function makeCandidate(config,maxAbsX,rng=Math.random,elite=null){
   const maxTerms=Math.max(1,Math.min(3,Math.floor(config.maxTerms)));
   const maxX=Math.max(1,Math.min(2,Math.floor(config.maxX)));
   const options=BASIS.filter(k=>k.uses<=maxX);
+  const decimals=decimalLimit(config.decimals);
   let terms;
   if(elite?.terms?.length&&rng()<.72){
     terms=elite.terms.map(t=>({...t})).slice(0,maxTerms);
     const pos=Math.floor(rng()*Math.max(1,terms.length));
-    if(rng()<.5){terms[pos]=makeTerm(choice(options,rng).kind,maxAbsX,rng)}
-    else if(terms[pos]){const old=terms[pos];terms[pos]=makeTerm(old.kind,maxAbsX,rng);terms[pos].p=old.p*.75+terms[pos].p*.25}
-    if(rng()<.14&&terms.length<maxTerms)terms.push(makeTerm(choice(options,rng).kind,maxAbsX,rng));
+    if(rng()<.5){terms[pos]=makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals)}
+    else if(terms[pos]){const old=terms[pos];terms[pos]=makeTerm(old.kind,maxAbsX,rng,decimals);terms[pos].p=roundNumber(old.p*.75+terms[pos].p*.25,decimals)}
+    if(rng()<.14&&terms.length<maxTerms)terms.push(makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals));
     if(rng()<.12&&terms.length>1)terms.splice(Math.floor(rng()*terms.length),1);
   }else{
     const n=1+Math.floor(rng()*maxTerms);
-    terms=Array.from({length:n},()=>makeTerm(choice(options,rng).kind,maxAbsX,rng));
+    terms=Array.from({length:n},()=>makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals));
   }
   return {terms,constant:!!config.constant};
 }
@@ -75,7 +92,7 @@ function solve(A,b){
   }
   return M.map(row=>row[n]);
 }
-export function fitCandidate(candidate,points){
+export function fitCandidate(candidate,points,decimals=3){
   const n=candidate.terms.length+(candidate.constant?1:0);
   const rows=[];
   for(const [x,y] of points){
@@ -99,8 +116,10 @@ export function fitCandidate(candidate,points){
   for(let i=0;i<n;i++)A[i][i]+=Math.max(1e-12,trace*1e-10);
   const result=solve(A,b);
   if(!result||result.some(v=>!Number.isFinite(v)))return null;
-  const coefs=result.map((v,i)=>v/scales[i]);
-  return {...candidate,coefs};
+  const digits=decimalLimit(decimals);
+  const coefs=result.map((v,i)=>roundNumber(v/scales[i],digits));
+  if(coefs.some(v=>!Number.isFinite(v)||Math.abs(v)>=1e21))return null;
+  return {...candidate,coefs,decimals:digits};
 }
 export function predict(model,x){
   if(!model?.coefs)return NaN;
@@ -125,8 +144,8 @@ export function scoreModel(model,points,ranges){
   const perRange=intervals.map(r=>r.invalid>0||r.count===0?null:r.total/r.count);
   return {mape:invalid>0?Infinity:mape,coverage,perRange};
 }
-function latexTerm(term){
-  const p=fmt(term.p);
+function latexTerm(term,decimals){
+  const p=fmt(term.p,decimals);
   switch(term.kind){
     case 'x':return 'x';case 'power':return `x^{${p}}`;
     case 'ln':return '\\ln(x)';case 'log1p':return '\\ln(1+x)';
@@ -140,9 +159,10 @@ function latexTerm(term){
   }
 }
 export function modelToLatex(model){
+  const decimals=decimalLimit(model?.decimals);
   if(!model?.coefs||!validCandidate(model,{maxTerms:3,maxX:2,constant:true}))return null;
-  const parts=model.terms.map((term,i)=>`(${fmt(model.coefs[i])})\\cdot ${latexTerm(term)}`);
-  if(model.constant)parts.push(`(${fmt(model.coefs[model.terms.length])})`);
+  const parts=model.terms.map((term,i)=>`(${fmt(model.coefs[i],decimals)})\\cdot ${latexTerm(term,decimals)}`);
+  if(model.constant)parts.push(`(${fmt(model.coefs[model.terms.length],decimals)})`);
   return parts.join('+');
 }
 export function subsample(points,limit=350){
