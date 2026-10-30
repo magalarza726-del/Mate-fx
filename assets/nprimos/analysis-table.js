@@ -1,57 +1,43 @@
 /** nPrimos 4.3 — research results stay outside Desmos' expressions sidebar. */
 import {readNumber, numericFunction, buildRows} from './analysis-core.mjs';
+import {getFunctionDefinition, planAutomaticNames} from './expression-registry.mjs';
 
 const $=id=>document.getElementById(id);
 const calculatorReady=()=>window.__nPrimosCalculator;
 const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const formatNumber=n=>!Number.isFinite(n)?'—':Math.abs(n)>1e8||Math.abs(n)>0&&Math.abs(n)<1e-5?n.toExponential(5):n.toLocaleString('es-EC',{maximumFractionDigits:6});
 const formatPercent=n=>Number.isFinite(n)?n.toLocaleString('es-EC',{minimumFractionDigits:3,maximumFractionDigits:3})+' %':'—';
-const functionRegex=/^\s*((?:[a-zA-Z]|\\[a-zA-Z]+)(?:_\{[^}]+\})?)\s*(?:\\left)?\(\s*x\s*(?:\\right)?\)\s*=/;
-const state={calculator:null,source:null,mode:'y',sortKey:'index',sortDir:1,order:[],filters:{},page:0,pageSize:100,raw:[],columns:[],tableKey:'',scheduled:0,known:new Set(),labelTimer:0};
+const state={calculator:null,source:null,mode:'y',sortKey:'index',sortDir:1,order:[],filters:{},page:0,pageSize:100,raw:[],columns:[],tableKey:'',scheduled:0,labelTimer:0,normalizing:false};
 const excelData={dataset:null,xColumn:'__index__',yColumn:0};
 let allData=[];
 let currentTableLabel='';
 
+function visibleExpressions(){
+  const c=state.calculator;
+  return c?.getExpressions?.() || c?.getState?.()?.expressions?.list || [];
+}
 function definitions(){
-  const list=state.calculator?.getState()?.expressions?.list || [];
-  return list.filter(e=>e&&e.type==='expression'&&e.latex&&!e.secret&&!String(e.id).startsWith('__'))
-    .map(e=>{const match=String(e.latex).match(functionRegex);
-      return match?{id:String(e.id),name:match[1],label:match[1].replace(/_\{(\d+)\}/g,(_,n)=>String(n).replace(/0/g,'₀').replace(/1/g,'₁').replace(/2/g,'₂').replace(/3/g,'₃').replace(/4/g,'₄').replace(/5/g,'₅').replace(/6/g,'₆').replace(/7/g,'₇').replace(/8/g,'₈').replace(/9/g,'₉')).replace(/\\/g,''),latex:String(e.latex),evaluate:numericFunction(e.latex)}:null;
+  return visibleExpressions().filter(e=>e && (!e.type || e.type==='expression') && e.latex && !e.secret && !String(e.id).startsWith('__'))
+    .map(e=>{const def=getFunctionDefinition(e.latex);
+      return def?{id:String(e.id),...def,latex:String(e.latex),evaluate:numericFunction(e.latex)}:null;
     }).filter(Boolean);
 }
-
-function nextOrdinal(items){
-  const used=new Set();
-  for(const item of items){const m=String(item.latex||'').match(/f_\{(\d+)\}\s*\(/);if(m)used.add(+m[1])}
-  let i=1;while(used.has(i))i++;return i;
-}
 function normalizeExpressions(){
-  const c=state.calculator;if(!c)return;
-  const items=c.getState()?.expressions?.list||[];
-  let next=nextOrdinal(items),changed=false;
-  for(const item of items){
-    const id=String(item.id||'');if(!id||id.startsWith('__'))continue;
-    if(item.type==='expression'&&!String(item.latex||'').trim()&&!state.known.has(id)) continue;
-    if(item.type==='table' || (item.type==='expression' && item.latex && !functionRegex.test(item.latex) && !state.known.has(id))) {
-      if(item.type==='table'){
-        // El API no garantiza `secret` en tablas; ocultamos tablas comunes
-        // como listas de puntos, preservando sus valores cuando son numéricos.
-        hideLegacyTable(item);
-        state.known.add(id);continue;
-      }
-      const latex=String(item.latex||'').trim();
-      // A parameter (a=...) remains a hidden dependency; a formula is assigned f_i(x).
-      if(/^(?!y\s*=)[a-zA-Z](?:_\{[^}]+\})?\s*=/.test(latex)) {
-        try{c.setExpression({id,secret:true});changed=true}catch(_){}
-      }else if(latex&&!/^(?:\(|\\left\()/.test(latex)) {
-        let body=latex.replace(/^y\s*=/,'');
-        try{c.setExpression({id,latex:`f_{${next++}}(x)=${body}`,secret:false});changed=true}catch(_){}
-      }
+  const c=state.calculator;
+  if(!c || state.normalizing)return;
+  const changes=planAutomaticNames(visibleExpressions());
+  if(!changes.length) {updateSoon(60);return;}
+  state.normalizing=true;
+  try {
+    for(const change of changes) {
+      // setExpression updates the existing row by ID; it preserves the user's
+      // color, style and saved project, unlike deleting/recreating the row.
+      c.setExpression(change);
     }
-    state.known.add(id);
-  }
-  updateSoon(140);
-  if(changed)setTimeout(()=>window.__gmrSaveNPrimos?.(),250);
+  } finally {state.normalizing=false}
+  updateSoon(80);
+  clearTimeout(state.labelTimer);
+  state.labelTimer=setTimeout(()=>window.__gmrSaveNPrimos?.(),320);
 }
 function hideLegacyTable(item){
   if(!state.calculator || item.secret===true)return;
@@ -73,14 +59,11 @@ function hideLegacyTable(item){
   }
 }
 function storeKnown(){
-  state.known=new Set((state.calculator?.getState()?.expressions?.list||[]).map(x=>String(x.id||'')));
-  // Legacy tables, point lists and auxiliary parameters keep affecting the plot,
-  // but the left Desmos editor displays user functions only.
-  for(const e of state.calculator?.getState()?.expressions?.list||[]) {
-    const nonFunction=e.type==='expression' && e.latex && !functionRegex.test(e.latex);
-    if(e.type==='table')hideLegacyTable(e);
-    else if(nonFunction&&!e.secret)try{state.calculator.setExpression({id:e.id,secret:true})}catch(_){}
-  }
+  // Don't mark existing empty rows as permanently known: the first blank row
+  // is precisely the row users normally type their first formula into.
+  // Migrate old visible data tables without hiding unlabelled formulas.
+  for(const e of visibleExpressions()) if(e.type==='table')hideLegacyTable(e);
+  normalizeExpressions();
 }
 function updateSoon(ms=130){clearTimeout(state.scheduled);state.scheduled=setTimeout(refresh,ms)}
 function currentDataset(){return excelData.dataset || null}
@@ -232,7 +215,7 @@ function setup(){
   panel.querySelector('.panel-header').after(toolbar,note);
   panel.querySelector('.table-wrap').after(footer);
   $('tableBtn')?.classList.add('np-hide-old-table-btn');
-  button.addEventListener('click',()=>{$('tableBtn')?.click();button.setAttribute('aria-expanded',String(panel.classList.contains('open')))});
+  button.addEventListener('click',()=>{normalizeExpressions();$('tableBtn')?.click();button.setAttribute('aria-expanded',String(panel.classList.contains('open')))});
   $('closeTableBtn')?.addEventListener('click',()=>button.setAttribute('aria-expanded','false'));
   $('np-error-axis').addEventListener('change',e=>{state.mode=e.target.value;state.page=0;state.tableKey='';updateSoon(0)});
   $('np-pages').addEventListener('change',e=>{state.pageSize=Number(e.target.value)||100;state.page=0;updateSoon(0)});
@@ -243,7 +226,7 @@ function setup(){
   const obs=new MutationObserver(()=>{if(panel.classList.contains('open'))updateSoon(0)});
   obs.observe(panel,{attributes:true,attributeFilter:['class']});
   calc.observeEvent('change.gmrAnalysis',(_name,event)=>{
-    if(event?.isUserInitiated){clearTimeout(state.labelTimer);state.labelTimer=setTimeout(normalizeExpressions,850)}
+    if(event?.isUserInitiated){clearTimeout(state.labelTimer);state.labelTimer=setTimeout(normalizeExpressions,900)}
     updateSoon(200);
   });
   document.addEventListener('change',e=>{if(e.target?.id==='primeCountInput'||e.target?.id==='primeCountSlider')updateSoon(80)});
