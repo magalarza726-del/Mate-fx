@@ -118,3 +118,10 @@ Pruebas: `node --test tests/analysis-core.test.mjs tests/expression-registry.tes
 ### Generador de funciones · límites numéricos
 
 En **Límites de los números generados**, junto a **Iniciar n iteraciones**, se configuran los **decimales máximos** (0, 1, 2, 3) y la **parte entera máxima** (9 unidades, 99 decenas, 999 centenas, 9999 miles). Aplican a coeficientes, exponentes, parámetros internos y constante, también si son negativos. El ajuste se cuantiza y limita antes de medir el MAPE; los datos originales se conservan. Una nueva generación reinicia la *mejor función actual* sin borrar el historial del proyecto. El historial y su CSV incluyen las dos restricciones para cada resultado.
+
+
+### Generador 4.8 · tendencias y composición
+
+Casillas combinables: **Logarítmicas** (ln(x), ln(1+x), x ln(x)), **Exponenciales** (e^(kx), x e^(kx), x^x), **Polinómicas** (x, x^n con exponentes enteros positivos) y **Trigonométricas** (sin(kx), cos(kx), x sin(kx)). Desmarcar todas bloquea el inicio. El aprendizaje generacional solo reutiliza términos de las familias seleccionadas.
+
+Tres composiciones: **suma** f₁ + f₂ + f₃, **producto** f₁ · f₂ · f₃ y **mixta** f₁ · f₂ + f₃. El número de términos admisible es de 1 a 3 para suma/producto; la mixta requiere exactamente 3. La constante opcional +c se suma al resultado final en cualquier forma. Se ajusta un solo coeficiente efectivo para cada producto porque los coeficientes individuales de factores multiplicativos no se pueden identificar unívocamente con los datos. Cada función conserva la composición y las tendencias utilizadas en el historial y en la exportación CSV.

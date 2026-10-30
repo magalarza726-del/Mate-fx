@@ -3,6 +3,8 @@ import {modelToLatex} from './generator-core.mjs';
 const $=id=>document.getElementById(id);
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nfmt=v=>Number.isFinite(v)?v.toLocaleString('es-EC',{maximumFractionDigits:4}):'—';
+const formLabel=form=>({sum:'f₁ + f₂ + f₃',product:'f₁ · f₂ · f₃',pair_plus:'f₁ · f₂ + f₃'}[form]||'Suma (versión anterior)');
+const familyNames={logarithmic:'Logarítmicas',exponential:'Exponenciales',polynomial:'Polinómicas',trigonometric:'Trigonométricas'};
 const colors=['#2672ba','#e47c37','#269767','#aa51b3','#dd4e68','#e2af32','#31465e','#26a8b5','#a47c35'];
 const state={project:'',history:[],best:null,worker:null,running:false,paused:false,done:0,total:0,seriesSelected:new Set(['y']),axis:'x',errorAxis:'y',chartType:'line',normalize:false,ranges:[],currentPoints:[],startedProject:'',pendingWrites:Promise.resolve(),hasStartedRun:false};
 const snapshot=()=>window.__gmrResearchSnapshot?.(state.errorAxis)||null;
@@ -125,11 +127,11 @@ function historyRows(){
   const nSegments=Math.max(segmentConfig().length,...state.history.map(h=>(h.ranges||[]).length),0);
   $('gmr-gen-count').textContent=state.history.length.toLocaleString('es-EC')+' funciones válidas guardadas';
   for(const h of sorted){
-    const tr=document.createElement('tr');const cells=[h.iteration,h.decimals??'—',h.maxInteger??'—',nfmt(h.mape)+' %',...Array.from({length:nSegments},(_,i)=>{const r=h.ranges?.[i],v=h.perRange?.[i];return r?(nfmt(r.min)+'–'+nfmt(r.max)+': '+(v==null?'—':nfmt(v)+' %')):'—'}),h.latex];
+    const tr=document.createElement('tr');const cells=[h.iteration,h.decimals??'—',h.maxInteger??'—',formLabel(h.composition),(h.families||[]).map(f=>familyNames[f]||f).join(', ')||'Todas',nfmt(h.mape)+' %',...Array.from({length:nSegments},(_,i)=>{const r=h.ranges?.[i],v=h.perRange?.[i];return r?(nfmt(r.min)+'–'+nfmt(r.max)+': '+(v==null?'—':nfmt(v)+' %')):'—'}),h.latex];
     for(const v of cells){const td=document.createElement('td');td.textContent=String(v);tr.append(td)}
     const action=document.createElement('td');const b=document.createElement('button');b.className='gmr-apply';b.textContent='Añadir a Desmos';b.onclick=()=>applyToDesmos(h.latex);action.append(b);tr.append(action);body.append(tr);
   }
-  const head=$('gmr-gen-history-head');head.replaceChildren();['Iteración','Decimales','Límite entero','MAPE global',...Array.from({length:nSegments},(_,i)=>`Tramo ${i+1} (X / %E)`),'Función','Acción'].forEach(label=>{const th=document.createElement('th');th.textContent=label;head.append(th)});
+  const head=$('gmr-gen-history-head');head.replaceChildren();['Iteración','Decimales','Límite entero','Estructura','Tendencias','MAPE global',...Array.from({length:nSegments},(_,i)=>`Tramo ${i+1} (X / %E)`),'Función','Acción'].forEach(label=>{const th=document.createElement('th');th.textContent=label;head.append(th)});
 }
 function showGenStatus(label){
   $('gmr-gen-status').textContent=label;$('gmr-gen-progress').value=state.done;
@@ -153,8 +155,8 @@ function applyToDesmos(latex){
 }
 function exportHistory(){
   const count=Math.max(segmentConfig().length,...state.history.map(h=>(h.ranges||[]).length),0);
-  const heads=['iteracion','decimales_maximos','limite_parte_entera','MAPE_global_%',...Array.from({length:count},(_,i)=>['tramo_'+(i+1)+'_x_min','tramo_'+(i+1)+'_x_max','tramo_'+(i+1)+'_MAPE_%']).flat(),'funcion_latex'];
-  const rows=[heads,...state.history.map(item=>[item.iteration,item.decimals??'',item.maxInteger??'',item.mape,...Array.from({length:count},(_,i)=>[item.ranges?.[i]?.min??'',item.ranges?.[i]?.max??'',item.perRange?.[i]??'']).flat(),item.latex])];
+  const heads=['iteracion','decimales_maximos','limite_parte_entera','forma_funcion','tendencias_habilitadas','MAPE_global_%',...Array.from({length:count},(_,i)=>['tramo_'+(i+1)+'_x_min','tramo_'+(i+1)+'_x_max','tramo_'+(i+1)+'_MAPE_%']).flat(),'funcion_latex'];
+  const rows=[heads,...state.history.map(item=>[item.iteration,item.decimals??'',item.maxInteger??'',item.composition||'sum',(item.families||[]).join('|'),item.mape,...Array.from({length:count},(_,i)=>[item.ranges?.[i]?.min??'',item.ranges?.[i]?.max??'',item.perRange?.[i]??'']).flat(),item.latex])];
   const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(';')).join('\r\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.download='historial_funciones_'+state.project+'.csv';a.href=url;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
@@ -168,7 +170,11 @@ function stopGenerator(){if(state.worker){state.worker.terminate();state.worker=
 function runGenerator(){
   const snap=snapshot();if(!snap||snap.source.points.length<5){showGenStatus('Importa una tabla con al menos 5 puntos válidos antes de iniciar.');return}
   const ranges=segmentConfig();if(!ranges.length||ranges.some(r=>!Number.isFinite(r.min)||!Number.isFinite(r.max)||r.min>r.max)){showGenStatus('Revisa los tramos: mínimo debe ser menor o igual al máximo.');return}
-  const config={n:Math.max(1,Math.min(100000,Number($('gmr-gen-n').value)||100)),generational:$('gmr-gen-learning').checked,maxTerms:Number($('gmr-gen-terms').value),maxX:Number($('gmr-gen-xs').value),constant:$('gmr-gen-c').checked,decimals:Number($('gmr-gen-decimals').value),maxInteger:Number($('gmr-gen-max-integer').value),ranges};
+  const families=[...document.querySelectorAll('.gmr-gen-family:checked')].map(ch=>ch.value);
+  if(!families.length){showGenStatus('Selecciona al menos una tendencia: logarítmica, exponencial, polinómica o trigonométrica.');return}
+  const composition=document.querySelector('input[name="gmr-gen-composition"]:checked')?.value||'sum';
+  if(composition==='pair_plus'&&Number($('gmr-gen-terms').value)<3){showGenStatus('La estructura f₁·f₂ + f₃ necesita exactamente tres términos.');return}
+  const config={n:Math.max(1,Math.min(100000,Number($('gmr-gen-n').value)||100)),generational:$('gmr-gen-learning').checked,maxTerms:Number($('gmr-gen-terms').value),maxX:Number($('gmr-gen-xs').value),constant:$('gmr-gen-c').checked,decimals:Number($('gmr-gen-decimals').value),maxInteger:Number($('gmr-gen-max-integer').value),families,composition,ranges};
   stopGenerator();const thisProject=project().id;state.startedProject=thisProject;state.done=0;state.total=config.n;state.running=true;state.paused=false;state.best=null;state.hasStartedRun=true;
   // Preserve prior runs in the history, but evaluate 'best' only for this run.
   state.worker=new Worker(new URL('./generator-worker.mjs',import.meta.url),{type:'module'});
@@ -200,6 +206,18 @@ function setupGenerator(){
     <label>Aprendizaje generacional <input type="checkbox" id="gmr-gen-learning" checked></label>
     <label>Permitir constante +c <input type="checkbox" id="gmr-gen-c" checked></label>
   </div><p class="gmr-research-note">Estructura: h₁(x) + h₂(x) + h₃(x) + c. Cada hᵢ contiene 1–2 apariciones de x, independientemente del número de términos. Los coeficientes y parámetros se redondean al máximo de decimales elegido ANTES de evaluar y guardar cada función; los datos y errores mantienen su precisión original. Se ajustan los coeficientes por mínimos cuadrados y se compara el error relativo medio en Y (MAPE). Las filas con Y=0 no permiten porcentaje y se excluyen del promedio.</p></div>
+
+  <div class="gmr-research-group"><strong>Preferencia de tendencias (elige una o varias)</strong><div class="gmr-family-choices">
+    <label><input type="checkbox" class="gmr-gen-family" value="logarithmic" checked> Logarítmicas</label>
+    <label><input type="checkbox" class="gmr-gen-family" value="exponential" checked> Exponenciales</label>
+    <label><input type="checkbox" class="gmr-gen-family" value="polynomial" checked> Polinómicas</label>
+    <label><input type="checkbox" class="gmr-gen-family" value="trigonometric" checked> Trigonométricas</label>
+  </div><p class="gmr-research-note">Solo se utilizan términos de las familias seleccionadas. Polinómicas: potencias enteras de x; x·ln(x) pertenece a logarítmicas, x·sin(kx) a trigonométricas.</p></div>
+  <div class="gmr-research-group"><strong>Forma de la función mayor</strong><div class="gmr-composition-choices" role="radiogroup" aria-label="Forma de la función mayor">
+    <label><input type="radio" name="gmr-gen-composition" value="sum" checked> f(x) = f₁(x) + f₂(x) + f₃(x)</label>
+    <label><input type="radio" name="gmr-gen-composition" value="product"> f(x) = f₁(x) · f₂(x) · f₃(x)</label>
+    <label><input type="radio" name="gmr-gen-composition" value="pair_plus"> f(x) = f₁(x) · f₂(x) + f₃(x)</label>
+  </div><p class="gmr-research-note">Suma y producto respetan el máximo de 1 a 3 términos. La forma mixta requiere tres términos. Con constante activada se añade +c al resultado final. Cada producto tiene un factor de escala ajustado por mínimos cuadrados.</p></div>
   <div class="gmr-research-group"><strong>Tramos editables de X (para error relativo promedio)</strong><div id="gmr-intervals" class="gmr-segments"></div><button class="gmr-research-btn secondary" type="button" id="gmr-add-interval">＋ Añadir tramo</button></div>
   <div class="gmr-research-group"><strong>Límites de los números generados</strong>
   <div class="gmr-generator-settings gmr-numeric-settings">
@@ -211,6 +229,15 @@ function setupGenerator(){
   const points=snapshot()?.source?.points||[],xs=points.map(p=>p[0]);const min=xs.length?Math.min(...xs):0,max=xs.length?Math.max(...xs):100;
   const delta=(max-min)/3;for(let i=0;i<3;i++)intervalRow(+(min+i*delta).toPrecision(6),+(i===2?max:min+(i+1)*delta).toPrecision(6));
   $('gmr-add-interval').onclick=()=>intervalRow(min,max);
+  const termsField=$('gmr-gen-terms');
+  const syncComposition=()=>{
+    const pair=document.querySelector('input[name="gmr-gen-composition"]:checked')?.value==='pair_plus';
+    if(pair)termsField.value='3';
+    termsField.disabled=pair;
+    termsField.title=pair?'La composición f₁·f₂ + f₃ requiere 3 términos.':'';
+  };
+  document.querySelectorAll('input[name="gmr-gen-composition"]').forEach(input=>input.addEventListener('change',syncComposition));
+  syncComposition();
   $('gmr-gen-start').onclick=runGenerator;
   $('gmr-gen-pause').onclick=()=>{if(state.worker&&state.running){state.worker.postMessage({type:'pause'});state.paused=true;showGenStatus('Pausa solicitada…')}};
   $('gmr-gen-resume').onclick=()=>{if(state.worker&&state.running){state.worker.postMessage({type:'resume'});state.paused=false;showGenStatus('Reanudando…')}};

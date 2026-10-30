@@ -6,7 +6,21 @@ export const BASIS = Object.freeze([
   {kind:'xln',uses:2},{kind:'xx',uses:2},{kind:'xexp',uses:2},
   {kind:'xover',uses:2},{kind:'xsin',uses:2}
 ]);
-const params=[0.125,0.25,0.5,0.75,1,1.25,1.5,2,2.5,3];
+export const FAMILIES=Object.freeze({
+  logarithmic:['ln','log1p','xln'],
+  exponential:['exp','xexp','xx'],
+  polynomial:['x','power'],
+  trigonometric:['sin','cos','xsin']
+});
+export const COMPOSITIONS=Object.freeze(['sum','product','pair_plus']);
+export const familyForKind=kind=>Object.keys(FAMILIES).find(k=>FAMILIES[k].includes(kind))||null;
+export const chosenFamilies=config=>{
+  const list=Array.isArray(config?.families)?config.families:Object.keys(FAMILIES);
+  return [...new Set(list.filter(k=>Object.prototype.hasOwnProperty.call(FAMILIES,k)))];
+};
+export const compositionOf=config=>COMPOSITIONS.includes(config?.composition)?config.composition:'sum';
+const params=[1,2,3,4]; // Polynómica: exponentes enteros positivos.
+
 // Limite de decimales de los literales de cada funcion generada.
 export function decimalLimit(value=3){
   const n=Number(value);
@@ -71,27 +85,54 @@ export function makeTerm(kind,maxAbsX,rng=Math.random,decimals=3,maxInteger=9999
 export function makeCandidate(config,maxAbsX,rng=Math.random,elite=null){
   const maxTerms=Math.max(1,Math.min(3,Math.floor(config.maxTerms)));
   const maxX=Math.max(1,Math.min(2,Math.floor(config.maxX)));
-  const options=BASIS.filter(k=>k.uses<=maxX);
+  const families=chosenFamilies(config);
+  if(!families.length)throw Error('Selecciona al menos una tendencia matemática.');
+  const options=BASIS.filter(k=>k.uses<=maxX&&families.includes(familyForKind(k.kind)));
+  if(!options.length)throw Error('No hay términos compatibles con las tendencias y el límite de X.');
+  const composition=compositionOf(config);
+  if(composition==='pair_plus'&&maxTerms<3)throw Error('La forma f₁·f₂ + f₃ exige exactamente 3 términos.');
   const decimals=decimalLimit(config.decimals);
   const maxInteger=integerLimit(config.maxInteger);
   let terms;
   if(elite?.terms?.length&&rng()<.72){
-    terms=elite.terms.map(t=>({...t})).slice(0,maxTerms);
+    terms=elite.terms.filter(t=>options.some(o=>o.kind===t.kind)).map(t=>({...t})).slice(0,maxTerms);
+    if(!terms.length)terms=[makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals,maxInteger)];
     const pos=Math.floor(rng()*Math.max(1,terms.length));
     if(rng()<.5){terms[pos]=makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals,maxInteger)}
     else if(terms[pos]){const old=terms[pos];terms[pos]=makeTerm(old.kind,maxAbsX,rng,decimals,maxInteger);terms[pos].p=constrainNumber(old.p*.75+terms[pos].p*.25,decimals,maxInteger)}
     if(rng()<.14&&terms.length<maxTerms)terms.push(makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals,maxInteger));
-    if(rng()<.12&&terms.length>1)terms.splice(Math.floor(rng()*terms.length),1);
+    if(composition!=='pair_plus'&&rng()<.12&&terms.length>1)terms.splice(Math.floor(rng()*terms.length),1);
+    if(composition==='pair_plus')while(terms.length<3)terms.push(makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals,maxInteger));
   }else{
-    const n=1+Math.floor(rng()*maxTerms);
+    const n=composition==='pair_plus'?3:1+Math.floor(rng()*maxTerms);
     terms=Array.from({length:n},()=>makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals,maxInteger));
   }
-  return {terms,constant:!!config.constant};
+  return {terms,constant:!!config.constant,composition};
 }
 export function validCandidate(candidate,config){
-  return Array.isArray(candidate?.terms)&&candidate.terms.length>=1&&candidate.terms.length<=config.maxTerms&&
-    candidate.terms.every(t=>BASIS.some(b=>b.kind===t.kind&&b.uses===t.uses)&&t.uses>=1&&t.uses<=config.maxX)&&
+  const form=compositionOf(candidate),requested=compositionOf(config);
+  const families=chosenFamilies(config);
+  return (config.composition===undefined||requested===form)&&
+    Array.isArray(candidate?.terms)&&candidate.terms.length>=1&&candidate.terms.length<=config.maxTerms&&
+    (form!=='pair_plus'||candidate.terms.length===3)&&
+    candidate.terms.every(t=>BASIS.some(b=>b.kind===t.kind&&b.uses===t.uses)&&t.uses>=1&&t.uses<=config.maxX&&
+      (config.families===undefined||families.includes(familyForKind(t.kind))))&&
     (!candidate.constant||!!config.constant);
+}
+/** Adjust effective coefficients, because individual product factors are not identifiable. */
+export function featureValues(candidate,x){
+  if(!candidate?.terms?.length)return [];
+  const values=candidate.terms.map(term=>basisValue(term,x));
+  const form=compositionOf(candidate);
+  if(form==='product')return [bounded(values.reduce((a,b)=>a*b,1))];
+  if(form==='pair_plus'){
+    if(values.length!==3)return [NaN];
+    return [bounded(values[0]*values[1]),values[2]];
+  }
+  return values;
+}
+export function featureCount(candidate){
+  return (compositionOf(candidate)==='sum'?candidate.terms.length:compositionOf(candidate)==='product'?1:2)+(candidate.constant?1:0);
 }
 function solve(A,b){
   const n=b.length,M=A.map((row,i)=>[...row,b[i]]);
@@ -105,11 +146,11 @@ function solve(A,b){
   return M.map(row=>row[n]);
 }
 export function fitCandidate(candidate,points,decimals=3,maxInteger=9999){
-  const n=candidate.terms.length+(candidate.constant?1:0);
+  const n=featureCount(candidate);
   const rows=[];
   for(const [x,y] of points){
     if(!Number.isFinite(x)||!Number.isFinite(y))continue;
-    const v=candidate.terms.map(t=>basisValue(t,x));
+    const v=featureValues(candidate,x);
     if(v.some(k=>!Number.isFinite(k)))continue;
     if(candidate.constant)v.push(1);
     rows.push({v,y});
@@ -136,8 +177,9 @@ export function fitCandidate(candidate,points,decimals=3,maxInteger=9999){
 }
 export function predict(model,x){
   if(!model?.coefs)return NaN;
-  let y=model.constant?model.coefs[model.terms.length]:0;
-  for(let i=0;i<model.terms.length;i++)y+=model.coefs[i]*basisValue(model.terms[i],x);
+  const values=featureValues(model,x);
+  let y=model.constant?model.coefs[values.length]:0;
+  for(let i=0;i<values.length;i++)y+=model.coefs[i]*values[i];
   return bounded(y);
 }
 export function scoreModel(model,points,ranges){
@@ -174,9 +216,19 @@ function latexTerm(term,decimals){
 export function modelToLatex(model){
   const decimals=decimalLimit(model?.decimals);
   if(!model?.coefs||!validCandidate(model,{maxTerms:3,maxX:2,constant:true}))return null;
-  const parts=model.terms.map((term,i)=>`(${fmt(model.coefs[i],decimals)})\\cdot ${latexTerm(term,decimals)}`);
-  if(model.constant)parts.push(`(${fmt(model.coefs[model.terms.length],decimals)})`);
-  return parts.join('+');
+  const wrap=(a,t)=>'('+fmt(a,decimals)+')\\cdot '+latexTerm(t,decimals);
+  const form=compositionOf(model);
+  let latex;
+  if(form==='product'){
+    latex=model.terms.map((t,i)=>wrap(i===0?model.coefs[0]:1,t)).join('\\cdot ');
+  }else if(form==='pair_plus'){
+    if(model.terms.length!==3)return null;
+    latex='('+wrap(model.coefs[0],model.terms[0])+')\\cdot ('+wrap(1,model.terms[1])+')+'+wrap(model.coefs[1],model.terms[2]);
+  }else{
+    latex=model.terms.map((t,i)=>wrap(model.coefs[i],t)).join('+');
+  }
+  if(model.constant)latex+='+('+fmt(model.coefs[featureCount(model)-1],decimals)+')';
+  return latex;
 }
 export function subsample(points,limit=350){
   if(points.length<=limit)return points;

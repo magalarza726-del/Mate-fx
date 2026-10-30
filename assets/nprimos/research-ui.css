@@ -32,3 +32,13 @@
 .gmr-best{padding:10px;background:#f0f9f4;border-left:4px solid #28975b;border-radius:6px;overflow-wrap:anywhere}
 @media(max-width:860px){.gmr-research-grid{grid-template-columns:1fr}.gmr-generator-settings{grid-template-columns:1fr 1fr}#gmr-dashboard-canvas{height:310px}}
 @media(max-width:600px){#np-dashboard-btn{bottom:192px;right:9px}#np-generator-btn{bottom:248px;right:9px}.gmr-research-overlay{padding:5px}.gmr-research-body{padding:10px}.gmr-generator-settings{grid-template-columns:1fr}.gmr-research-heading{padding:9px 12px}}
+
+/* Preferencias de tendencias y forma global de las funciones. */
+.gmr-family-choices{display:grid;grid-template-columns:repeat(4,minmax(125px,1fr));gap:6px 12px}
+.gmr-composition-choices{display:flex;flex-wrap:wrap;gap:7px 14px}
+.gmr-family-choices label,.gmr-composition-choices label{display:inline-flex;justify-content:flex-start;align-items:center;gap:8px;cursor:pointer;border:1px solid #d5e1ec;border-radius:8px;padding:8px 10px;background:#fff;margin:0}
+.gmr-family-choices label:has(:checked),.gmr-composition-choices label:has(:checked){background:#e8f4eb;border-color:#7bb99b}
+.gmr-composition-choices label{font-weight:600}
+.gmr-family-choices input,.gmr-composition-choices input{flex:none;width:16px;height:16px;accent-color:#25865c}
+@media(max-width:800px){.gmr-family-choices{grid-template-columns:repeat(2,minmax(130px,1fr))}.gmr-composition-choices{flex-direction:column}}
+@media(max-width:430px){.gmr-family-choices{grid-template-columns:1fr}}

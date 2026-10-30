@@ -1,4 +1,4 @@
-import {makeCandidate,fitCandidate,scoreModel,modelToLatex,subsample} from './generator-core.mjs';
+import {makeCandidate,fitCandidate,scoreModel,modelToLatex,subsample,chosenFamilies} from './generator-core.mjs';
 let session=null;
 const pause=()=>{if(session)session.paused=true};
 const tick=()=>{
@@ -13,7 +13,7 @@ const tick=()=>{
     const scoring=scoreModel(model,s.scorePoints,s.config.ranges);
     if(!Number.isFinite(scoring.mape))continue;
     const latex=modelToLatex(model);if(!latex)continue;
-    const item={iteration:s.done,decimals:model.decimals,maxInteger:model.maxInteger,latex,mape:scoring.mape,perRange:scoring.perRange,ranges:s.config.ranges,model};
+    const item={iteration:s.done,decimals:model.decimals,maxInteger:model.maxInteger,composition:model.composition,families:chosenFamilies(s.config),latex,mape:scoring.mape,perRange:scoring.perRange,ranges:s.config.ranges,model};
     batch.push(item);
     if(!s.best||item.mape<s.best.mape)s.best=item;
     if(s.config.generational){
