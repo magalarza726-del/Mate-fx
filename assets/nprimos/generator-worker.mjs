@@ -8,12 +8,12 @@ const tick=()=>{
     s.done++;
     const elite=s.config.generational&&s.elites.length&&Math.random()<.8?s.elites[Math.floor(Math.random()*Math.min(6,s.elites.length))].model:null;
     const shape=makeCandidate(s.config,s.maxAbsX,Math.random,elite);
-    const model=fitCandidate(shape,s.fitPoints,s.config.decimals);
+    const model=fitCandidate(shape,s.fitPoints,s.config.decimals,s.config.maxInteger);
     if(!model)continue;
     const scoring=scoreModel(model,s.scorePoints,s.config.ranges);
     if(!Number.isFinite(scoring.mape))continue;
     const latex=modelToLatex(model);if(!latex)continue;
-    const item={iteration:s.done,decimals:model.decimals,latex,mape:scoring.mape,perRange:scoring.perRange,ranges:s.config.ranges,model};
+    const item={iteration:s.done,decimals:model.decimals,maxInteger:model.maxInteger,latex,mape:scoring.mape,perRange:scoring.perRange,ranges:s.config.ranges,model};
     batch.push(item);
     if(!s.best||item.mape<s.best.mape)s.best=item;
     if(s.config.generational){

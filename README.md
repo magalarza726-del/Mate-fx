@@ -113,3 +113,8 @@ En **nPrimos**, sobre el botón rojo de la tabla aparecen dos herramientas:
 Pruebas: `node --test tests/analysis-core.test.mjs tests/expression-registry.test.mjs tests/generator-core.test.mjs`. La prueba de interfaz aislada es `python tests/research-inline-browser-test.py` (requiere Playwright y Chromium).
 
 **Precisión del historial:** el ajuste utiliza una muestra representativa de hasta 350 filas para mantener rápidas las iteraciones, pero el MAPE global y por tramos se evalúa sobre **todas las filas importadas**; la media registrada no se basa en una muestra.
+
+
+### Generador de funciones · límites numéricos
+
+En **Límites de los números generados**, junto a **Iniciar n iteraciones**, se configuran los **decimales máximos** (0, 1, 2, 3) y la **parte entera máxima** (9 unidades, 99 decenas, 999 centenas, 9999 miles). Aplican a coeficientes, exponentes, parámetros internos y constante, también si son negativos. El ajuste se cuantiza y limita antes de medir el MAPE; los datos originales se conservan. Una nueva generación reinicia la *mejor función actual* sin borrar el historial del proyecto. El historial y su CSV incluyen las dos restricciones para cada resultado.

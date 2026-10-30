@@ -17,6 +17,17 @@ export function roundNumber(value,decimals=3){
   const rounded=Number(value.toFixed(decimalLimit(decimals)));
   return Object.is(rounded,-0)?0:rounded;
 }
+/** Maximum permitted integer part of every coefficient/parameter (sign ignored). */
+export function integerLimit(value=9999){
+  const n=Number(value);
+  return [9,99,999,9999].includes(n)?n:9999;
+}
+/** Quantize first, then constrain the integer part. Fractional digits remain allowed. */
+export function constrainNumber(value,decimals=3,maxInteger=9999){
+  if(!Number.isFinite(value))return NaN;
+  const d=decimalLimit(decimals),cap=integerLimit(maxInteger)+1-10**(-d);
+  return roundNumber(Math.max(-cap,Math.min(cap,value)),d);
+}
 const fmt=(n,decimals=3)=>{
   const rounded=roundNumber(n,decimals);
   return Number.isFinite(rounded)?String(rounded):'NaN';
@@ -44,7 +55,7 @@ export function basisValue(term,x){
     default:return NaN;
   }
 }
-export function makeTerm(kind,maxAbsX,rng=Math.random,decimals=3){
+export function makeTerm(kind,maxAbsX,rng=Math.random,decimals=3,maxInteger=9999){
   const uses=BASIS.find(a=>a.kind===kind)?.uses;
   if(!uses)throw Error('Tipo de término desconocido');
   const scale=Math.max(1,maxAbsX);
@@ -52,7 +63,7 @@ export function makeTerm(kind,maxAbsX,rng=Math.random,decimals=3){
   if(kind==='power')p=choice(params,rng);
   if(['exp','xexp','sin','cos','xsin'].includes(kind))p=rand(-5,5,rng)/scale;
   if(['reciprocal','xover'].includes(kind))p=rand(.15,.85,rng)*scale*(rng()<.5?1:-1);
-  p=roundNumber(p,decimals);
+  p=constrainNumber(p,decimals,maxInteger);
   // x^0 deja de depender de x.
   if(kind==='power'&&p===0)p=1;
   return {kind,uses,p};
@@ -62,17 +73,18 @@ export function makeCandidate(config,maxAbsX,rng=Math.random,elite=null){
   const maxX=Math.max(1,Math.min(2,Math.floor(config.maxX)));
   const options=BASIS.filter(k=>k.uses<=maxX);
   const decimals=decimalLimit(config.decimals);
+  const maxInteger=integerLimit(config.maxInteger);
   let terms;
   if(elite?.terms?.length&&rng()<.72){
     terms=elite.terms.map(t=>({...t})).slice(0,maxTerms);
     const pos=Math.floor(rng()*Math.max(1,terms.length));
-    if(rng()<.5){terms[pos]=makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals)}
-    else if(terms[pos]){const old=terms[pos];terms[pos]=makeTerm(old.kind,maxAbsX,rng,decimals);terms[pos].p=roundNumber(old.p*.75+terms[pos].p*.25,decimals)}
-    if(rng()<.14&&terms.length<maxTerms)terms.push(makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals));
+    if(rng()<.5){terms[pos]=makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals,maxInteger)}
+    else if(terms[pos]){const old=terms[pos];terms[pos]=makeTerm(old.kind,maxAbsX,rng,decimals,maxInteger);terms[pos].p=constrainNumber(old.p*.75+terms[pos].p*.25,decimals,maxInteger)}
+    if(rng()<.14&&terms.length<maxTerms)terms.push(makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals,maxInteger));
     if(rng()<.12&&terms.length>1)terms.splice(Math.floor(rng()*terms.length),1);
   }else{
     const n=1+Math.floor(rng()*maxTerms);
-    terms=Array.from({length:n},()=>makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals));
+    terms=Array.from({length:n},()=>makeTerm(choice(options,rng).kind,maxAbsX,rng,decimals,maxInteger));
   }
   return {terms,constant:!!config.constant};
 }
@@ -92,7 +104,7 @@ function solve(A,b){
   }
   return M.map(row=>row[n]);
 }
-export function fitCandidate(candidate,points,decimals=3){
+export function fitCandidate(candidate,points,decimals=3,maxInteger=9999){
   const n=candidate.terms.length+(candidate.constant?1:0);
   const rows=[];
   for(const [x,y] of points){
@@ -117,9 +129,10 @@ export function fitCandidate(candidate,points,decimals=3){
   const result=solve(A,b);
   if(!result||result.some(v=>!Number.isFinite(v)))return null;
   const digits=decimalLimit(decimals);
-  const coefs=result.map((v,i)=>roundNumber(v/scales[i],digits));
+  const cap=integerLimit(maxInteger);
+  const coefs=result.map((v,i)=>constrainNumber(v/scales[i],digits,cap));
   if(coefs.some(v=>!Number.isFinite(v)||Math.abs(v)>=1e21))return null;
-  return {...candidate,coefs,decimals:digits};
+  return {...candidate,coefs,decimals:digits,maxInteger:cap};
 }
 export function predict(model,x){
   if(!model?.coefs)return NaN;
