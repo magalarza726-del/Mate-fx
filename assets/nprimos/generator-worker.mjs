@@ -32,7 +32,7 @@ onmessage=e=>{
   if(type==='start'){
     const {points,config}=e.data;
     const maxAbsX=Math.max(1,...points.map(p=>Math.abs(p[0])));
-    session={config,done:0,best:null,elites:[],paused:false,maxAbsX,fitPoints:subsample(points,350),scorePoints:subsample(points,1200)};
+    session={config,done:0,best:null,elites:[],paused:false,maxAbsX,fitPoints:subsample(points,350),scorePoints:points};
     postMessage({type:'started',total:config.n});setTimeout(tick,0);
   }
 };

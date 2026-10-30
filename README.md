@@ -110,3 +110,5 @@ En **nPrimos**, sobre el botón rojo de la tabla aparecen dos herramientas:
 - **Operación**: la generación corre en Web Worker para mantener la interfaz utilizable; los lotes ceden control para procesar pausa y reanudación. La persistencia de historial no implica ejecución en segundo plano después de cerrar la pestaña. Desmos requiere internet, pero las evaluaciones del generador son locales.
 
 Pruebas: `node --test tests/analysis-core.test.mjs tests/expression-registry.test.mjs tests/generator-core.test.mjs`. La prueba de interfaz aislada es `python tests/research-inline-browser-test.py` (requiere Playwright y Chromium).
+
+**Precisión del historial:** el ajuste utiliza una muestra representativa de hasta 350 filas para mantener rápidas las iteraciones, pero el MAPE global y por tramos se evalúa sobre **todas las filas importadas**; la media registrada no se basa en una muestra.
