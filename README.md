@@ -125,3 +125,15 @@ En **Límites de los números generados**, junto a **Iniciar n iteraciones**, se
 Casillas combinables: **Logarítmicas** (ln(x), ln(1+x), x ln(x)), **Exponenciales** (e^(kx), x e^(kx), x^x), **Polinómicas** (x, x^n con exponentes enteros positivos) y **Trigonométricas** (sin(kx), cos(kx), x sin(kx)). Desmarcar todas bloquea el inicio. El aprendizaje generacional solo reutiliza términos de las familias seleccionadas.
 
 Tres composiciones: **suma** f₁ + f₂ + f₃, **producto** f₁ · f₂ · f₃ y **mixta** f₁ · f₂ + f₃. El número de términos admisible es de 1 a 3 para suma/producto; la mixta requiere exactamente 3. La constante opcional +c se suma al resultado final en cualquier forma. Se ajusta un solo coeficiente efectivo para cada producto porque los coeficientes individuales de factores multiplicativos no se pueden identificar unívocamente con los datos. Cada función conserva la composición y las tendencias utilizadas en el historial y en la exportación CSV.
+
+
+## Mate-fx 4.9 · Generación estable y dashboards por tramos
+
+- **Escala X para tasas:** las funciones exponenciales y trigonométricas usan parámetros visibles del tipo \`e^{p·x/s}\`, donde tanto \`p\` como \`s\` cumplen el límite de decimales y magnitud. Esto evita redondear tasas pequeñas a cero y convertir funciones en constantes.
+- **Candidatas distintas:** no se guardan curvas degeneradas ni fórmulas LaTeX repetidas dentro de una generación. Los coeficientes se ajustan mediante mínimos cuadrados ponderados por error relativo para acercarse al objetivo MAPE.
+- **Limpiar historial:** botón con confirmación dentro del generador. Borra únicamente el historial de la investigación activa (IndexedDB o almacenamiento local), después de detener y guardar los últimos cambios; no borra proyectos, datos ni funciones copiadas a Desmos.
+- **Dash Boards con pestañas:** Comparar series; Errores por tramos (%E o error absoluto promedio por función); Real vs. calculado (barras de medias por tramo). Se emplean los tramos editados en el generador o 1–20 intervalos iguales.
+- **Interfaz:** los cuatro botones flotantes se ocultan mientras la tabla de investigación o un dashboard están abiertos.
+- **Rendimiento:** la actualización visual del historial se limita durante iteraciones rápidas, para evitar ordenar decenas de miles de filas continuamente.
+
+La agregación en los extremos compartidos de dos intervalos no duplica las observaciones. Los valores no definidos se excluyen de los promedios; el historial anterior permanece intacto hasta que el usuario elija borrarlo.

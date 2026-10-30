@@ -42,3 +42,14 @@
 .gmr-family-choices input,.gmr-composition-choices input{flex:none;width:16px;height:16px;accent-color:#25865c}
 @media(max-width:800px){.gmr-family-choices{grid-template-columns:repeat(2,minmax(130px,1fr))}.gmr-composition-choices{flex-direction:column}}
 @media(max-width:430px){.gmr-family-choices{grid-template-columns:1fr}}
+
+
+/* Los botones del gráfico no deben cubrir la tabla de investigación. */
+body:has(#primeTablePanel.open) :is(#np-view-table,#np-dashboard-btn,#np-generator-btn,.gmr-data-open),
+body:has(.gmr-research-overlay:not([hidden])) :is(#np-view-table,#np-dashboard-btn,#np-generator-btn,.gmr-data-open){display:none!important}
+.gmr-dashboard-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:13px;border-bottom:1px solid #dce6f1;padding-bottom:12px}
+.gmr-dashboard-tabs button{border:1px solid #cedbe9;border-radius:9px;background:#f7f9fd;color:#294e76;font:700 13px system-ui;padding:10px 13px;cursor:pointer}
+.gmr-dashboard-tabs button[aria-selected=true]{background:#216aa9;color:#fff;border-color:#216aa9}
+#gmr-bars-options .gmr-research-note{margin-bottom:0}
+.gmr-series-control[hidden],#gmr-bars-options[hidden],.gmr-bars-metric-control[hidden]{display:none!important}
+@media(max-width:680px){.gmr-dashboard-tabs{display:grid;grid-template-columns:1fr}.gmr-dashboard-tabs button{text-align:left}}

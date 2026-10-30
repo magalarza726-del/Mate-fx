@@ -51,21 +51,22 @@ const rand=(a,b,rng)=>a+(b-a)*rng();
 const bounded=n=>Number.isFinite(n)&&Math.abs(n)<1e140?n:NaN;
 export function basisValue(term,x){
   const p=term.p;
+  const z=p*x/Math.max(1,term.scale||1);
   switch(term.kind){
     case 'x':return x;
     case 'power':return bounded(Math.pow(x,p));
     case 'ln':return x>0?Math.log(x):NaN;
     case 'log1p':return x>-1?Math.log1p(x):NaN;
     case 'sqrt':return x>=0?Math.sqrt(x):NaN;
-    case 'exp':return bounded(Math.exp(p*x));
-    case 'sin':return Math.sin(p*x);
-    case 'cos':return Math.cos(p*x);
+    case 'exp':return bounded(Math.exp(z));
+    case 'sin':return Math.sin(z);
+    case 'cos':return Math.cos(z);
     case 'reciprocal':return x+p!==0?1/(x+p):NaN;
     case 'xln':return x>0?bounded(x*Math.log(x)):NaN;
     case 'xx':return x>0?bounded(Math.pow(x,x)):NaN;
-    case 'xexp':return bounded(x*Math.exp(p*x));
+    case 'xexp':return bounded(x*Math.exp(z));
     case 'xover':return x+p!==0?x/(x+p):NaN;
-    case 'xsin':return bounded(x*Math.sin(p*x));
+    case 'xsin':return bounded(x*Math.sin(z));
     default:return NaN;
   }
 }
@@ -73,14 +74,22 @@ export function makeTerm(kind,maxAbsX,rng=Math.random,decimals=3,maxInteger=9999
   const uses=BASIS.find(a=>a.kind===kind)?.uses;
   if(!uses)throw Error('Tipo de término desconocido');
   const scale=Math.max(1,maxAbsX);
+  // Escala explícita de X: permite tasas pequeñas respetando los límites
+  // de decimales y magnitud de TODOS los números escritos.
+  const normalizedScale=Math.max(1,Math.min(integerLimit(maxInteger),Math.round(scale/4)));
   let p=0;
   if(kind==='power')p=choice(params,rng);
-  if(['exp','xexp','sin','cos','xsin'].includes(kind))p=rand(-5,5,rng)/scale;
+  if(['exp','xexp','sin','cos','xsin'].includes(kind))p=rand(-12,12,rng)*normalizedScale/scale;
   if(['reciprocal','xover'].includes(kind))p=rand(.15,.85,rng)*scale*(rng()<.5?1:-1);
   p=constrainNumber(p,decimals,maxInteger);
+  if(['exp','xexp','sin','cos','xsin'].includes(kind)&&p===0){
+    // No admitir una familia exponencial/trigonométrica degenerada.
+    const smallest=10**(-decimalLimit(decimals));
+    p=rng()<.5?-smallest:smallest;
+  }
   // x^0 deja de depender de x.
   if(kind==='power'&&p===0)p=1;
-  return {kind,uses,p};
+  return {kind,uses,p,...(['exp','xexp','sin','cos','xsin'].includes(kind)?{scale:normalizedScale}:{})};
 }
 export function makeCandidate(config,maxAbsX,rng=Math.random,elite=null){
   const maxTerms=Math.max(1,Math.min(3,Math.floor(config.maxTerms)));
@@ -156,13 +165,18 @@ export function fitCandidate(candidate,points,decimals=3,maxInteger=9999){
     rows.push({v,y});
   }
   if(rows.length<n+1)return null;
-  const scales=Array(n).fill(1).map((_,i)=>Math.max(1e-12,Math.sqrt(rows.reduce((sum,r)=>sum+r.v[i]**2,0)/rows.length)));
+  const positives=rows.map(r=>Math.abs(r.y)).filter(v=>v>0).sort((a,b)=>a-b);
+  // Mínimos cuadrados ponderados con el objetivo de error relativo.
+  const floor=positives[0]||1;
+  for(const row of rows)row.w=1/Math.max(Math.abs(row.y),floor)**2;
+  const wSum=rows.reduce((a,r)=>a+r.w,0);
+  const scales=Array(n).fill(1).map((_,i)=>Math.max(1e-12,Math.sqrt(rows.reduce((sum,r)=>sum+r.w*r.v[i]**2,0)/wSum)));
   const A=Array.from({length:n},()=>Array(n).fill(0)),b=Array(n).fill(0);
   for(const row of rows){
     const v=row.v.map((x,i)=>x/scales[i]);
     for(let i=0;i<n;i++){
-      b[i]+=v[i]*row.y;
-      for(let j=0;j<n;j++)A[i][j]+=v[i]*v[j];
+      b[i]+=row.w*v[i]*row.y;
+      for(let j=0;j<n;j++)A[i][j]+=row.w*v[i]*v[j];
     }
   }
   const trace=A.reduce((s,row,i)=>s+row[i],0);
@@ -181,6 +195,15 @@ export function predict(model,x){
   let y=model.constant?model.coefs[values.length]:0;
   for(let i=0;i<values.length;i++)y+=model.coefs[i]*values[i];
   return bounded(y);
+}
+/** Descarta curvas prácticamente constantes en el dominio observado. */
+export function isNonDegenerate(model,points){
+  if(!model?.coefs||!points?.length)return false;
+  const samples=[points[0],points[Math.floor(points.length/2)],points[points.length-1]];
+  const results=samples.map(([x])=>predict(model,x));
+  if(results.some(y=>!Number.isFinite(y)))return false;
+  const magnitude=Math.max(1,...results.map(Math.abs));
+  return Math.max(...results)-Math.min(...results)>magnitude*1e-9;
 }
 export function scoreModel(model,points,ranges){
   let total=0,valid=0,invalid=0;
@@ -201,15 +224,16 @@ export function scoreModel(model,points,ranges){
 }
 function latexTerm(term,decimals){
   const p=fmt(term.p,decimals);
+  const arg=term.scale&&term.scale!==1?`(${p}\\cdot x/${fmt(term.scale,0)})`:`(${p}x)`;
   switch(term.kind){
     case 'x':return 'x';case 'power':return `x^{${p}}`;
     case 'ln':return '\\ln(x)';case 'log1p':return '\\ln(1+x)';
-    case 'sqrt':return '\\sqrt{x}';case 'exp':return `e^{${p}x}`;
-    case 'sin':return `\\sin(${p}x)`;case 'cos':return `\\cos(${p}x)`;
+    case 'sqrt':return '\\sqrt{x}';case 'exp':return `e^{${arg}}`;
+    case 'sin':return `\\sin(${arg})`;case 'cos':return `\\cos(${arg})`;
     case 'reciprocal':return `\\frac{1}{x+(${p})}`;
     case 'xln':return 'x\\cdot\\ln(x)';case 'xx':return 'x^{x}';
-    case 'xexp':return `x\\cdot e^{${p}x}`;case 'xover':return `\\frac{x}{x+(${p})}`;
-    case 'xsin':return `x\\cdot\\sin(${p}x)`;
+    case 'xexp':return `x\\cdot e^{${arg}}`;case 'xover':return `\\frac{x}{x+(${p})}`;
+    case 'xsin':return `x\\cdot\\sin(${arg})`;
     default:throw Error('Tipo inválido');
   }
 }

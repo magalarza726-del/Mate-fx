@@ -1,4 +1,4 @@
-import {makeCandidate,fitCandidate,scoreModel,modelToLatex,subsample,chosenFamilies} from './generator-core.mjs';
+import {makeCandidate,fitCandidate,scoreModel,modelToLatex,subsample,chosenFamilies,isNonDegenerate} from './generator-core.mjs';
 let session=null;
 const pause=()=>{if(session)session.paused=true};
 const tick=()=>{
@@ -9,10 +9,11 @@ const tick=()=>{
     const elite=s.config.generational&&s.elites.length&&Math.random()<.8?s.elites[Math.floor(Math.random()*Math.min(6,s.elites.length))].model:null;
     const shape=makeCandidate(s.config,s.maxAbsX,Math.random,elite);
     const model=fitCandidate(shape,s.fitPoints,s.config.decimals,s.config.maxInteger);
-    if(!model)continue;
+    if(!model||!isNonDegenerate(model,s.scorePoints))continue;
     const scoring=scoreModel(model,s.scorePoints,s.config.ranges);
     if(!Number.isFinite(scoring.mape))continue;
-    const latex=modelToLatex(model);if(!latex)continue;
+    const latex=modelToLatex(model);if(!latex||s.seen.has(latex))continue;
+    s.seen.add(latex);
     const item={iteration:s.done,decimals:model.decimals,maxInteger:model.maxInteger,composition:model.composition,families:chosenFamilies(s.config),latex,mape:scoring.mape,perRange:scoring.perRange,ranges:s.config.ranges,model};
     batch.push(item);
     if(!s.best||item.mape<s.best.mape)s.best=item;
@@ -32,7 +33,7 @@ onmessage=e=>{
   if(type==='start'){
     const {points,config}=e.data;
     const maxAbsX=Math.max(1,...points.map(p=>Math.abs(p[0])));
-    session={config,done:0,best:null,elites:[],paused:false,maxAbsX,fitPoints:subsample(points,350),scorePoints:points};
+    session={config,done:0,best:null,seen:new Set(),elites:[],paused:false,maxAbsX,fitPoints:subsample(points,350),scorePoints:points};
     postMessage({type:'started',total:config.n});setTimeout(tick,0);
   }
 };
