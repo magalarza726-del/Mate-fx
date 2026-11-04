@@ -528,10 +528,10 @@ async function comparisonFigures(paper,state,entries,progress){
  paper.heading('3. Análisis visual');
  progress?.('Capturando el dashboard de comparación directamente desde Desmos');
  await paper.figure(plotSpecifications(state.source,entries[0].best,'complexity',chartEntries),
-  'Relación entre complejidad y log10(MAPE %), para visualizar errores de órdenes de magnitud diferentes.',{height:65});
+  'Relación entre complejidad y log10(1 + MAPE %), para visualizar errores de órdenes de magnitud diferentes.',{height:65});
  progress?.('Capturando la comparación de errores desde Desmos');
  await paper.figure(plotSpecifications(state.source,entries[0].best,'comparison',chartEntries),
-  'log10(MAPE %) y log10(MaxAPE %) por configuración. Ambas series son porcentuales y no se mezclan con MAE.',{height:65});
+  'log10(MAPE %) y log10(1 + MaxAPE %) por configuración. Ambas series son porcentuales y no se mezclan con MAE.',{height:65});
  paper.writeLines('Las figuras comparativas deben interpretarse junto con la Tabla 1: una curva visualmente cercana a los puntos no garantiza un MAPE bajo ni un comportamiento físicamente válido.',9.4,4.5);
 }
 async function winners(paper,state,entries,progress){
