@@ -89,6 +89,7 @@ function table(){
  '<button type="button" data-pdf="'+m+'">Reporte PDF · '+esc(methodById(m).name)+'</button>').join('');
  $('inv-permethod').querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>reportMethod(b.dataset.pdf));
  $('inv-general').disabled=!done||state.exporting;$('inv-json').disabled=!state.history.size||state.exporting;
+ $('inv-all-pdf').disabled=!done||state.exporting;
  refreshDashboards();
 }
 function reportState(){
@@ -106,6 +107,19 @@ async function generatePDF(task){
 async function reportMethod(id){
  const snapshot=reportState();
  await generatePDF(notify=>methodReport(snapshot,id,methodById(id).name,notify));
+}
+async function reportAll(){
+ const snapshot=reportState(),methods=[...new Set(snapshot.entries.filter(e=>snapshot.results.get(e.id)?.best).map(e=>e.method))];
+ if(!methods.length)return note('No hay ecuaciones válidas para descargar.');
+ await generatePDF(async notify=>{
+  const outputs=[];
+  for(let i=0;i<methods.length;i++){
+   const id=methods[i];notify('Descargando reporte por método '+(i+1)+' / '+methods.length+': '+methodById(id).name);
+   outputs.push(await methodReport(snapshot,id,methodById(id).name,notify));
+  }
+  outputs.push(await generalReport(snapshot,id=>methodById(id).name,notify));
+  return outputs.length+' archivos PDF: '+outputs.join(', ');
+ });
 }
 async function reportGeneral(){
  const snapshot=reportState();
@@ -168,7 +182,7 @@ function run(mode){
   if(msg.type==='paused'){state.paused=true;buttons();note('Pausado.')}
   if(msg.type==='resumed'){state.paused=false;buttons();note('Reanudado.')}
   if(msg.type==='warning')note('Advertencia '+msg.entryId+': '+msg.message);
-  if(msg.type==='complete'){state.done=msg.done;finish('Experimentos terminados. Los reportes se descargan directamente como PDF.');if(mode==='automatic')reportGeneral()}
+  if(msg.type==='complete'){state.done=msg.done;finish('Experimentos terminados. Los reportes se descargan directamente como PDF.');if(mode==='automatic')reportAll()}
   if(msg.type==='error')finish('Error: '+msg.message);
  };
  w.onerror=e=>finish('Error en el motor: '+(e.message||'desconocido'));
@@ -191,7 +205,7 @@ function setup(){
  '<section class="gmr-research-group"><h3>Mejor curva en tiempo real</h3><div id="inv-preview"></div><small id="inv-preview-caption"></small></section>'+
  '<section class="gmr-research-group" id="inv-dashboards"></section>'+ 
  '<section class="gmr-research-group"><h3>Mejores fórmulas · <small id="inv-completed"></small></h3><div class="gmr-history"><table><thead><tr><th>Configuración</th><th>Método</th><th>Función LaTeX</th><th>MAPE</th><th>Error máximo</th><th>Complejidad</th><th>Gráfica</th></tr></thead><tbody id="inv-winners"></tbody></table></div></section>'+
- '<section class="gmr-research-group"><h3>Reportes</h3><p>Reportes individuales: primeras páginas con puntos, gráfica y errores; resto con las iteraciones y funciones en LaTeX, sin gráficas. Reporte general: fórmulas ganadoras y gráficas exclusivamente.</p><div id="inv-permethod" class="inv-reports"></div><div class="inv-actions"><button id="inv-general">Reporte general · fórmulas y gráficas</button><button id="inv-json">Exportar historial JSON</button></div><p class="gmr-research-note">Cada botón descarga directamente un archivo PDF (.pdf), sin utilizar la impresión del navegador. Las gráficas provienen de capturas PNG oficiales de Desmos. LaTeX se incluye en cada reporte; MathJax mejora su presentación cuando está disponible.</p></section></main></div></div>';
+ '<section class="gmr-research-group"><h3>Reportes</h3><p>Reportes individuales: primeras páginas con puntos, gráfica y errores; resto con las iteraciones y funciones en LaTeX, sin gráficas. Reporte general: fórmulas ganadoras y gráficas exclusivamente.</p><div id="inv-permethod" class="inv-reports"></div><div class="inv-actions"><button id="inv-general">Reporte general · fórmulas y gráficas</button><button id="inv-all-pdf">Descargar todos los PDF</button><button id="inv-json">Exportar historial JSON</button></div><p class="gmr-research-note">Cada botón descarga directamente PDF. «Reporte automático» descarga todos los informes individuales y el general al finalizar; tu navegador puede solicitar autorización para descargas múltiples. Las gráficas provienen de capturas PNG oficiales de Desmos. LaTeX se incluye en cada reporte; MathJax mejora su presentación cuando está disponible.</p></section></main></div></div>';
  document.body.append(overlay);
  setupDashboards(()=>state);
  document.addEventListener('gmr:inv-select',()=>graph(true));
@@ -208,7 +222,7 @@ function setup(){
  $('inv-pause').onclick=()=>state.worker?.postMessage({type:'pause'});
  $('inv-resume').onclick=()=>state.worker?.postMessage({type:'resume'});
  $('inv-stop').onclick=()=>{stop();note('Detenido. Los resultados parciales permanecen disponibles.')};
- $('inv-general').onclick=reportGeneral;$('inv-json').onclick=exportJSON;
+ $('inv-general').onclick=reportGeneral;$('inv-all-pdf').onclick=reportAll;$('inv-json').onclick=exportJSON;
  for(const [a,b] of [['inv-original-generator','np-generator-btn'],['inv-original-envelope','np-envelope-btn'],['inv-original-dashboard','np-dashboard-btn']])
   $(a).onclick=()=>{overlay.hidden=true;$(b)?.click()};
  window.addEventListener('gmr:project-switched',e=>{if(e.detail?.lab!=='prime')return;stop();state.project=null;state.source=null;overlay.hidden=true});
