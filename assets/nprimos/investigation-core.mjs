@@ -195,7 +195,7 @@ function customBasis(id,points,opt,seed=0){
  if(id==='reciprocal'){push(()=>1,'');push(v=>1/(v+2),'\\frac{1}{z+2}')}
  if(id==='fourier'){push(()=>1,'');for(let k=1;k<=opt.harmonics;k++){push(v=>Math.sin(Math.PI*k*v),'\\sin('+k+'\\pi z)');push(v=>Math.cos(Math.PI*k*v),'\\cos('+k+'\\pi z)')}}
  if(id==='correction_poly'){push(()=>1,'');push(v=>v,'z');push(v=>Math.exp(v),'e^z');push(v=>v*v,'z^2')}
- if(id==='rbf'){push(()=>1,'');for(let k=0;k<opt.knots;k++){const center=-1+2*k/Math.max(1,opt.knots-1),width=opt.width;push(v=>Math.exp(-((v-center)/width)**2),'e^{-((z-('+fmt(center)+'))/'+fmt(width)+')^2}')}}
+ if(id==='rbf'){push(()=>1,'');for(let k=0;k<opt.knots;k++){const center=-1+2*k/Math.max(1,opt.knots-1),width=opt.width;push(v=>Math.exp(-(((v-center)/width)**2)),'e^{-((z-('+fmt(center)+'))/'+fmt(width)+')^2}')}}
  if(id.startsWith('correction_')&&id!=='correction_poly'){
   const t=seed,rate=Math.max(.05,Math.abs(t));
   push(()=>1,'');push(v=>Math.exp(cap(t*v,-60,60)),'e^{('+fmt(t)+')z}');
@@ -279,10 +279,10 @@ function predictorModel(id,points,opt,rng,step,session){
  }
  if(id==='gaussian'){
   const norm=normalized(points),k=Math.min(points.length,opt.knots),indices=Array.from({length:k},(_,i)=>Math.round(i*(points.length-1)/(k-1))),
-   centers=indices.map(i=>norm.z(points[i][0])),width=opt.width,ker=(a,b)=>Math.exp(-((a-b)/width)**2);
-  const A=centers.map((u,i)=>centers.map((v,j)=>ker(u,v)+(i===j?.001:0)));
+   centers=indices.map(i=>norm.z(points[i][0])),width=opt.width,ker=(a,b)=>Math.exp(-(((a-b)/width)**2));
+  const A=centers.map((u,i)=>centers.map((v,j)=>ker(u,v)+(i===j?0.001:0)));
   const y=indices.map(i=>points[i][1]),alpha=solver(A,y);if(!alpha)return null;
-  return {latex:'f(x)=\\sum_{i=1}^{'+k+'}\\alpha_i\\exp\\left(-\\frac{(z-c_i)^2}{'+fmt(width*width)+'}\\right)',
+  return {latex:'f(x)='+alpha.map((a,i)=>'('+fmt(fix(a,opt.decimals,opt.magnitude))+')e^{-((z-('+fmt(centers[i])+'))/'+fmt(width)+')^2}').join('+'),
    ztex:norm.tex,complexity:k*4,predict:x=>clean(alpha.reduce((sum,v,i)=>sum+v*ker(norm.z(x),centers[i]),0))};
  }
  if(id==='levenberg'){
