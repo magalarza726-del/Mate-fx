@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 
 const downloads=[],images=[],desmosCalls=[],printedText=[];
 class FakePDF{
@@ -26,7 +27,7 @@ globalThis.document={
  body:{appendChild(){}}
 };
 
-const {methodReport,generalReport}=await import('../assets/nprimos/investigation-report.mjs');
+const {methodReport,generalReport,reportLatex}=await import('../assets/nprimos/investigation-report.mjs');
 const {plotSpecifications}=await import('../assets/nprimos/investigation-desmos.mjs');
 const points=Array.from({length:11},(_,i)=>[i+1,i*2+4]);
 const metrics={mape:0,maxape:0,maxAbs:0,mae:0,rmse:0,p95:0,valid:11,invalid:0};
@@ -53,10 +54,12 @@ test('Los reportes individuales y generales descargan archivos .pdf directamente
  assert.equal(desmosCalls[0][0].type,'table');
  assert.equal(desmosCalls[0][0].columns[1].points,true);
  assert.equal(desmosCalls[0][1].columns[1].lines,true);
- assert.ok(printedText.some(x=>x.includes('Resumen')),'El PDF incluye un resumen académico');
+ assert.ok(printedText.some(x=>x.includes('Resumen ejecutivo')),'El PDF incluye un resumen ejecutivo de estilo paper');
  assert.ok(printedText.some(x=>x.includes('Metodología')),'El PDF documenta la metodología');
  assert.ok(printedText.some(x=>x.includes('Resultados comparativos')),'Incluye resultados comparativos');
  assert.ok(printedText.some(x=>x.includes('Catálogo de ecuaciones')),'Incluye el catálogo de ganadoras');
+ assert.ok(printedText.some(x=>x.includes('Hallazgos clave')),'Incluye hallazgos de mejor precisión y menor complejidad');
+ assert.ok(printedText.some(x=>x.includes('Configuración del experimento')),'Incluye el panel de experimento de método');
  assert.ok(printedText.some(x=>x.includes('Anexo de iteraciones')),'El método conserva el historial');
  assert.ok(!printedText.some(x=>x.includes('about:blank')),'No muestra encabezados de impresión web');
 });
@@ -68,4 +71,20 @@ test('Dashboards para errores y complejidad usan series de datos para Desmos',()
  assert.equal(comparison.series.length,2);
  assert.equal(complexity.series.length,1);
  assert.equal(complexity.series[0].points[0][0],3);
+});
+
+test('Las ecuaciones del informe usan z y renombramos la normalización como u',()=>{
+ const plain=reportLatex('f(x)=(1.5)x^{2}+3');
+ assert.equal(plain.latex,'f(z)=(1.5)z^{2}+3');
+ assert.equal(plain.definition,'');
+ const normalized=reportLatex('f(x)=(4336.801)+(8776.749)\\cdot z','\\frac{x-(186.98)}{186.97}');
+ assert.equal(normalized.latex,'f(z)=(4336.801)+(8776.749)\\cdot u');
+ assert.equal(normalized.definition,'u=\\frac{z-(186.98)}{186.97}');
+});
+
+test('El modo automático solamente inicia la descarga del reporte general',async()=>{
+ const src=await readFile(new URL('../assets/nprimos/investigation-ui.js',import.meta.url),'utf8');
+ assert.match(src,/if\(mode==='automatic'\)reportGeneral\(\)/);
+ assert.doesNotMatch(src,/reportAll\(\)/);
+ assert.match(src,/data-pdf/,'Los informes individuales siguen disponibles mediante descarga manual');
 });
