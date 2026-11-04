@@ -5,7 +5,7 @@ const p=v=>Number.isFinite(v)?f(v)+' %':'—';
 const style='<style>@page{size:A4;margin:15mm 12mm}body{margin:0;color:#182b42;font:11px/1.42 system-ui,Arial}h1{font-size:23px}h2{font-size:16px;border-bottom:2px solid #c4d6e7;padding:5px 0}h3{font-size:14px}.muted{color:#52677a}.sheet{break-after:page;page-break-after:always}.sheet:last-child{break-after:auto}.break{break-before:page;page-break-before:always}.metrics{display:flex;flex-wrap:wrap;gap:8px}.metrics span{display:block;border:1px solid #d5dfe9;padding:8px;border-radius:6px;min-width:95px}.metrics b{display:block;font-size:14px}.formula{padding:11px;background:#f0f5fa;border-radius:7px;overflow-wrap:anywhere}.tex{font:10px/1.4 monospace;color:#52677a;overflow-wrap:anywhere}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px}th,td{border-bottom:1px solid #e0e7f0;padding:6px 3px;text-align:left;vertical-align:top}th{background:#ebf2fa}td.tex{overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid}.toolbar{position:sticky;top:0;background:#132f4d;color:#fff;padding:12px;display:flex;gap:14px;z-index:10}.toolbar button{padding:8px 14px}.chart{max-width:100%}@media print{.toolbar{display:none}.sheet{break-after:page}}</style>';
 function metrics(m){
  if(!m)return '';
- const rows=[['MAPE',p(m.metrics?.mape)],['Error máximo',p(m.metrics?.maxape)],['MAE',f(m.metrics?.mae)],['RMSE',f(m.metrics?.rmse)],['P95',p(m.metrics?.p95)],['Complejidad',f(m.complexity)],['MAPE entrenamiento',p(m.trainMetrics?.mape)],['MAPE validación',p(m.validationMetrics?.mape)]];
+ const rows=[['MAPE',p(m.metrics?.mape)],['Error máximo relativo',p(m.metrics?.maxape)],['Error máximo absoluto',f(m.metrics?.maxAbs)],['MAE',f(m.metrics?.mae)],['RMSE',f(m.metrics?.rmse)],['P95',p(m.metrics?.p95)],['Complejidad',f(m.complexity)],['MAPE entrenamiento',p(m.trainMetrics?.mape)],['MAPE validación',p(m.validationMetrics?.mape)],['Error máx. validación',p(m.validationMetrics?.maxape)],['Puntos válidos',f(m.metrics?.valid)],['Sin predicción finita',f(m.metrics?.invalid)]];
  return '<div class="metrics">'+rows.map(([a,b])=>'<span><small>'+esc(a)+'</small><b>'+esc(b)+'</b></span>').join('')+'</div>';
 }
 function latex(m){
@@ -25,14 +25,26 @@ export function graphSVG(points,estimates=[],w=700,h=275){
 function header(state,title){
  return '<h1>'+esc(title)+'</h1><p class="muted">Mate-fx · Investigación matemática · '+esc(new Date().toLocaleString('es-EC'))+'</p><p><b>Proyecto:</b> '+esc(state.projectName)+' · <b>Fuente:</b> '+esc(state.source.sourceName)+' · <b>Ejes:</b> '+esc(state.source.xName)+' / '+esc(state.source.yName)+' · <b>Datos:</b> '+state.source.points.length+'</p>';
 }
+function segmentErrors(points,predictions,n=5){
+ if(!points?.length||!predictions?.length)return '';
+ const xmin=points[0][0],xmax=points[points.length-1][0],span=Math.max(1e-12,xmax-xmin);
+ const sections=Array.from({length:n},(_,i)=>({lo:xmin+span*i/n,hi:xmin+span*(i+1)/n,values:[]}));
+ for(let i=0;i<points.length;i++){
+  const p=points[i],estimate=predictions[i],index=Math.max(0,Math.min(n-1,Math.floor((p[0]-xmin)/span*n)));
+  if(Number.isFinite(estimate))sections[index].values.push(p[1]===0?null:100*Math.abs(p[1]-estimate)/Math.abs(p[1]));
+ }
+ return '<h2>Errores por tramos de X</h2><table><thead><tr><th>Tramo</th><th>Observaciones</th><th>MAPE</th><th>MaxAPE</th></tr></thead><tbody>'+
+ sections.map((a,i)=>{const valid=a.values.filter(Number.isFinite),mean=valid.length?valid.reduce((s,v)=>s+v,0)/valid.length:null;
+  return '<tr><td>'+f(a.lo)+' — '+f(a.hi)+'</td><td>'+a.values.length+'</td><td>'+p(mean)+'</td><td>'+p(valid.length?Math.max(...valid):null)+'</td></tr>'}).join('')+'</tbody></table>';
+}
 function summary(state,e,title){
  const m=state.results.get(e.id)?.best,h=state.history.get(e.id)||[];
  return '<section class="sheet">'+header(state,title)+'<h2>Resumen · '+esc(e.id)+'</h2><p><b>Configuración:</b> '+esc(JSON.stringify(e.config))+' · <b>Semilla:</b> '+esc(e.seed)+' · <b>Intentos:</b> '+h.length+'</p>'+latex(m)+metrics(m)+'<h2>Datos y mejor ecuación</h2>'+graphSVG(state.source.points,m?.estimates)+'<p class="muted">Azul: puntos observados. Naranja: ecuación ajustada. Los valores sin estimación finita se excluyen de las métricas. Se muestran los errores de validación por separado.</p></section>';
 }
 function detailed(state,e){
  const h=state.history.get(e.id)||[];
- let out='<section class="break"><h2>Iteraciones · '+esc(e.id)+'</h2><p class="muted">Fórmulas en código LaTeX. Sin gráficas en estas páginas.</p><table><thead><tr><th style="width:8%">N.º</th><th style="width:58%">Función LaTeX</th><th>MAPE</th><th>Error máximo</th><th>Complejidad</th></tr></thead><tbody>';
- for(const m of h)out+='<tr><td>'+m.iteration+'</td><td class="tex">'+esc((m.ztex?'z='+m.ztex+'; ':'')+(m.latex||m.reason||'Intento inválido'))+'</td><td>'+p(m.metrics?.mape)+'</td><td>'+p(m.metrics?.maxape)+'</td><td>'+f(m.complexity)+'</td></tr>';
+ let out='<section class="break"><h2>Iteraciones · '+esc(e.id)+'</h2><p class="muted">Fórmulas en código LaTeX. Sin gráficas en estas páginas.</p><table><thead><tr><th style="width:8%">N.º</th><th style="width:58%">Función LaTeX</th><th>MAPE</th><th>Error máximo</th><th>MAE</th><th>Complejidad</th></tr></thead><tbody>';
+ for(const m of h)out+='<tr><td>'+m.iteration+'</td><td class="tex">'+esc((m.ztex?'z='+m.ztex+'; ':'')+(m.latex||m.reason||'Intento inválido'))+'</td><td>'+p(m.metrics?.mape)+'</td><td>'+p(m.metrics?.maxape)+'</td><td>'+f(m.metrics?.mae)+'</td><td>'+f(m.complexity)+'</td></tr>';
  return out+'</tbody></table></section>';
 }
 function page(title,body){
