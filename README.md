@@ -1,3 +1,13 @@
+## Reportes PDF y Dashboards Desmos · Actualización noviembre 2026
+
+- **Descarga directa en PDF**, sin imprimir ni HTML intermedio. «Reporte automático» descarga el PDF general al finalizar; cada método ofrece otro PDF con fórmulas y errores de todas sus iteraciones.
+- **jsPDF 3.0.3 distribuido localmente** bajo licencia MIT, en assets/shared/vendor/, con CDN alternativo. Las ecuaciones incluyen código LaTeX y pueden componerse visualmente mediante MathJax si está disponible.
+- **Todas las gráficas de Investigación provienen del motor Desmos** mediante asyncScreenshot. Los datos observados y las curvas ajustadas se grafican en una instancia de Desmos; no se sustituyen por dibujos propios.
+- **Dashboards**: comparación MAPE/MaxAPE, precisión frente a complejidad, residuos, error porcentual por X, curva real/calculada. Filtros por familia, precisión, complejidad, validación y tiempo.
+- **Reporte individual**: primeras páginas con fuente, fórmula, Desmos, datos reales/calculados, errores globales y por tramos. Después las iteraciones con LaTeX y métricas, sin gráficas.
+- **Reporte general**: fórmula ganadora y gráfica Desmos por configuración. No incluye tablas extensas de iteraciones.
+- Se requiere cargar la API real de Desmos para las capturas. Un PDF con miles de puntos e iteraciones puede exigir memoria considerable.
+
 
 ## Investigación comparativa · 38 entradas en 6 categorías (noviembre de 2026)
 
@@ -12,7 +22,7 @@ El laboratorio **nPrimos → Investigación** añade un motor de experimentació
 
 **Una ecuación por método y configuración.** Cada configuración puede duplicarse y controlar n, decimales y magnitud, además de sus parámetros específicos (grados, nodos, armónicos, ancho, cuantil, operadores y bases simbólicas, etc.). Los métodos deterministas resuelven una vez por configuración, los estocásticos ejecutan n intentos. Semillas configurables; control de pausa, reanudación, detención y seguimiento en tiempo real mediante Web Worker. Separación de observaciones para validación (por defecto, 20 % de las X distintas). MAPE, error relativo máximo, MAE, RMSE, P95, complejidad y tabla por tramos. Los puntos con Y=0 no participan en errores porcentuales, pero sí en errores absolutos.
 
-**Reporte automático** investiga todas las configuraciones seleccionadas; al terminar habilita reportes independientes por método y uno general. Los individuales muestran primero fórmula en LaTeX, fuente, configuración, puntos, gráfica y métricas, seguidos de **todas** las iteraciones con sus fórmulas LaTeX y errores **sin gráficas adicionales**. El general contiene únicamente las fórmulas ganadoras y sus gráficas. Los reportes son páginas imprimibles: elegir **Imprimir → Guardar como PDF**. MathJax requiere conexión para componer visualmente las ecuaciones; el código LaTeX siempre figura en el documento. El historial completo también se puede exportar como JSON.
+**Reporte automático** investiga todas las configuraciones seleccionadas; al terminar habilita reportes independientes por método y uno general. Los individuales muestran primero fórmula en LaTeX, fuente, configuración, puntos, gráfica y métricas, seguidos de **todas** las iteraciones con sus fórmulas LaTeX y errores **sin gráficas adicionales**. El general contiene únicamente las fórmulas ganadoras y sus gráficas. Los reportes se descargan directamente en **PDF** sin imprimir. El motor jsPDF se distribuye localmente. MathJax es opcional para componer las fórmulas; su código LaTeX siempre figura en el PDF. El historial completo también se puede exportar como JSON.
 
 **Limitaciones de implementación:** algunos algoritmos están identificados explícitamente como variantes aproximadas (Remez/minimax mediante IRLS, Taylor a partir de derivadas estimadas, media predictiva GP), no implementaciones formales completas con garantías matemáticas. Los límites de coeficientes de regresión no restringen el origen y la escala derivados de X para la normalización. El generador simbólico y las envolventes heredan un máximo de 3 decimales y magnitud 9 999; otros métodos ofrecen hasta 6 decimales y 999 999. Los resultados se validan numéricamente, no constituyen por sí solos leyes físicas ni sustituyen formulaciones termodinámicas de referencia. Para reportes de miles de iteraciones conviene utilizar un navegador de escritorio.
 
