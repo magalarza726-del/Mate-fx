@@ -22,14 +22,14 @@ export function plotSpecifications(source,best,kind='fit',entries=[]){
   return {title:'Error porcentual absoluto por z',useZ:true,xName:source?.xName||'X',yName:'Error (%)',series:[{points:errors,color:'#a63f83',mode:'points'}]};
  }
  if(kind==='complexity'){
-  const valid=entries.filter(e=>Number.isFinite(e.best?.metrics?.mape)&&e.best.metrics.mape>0&&Number.isFinite(e.best.complexity));
-  return {title:'Complejidad frente a log10(MAPE)',xName:'Complejidad',yName:'log10(MAPE %)',series:[
-    {points:valid.map(e=>[e.best.complexity,Math.log10(e.best.metrics.mape)]),color:'#18669d',mode:'points'}]};
+  const valid=entries.filter(e=>Number.isFinite(e.best?.metrics?.mape)&&e.best.metrics.mape>=0&&Number.isFinite(e.best.complexity));
+  return {title:'Complejidad frente a log10(1+MAPE)',xName:'Complejidad',yName:'log10(1+MAPE %)',series:[
+    {points:valid.map(e=>[e.best.complexity,Math.log10(1+e.best.metrics.mape)]),color:'#18669d',mode:'points'}]};
  }
  if(kind==='comparison'){
   const values=entries.map((e,i)=>({index:i+1,mape:e.best?.metrics?.mape,maxape:e.best?.metrics?.maxape}));
-  const log=key=>values.filter(v=>Number.isFinite(v[key])&&v[key]>0).map(v=>[v.index,Math.log10(v[key])]);
-  return {title:'Comparación logarítmica de errores por configuración',xName:'Número de configuración (según tabla)',yName:'log10(Error %)',series:[
+  const log=key=>values.filter(v=>Number.isFinite(v[key])&&v[key]>=0).map(v=>[v.index,Math.log10(1+v[key])]);
+  return {title:'Comparación logarítmica de errores por configuración',xName:'Número de configuración (según tabla)',yName:'log10(1+Error %)',series:[
     {points:log('mape'),color:'#2578c5',mode:'lines+points'},
     {points:log('maxape'),color:'#df762f',mode:'lines+points'}]};
  }
