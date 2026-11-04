@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {METHODS,methodById,methodConfig,splitData,statistics,evaluateMethod} from '../assets/nprimos/investigation-core.mjs';
 import {makeCandidate,validCandidate} from '../assets/nprimos/generator-core.mjs';
-import {graphSVG} from '../assets/nprimos/investigation-report.mjs';
+import {plotSpecifications} from '../assets/nprimos/investigation-desmos.mjs';
 
 const points=Array.from({length:34},(_,i)=>[i+1,7+2.5*(i+1)+0.3*(i+1)**2]);
 const groups=[
@@ -81,9 +81,14 @@ test('Optimización configurable conserva decimales y límites de búsqueda',()=
  assert.deepEqual(cfg.allowedKinds,['sin','cos']);
 });
 
-test('Gráfica SVG de un reporte contiene puntos y curva',()=>{
- const svg=graphSVG(points,points.map(([x])=>7+2.5*x+0.3*x*x));
- assert.ok(svg.includes('<svg'));
- assert.ok(svg.includes('<circle'));
- assert.ok(svg.includes('<polyline'));
+test('La representación de datos y ganadora requiere series para la API oficial de Desmos',()=>{
+ const predicted=points.map(([x])=>7+2.5*x+0.3*x*x);
+ const spec=plotSpecifications({points,xName:'Temperatura',yName:'Presión'},
+  {estimates:predicted,curvePoints:points.map((p,i)=>[p[0],predicted[i]])},'fit');
+ assert.equal(spec.series.length,2);
+ assert.equal(spec.series[0].mode,'points');
+ assert.equal(spec.series[1].mode,'lines');
+ assert.equal(spec.series[0].points.length,points.length);
+ assert.deepEqual(spec.series[1].points[0],[points[0][0],predicted[0]]);
 });
+
