@@ -1,11 +1,12 @@
 ## Reportes PDF y Dashboards Desmos · Actualización noviembre 2026
 
-- **Descarga directa en PDF**, sin imprimir ni HTML intermedio. «Reporte automático» descarga el PDF general al finalizar; cada método ofrece otro PDF con fórmulas y errores de todas sus iteraciones.
+- **Descarga directa en PDF**, sin imprimir ni HTML intermedio. «Reporte automático» descarga los PDF individuales de todos los métodos seleccionados y el PDF general al finalizar; cada método conserva su botón de descarga independiente y también existe «Descargar todos los PDF».
 - **jsPDF 3.0.3 distribuido localmente** bajo licencia MIT, en assets/shared/vendor/, con CDN alternativo. Las ecuaciones incluyen código LaTeX y pueden componerse visualmente mediante MathJax si está disponible.
 - **Todas las gráficas de Investigación provienen del motor Desmos** mediante asyncScreenshot. Los datos observados y las curvas ajustadas se grafican en una instancia de Desmos; no se sustituyen por dibujos propios.
 - **Dashboards**: comparación MAPE/MaxAPE, precisión frente a complejidad, residuos, error porcentual por X, curva real/calculada. Filtros por familia, precisión, complejidad, validación y tiempo.
 - **Reporte individual**: primeras páginas con fuente, fórmula, Desmos, datos reales/calculados, errores globales y por tramos. Después las iteraciones con LaTeX y métricas, sin gráficas.
 - **Reporte general**: fórmula ganadora y gráfica Desmos por configuración. No incluye tablas extensas de iteraciones.
+- El navegador puede solicitar permiso para descargar múltiples archivos cuando se ejecuta «Reporte automático».
 - Se requiere cargar la API real de Desmos para las capturas. Un PDF con miles de puntos e iteraciones puede exigir memoria considerable.
 
 
