@@ -113,7 +113,7 @@ export function makeCandidate(config,maxAbsX,rng=Math.random,elite=null){
   const maxX=Math.max(1,Math.min(2,Math.floor(config.maxX)));
   const families=chosenFamilies(config);
   if(!families.length)throw Error('Selecciona al menos una tendencia matemática.');
-  const options=BASIS.filter(k=>k.uses<=maxX&&families.includes(familyForKind(k.kind)));
+  const options=BASIS.filter(k=>k.uses<=maxX&&families.includes(familyForKind(k.kind))&&(!Array.isArray(config.allowedKinds)||config.allowedKinds.includes(k.kind)));
   if(!options.length)throw Error('No hay términos compatibles con las tendencias y el límite de X.');
   const composition=compositionOf(config);
   if(composition==='pair_plus'&&maxTerms<3)throw Error('La forma f₁·f₂ + f₃ exige exactamente 3 términos.');
@@ -144,7 +144,7 @@ export function validCandidate(candidate,config){
     Array.isArray(candidate?.terms)&&candidate.terms.length>=1&&candidate.terms.length<=config.maxTerms&&
     (form!=='pair_plus'||candidate.terms.length===3)&&
     candidate.terms.every(t=>BASIS.some(b=>b.kind===t.kind&&b.uses===t.uses)&&t.uses>=1&&t.uses<=config.maxX&&
-      (config.families===undefined||families.includes(familyForKind(t.kind))))&&
+      (config.families===undefined||families.includes(familyForKind(t.kind)))&&(!Array.isArray(config.allowedKinds)||config.allowedKinds.includes(t.kind)))&&
     (!candidate.constant||!!config.constant);
 }
 /** Adjust effective coefficients, because individual product factors are not identifiable. */
