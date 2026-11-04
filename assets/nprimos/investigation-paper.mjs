@@ -203,7 +203,7 @@ class Paper{
   this.y+=4;
  }
  async displayEquation(entry,{compact=false}={}){
-  const best=entry.best||entry,raw=best?.latex||'',z=best?.ztex||'',long=raw.length>175||raw.includes('\\begin{cases}');
+  const best=entry.best||entry,raw=best?.latex||'',z=best?.ztex||'',long=raw.length>105||raw.includes('\\begin{cases}');
   if(!raw){this.writeLines('No se encontró una expresión válida.',9);return}
   const title='Ecuación '+(entry.id||'')+(long?' (expresión extensa)':'');
   this.ensure(long?28:24);
@@ -217,10 +217,11 @@ class Paper{
   }else{
    const img=await equationPNG(raw);
    if(img){
-    const h=Math.min(compact?16:21,Math.max(8,(INNER-14)/img.ratio));
+    const displayWidth=Math.min(INNER-14,(compact?16:21)*img.ratio);
+    const h=displayWidth/img.ratio;
     this.ensure(h+7);
     this.pdf.setFillColor(247,250,251);this.pdf.roundedRect(L+2,this.y-3,INNER-4,h+6,1.5,1.5,'F');
-    this.pdf.addImage(img.data,'PNG',L+6,this.y,Math.min(INNER-14,h*img.ratio),h);
+    this.pdf.addImage(img.data,'PNG',L+6,this.y,displayWidth,h);
     this.y+=h+6;
    }else{
     this.writeLines(raw,8.7,4.4,NAVY,INNER-8,L+4);
@@ -375,7 +376,7 @@ async function winners(paper,state,entries,progress){
   await paper.winnerCard(entries[i],i,entries.length,state);
   if(i%4===0)await idle();
  }
- const extended=entries.filter(e=>e.best?.latex&&(e.best.latex.length>175||e.best.latex.includes('\\begin{cases}')));
+ const extended=entries.filter(e=>e.best?.latex&&(e.best.latex.length>105||e.best.latex.includes('\\begin{cases}')));
  if(extended.length){
   paper.next();paper.heading('Anexo A. Expresiones LaTeX extensas');
   paper.writeLines('Las ecuaciones extensas y por tramos se reproducen aquí de forma íntegra para evitar que queden microscópicas sobre las gráficas.',9);
