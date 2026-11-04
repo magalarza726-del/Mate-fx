@@ -3,11 +3,11 @@
 
 El laboratorio **nPrimos → Investigación** añade un motor de experimentación sin modificar el generador anterior ni la acotación exponencial original:
 
-1. **Métodos clásicos de ajuste**: lineal, polinómico, exponencial, logarítmico, potencial, racional, recíproco, raíz, y Padé desde una serie local ajustada (Padé figura entre métodos avanzados en la interfaz).
+1. **Métodos clásicos de ajuste**: lineal, polinómico, exponencial, logarítmico, potencial, racional, recíproco y raíz cuadrada.
 2. **Correcciones de funciones**: corrección polinómica, exponencial, racional, potencial y sigmoidal.
 3. **Restricciones y cotas**: mínimos cuadrados, mínimos errores absolutos (IRLS), minimax aproximado, regresión cuantílica, expresiones restringidas y acotación exponencial.
 4. **Interpolación**: lineal, Lagrange, Newton, Hermite, PCHIP y spline cúbico natural.
-5. **Aproximación avanzada**: Chebyshev, aproximación minimax tipo Remez (IRLS), Padé, Taylor local con derivadas estimadas, Fourier, regresión simbólica y media predictiva de un proceso gaussiano con núcleo RBF.
+5. **Aproximación avanzada**: Chebyshev, aproximación minimax tipo Remez (IRLS), Padé desde serie local ajustada, Taylor local con derivadas estimadas, Fourier, regresión simbólica y media predictiva de un proceso gaussiano con núcleo RBF.
 6. **Búsqueda y optimización**: Levenberg–Marquardt, evolución diferencial, algoritmo genético, recocido simulado y optimización bayesiana 1D.
 
 **Una ecuación por método y configuración.** Cada configuración puede duplicarse y controlar n, decimales y magnitud, además de sus parámetros específicos (grados, nodos, armónicos, ancho, cuantil, operadores y bases simbólicas, etc.). Los métodos deterministas resuelven una vez por configuración, los estocásticos ejecutan n intentos. Semillas configurables; control de pausa, reanudación, detención y seguimiento en tiempo real mediante Web Worker. Separación de observaciones para validación (por defecto, 20 % de las X distintas). MAPE, error relativo máximo, MAE, RMSE, P95, complejidad y tabla por tramos. Los puntos con Y=0 no participan en errores porcentuales, pero sí en errores absolutos.
