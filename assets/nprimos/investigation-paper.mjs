@@ -377,7 +377,7 @@ class Paper{
   this.heading('Configuración del experimento',2);
   this.infoTiles([
    ['Método',entry.label],['Semilla',String(entry.seed)],
-   ['Intentos registrados',String(entry.iterations)],['Tiempo de cálculo',norm(entry.elapsedMs/1000)+' s']
+   ['Intentos',String(entry.iterations)],['Duración',norm(entry.elapsedMs/1000)+' s']
   ],4);
   if(!best){
    this.highlightNote('Sin ecuación','No hubo una función válida con las restricciones indicadas. El historial se conserva en los anexos.');
@@ -509,6 +509,18 @@ async function comparison(paper,state,entries){
   norm(e.best?.metrics?.mae),norm(e.best?.complexity)]);
  paper.table(['ID','Método','MAPE','MaxAPE','MAE','C'],rows,[15,67,24,26,24,18],{font:8});
  paper.caption('Tabla 1. Mejores ecuaciones por configuración, ordenadas por MAPE. Los valores de error son los de la evaluación realizada por el motor.');
+ if(sorted.length){
+  const best=[...sorted].find(e=>Number.isFinite(e.best?.metrics?.mape));
+  const simple=[...sorted].sort((a,b)=>scalar(a.best?.complexity)-scalar(b.best?.complexity))[0];
+  const stable=[...sorted].sort((a,b)=>scalar(a.best?.metrics?.maxape)-scalar(b.best?.metrics?.maxape))[0];
+  paper.heading('Hallazgos clave',2);
+  paper.infoTiles([
+   ['Menor MAPE',best?best.id+' | '+percent(best.best.metrics.mape):'N/D'],
+   ['Menor complejidad',simple?simple.id+' | '+norm(simple.best.complexity):'N/D'],
+   ['Menor MaxAPE',stable?stable.id+' | '+percent(stable.best.metrics.maxape):'N/D']
+  ],3);
+ }
+
 }
 async function comparisonFigures(paper,state,entries,progress){
  if(!entries.length)return;
@@ -516,10 +528,10 @@ async function comparisonFigures(paper,state,entries,progress){
  paper.heading('3. Análisis visual');
  progress?.('Capturando el dashboard de comparación directamente desde Desmos');
  await paper.figure(plotSpecifications(state.source,entries[0].best,'complexity',chartEntries),
-  'Relación entre el índice de complejidad de las expresiones y el error medio porcentual.',{height:79});
+  'Relación entre complejidad y log10(MAPE %), para visualizar errores de órdenes de magnitud diferentes.',{height:65});
  progress?.('Capturando la comparación de errores desde Desmos');
  await paper.figure(plotSpecifications(state.source,entries[0].best,'comparison',chartEntries),
-  'Error medio y error máximo de las configuraciones, en el orden mostrado.',{height:79});
+  'log10(MAPE %) y log10(MaxAPE %) por configuración. Ambas series son porcentuales y no se mezclan con MAE.',{height:65});
  paper.writeLines('Las figuras comparativas deben interpretarse junto con la Tabla 1: una curva visualmente cercana a los puntos no garantiza un MAPE bajo ni un comportamiento físicamente válido.',9.4,4.5);
 }
 async function winners(paper,state,entries,progress){
@@ -552,6 +564,7 @@ export async function generalReport(state,nameOf,onProgress=()=>{}){
  const paper=new Paper(pdf,'Catálogo general');
  await cover(paper,state,entries,'Estudio comparativo');
  await methodology(paper,state);
+ paper.next();
  await comparison(paper,state,entries);
  await comparisonFigures(paper,state,entries,onProgress);
  await winners(paper,state,entries,onProgress);
