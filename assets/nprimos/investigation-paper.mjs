@@ -230,8 +230,9 @@ class Paper{
  }
  async figure(spec,description,{width=INNER,height=76}={}){
   this.ensure(height+19);
-  const png=await screenshotFromDesmos(spec,{width:920,height:402,ratio:1.22});
-  const displayedHeight=Math.min(height,width*402/920);
+  const captureHeight=Math.max(270,Math.round(920*height/width));
+  const png=await screenshotFromDesmos(spec,{width:920,height:captureHeight,ratio:1.22});
+  const displayedHeight=width*captureHeight/920;
   this.pdf.addImage(png,'PNG',L,this.y,width,displayedHeight);
   this.y+=displayedHeight+4;
   this.figure++;
@@ -255,13 +256,13 @@ class Paper{
   const topLine=entry.label+' · '+entry.id;
   const best=entry.best;
   // Each card occupies its natural height; no mandatory page break.
-  this.ensure(123);
+  this.ensure(118);
   this.heading(String(index+1)+'. '+topLine,2);
   await this.displayEquation(entry,{compact:true});
   this.metricGrid(best);
   await this.figure(plotSpecifications(state.source,best,'fit'),
    'Valores de referencia (puntos azules) y valores calculados (trazo naranja). '+txt(state.source.xName)+' frente a '+txt(state.source.yName)+'.',
-   {width:INNER,height:71});
+   {width:INNER,height:55});
  }
  annexLatex(entry){
   const raw=entry.best?.latex||'';
@@ -274,7 +275,7 @@ class Paper{
   for(const str of lines){this.ensure(4.6);this.setFont('courier','normal',7.2,NAVY);this.pdf.text(txt(str),L+4,this.y);this.y+=3.9}
   this.y+=5;
  }
- iterationTable(items,id,progress){
+ async iterationTable(items,id,progress){
   this.next();this.heading('Anexo de iteraciones: '+id);
   this.writeLines('Cada registro conserva la fórmula LaTeX y sus errores. Este anexo no incorpora gráficas.',9);
   const p=this.pdf;
