@@ -7,6 +7,16 @@ function summarize(r,validation){
  if(validation.length){const map=new Map(r._all?.map((p,i)=>[p[0],r.estimates[i]])||[]);out.validationMetrics=statistics(validation,validation.map(p=>map.get(p[0])))}
  return out;
 }
+function curvePoints(points,predictor){
+ if(typeof predictor!=='function'||!points.length)return [];
+ const min=points[0][0],max=points[points.length-1][0],total=220;
+ const curve=[];
+ for(let i=0;i<total;i++){
+  const x=min+(max-min)*i/(total-1),y=predictor(x);
+  if(Number.isFinite(y))curve.push([x,y]);
+ }
+ return curve;
+}
 function next(){
  const s=run;if(!s||s.paused)return;
  if(s.index>=s.entries.length){postMessage({type:'complete',done:s.done,total:s.total,results:s.results});run=null;return}
@@ -24,7 +34,7 @@ function next(){
    const validationMetrics=s.split.validation.length?statistics(s.split.validation,s.split.validation.map(p=>result.estimates[s.indexMap.get(p[0])])):null;
    const item={iteration:s.iteration,latex:result.latex,ztex:result.ztex,complexity:result.complexity,metrics:result.metrics,trainMetrics:result.trainMetrics,validationMetrics,score:result.score};
    rows.push(item);
-   if(!s.best||result.score<s.best.score){s.best={...item,estimates:result.estimates};if(method.id==='symbolic'&&cfg.generational)s.session.elite=result}
+   if(!s.best||result.score<s.best.score){s.best={...item,estimates:result.estimates,curvePoints:curvePoints(s.split.all,result.predictor)};if(['symbolic','constrained'].includes(method.id)&&cfg.generational)s.session.elite=result}
   }else rows.push({iteration:s.iteration,latex:null,score:null,reason:'Sin ajuste válido bajo las restricciones'});
  }
  postMessage({type:'progress',index:s.index,entryId:entry.id,done:s.done,total:s.total,methodDone:s.iteration,methodTotal:effective,rows,best:s.best});
