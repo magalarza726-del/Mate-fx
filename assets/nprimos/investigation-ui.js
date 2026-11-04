@@ -122,7 +122,7 @@ async function graph(force=false){
  const spec=plotSpecifications(state.source,best,'fit');
  $('inv-preview-caption').textContent=(state.active||'Ganadora')+' · Azul: puntos observados · naranja: estimación · Gráfica real de Desmos';
  try{
-  const png=await screenshotFromDesmos(spec,{width:900,height:470,ratio:1.15});
+  const png=await screenshotFromDesmos(spec,{width:900,height:470,ratio:1.15,previewKey:'main'});
   if(token!==state.graphSerial||!element.isConnected)return;
   const img=new Image();img.src=png;img.alt='Captura real de Desmos mostrando los datos y la ecuación ganadora.';
   img.style.cssText='display:block;width:100%;height:auto;';element.replaceChildren(img);
