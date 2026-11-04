@@ -1,13 +1,15 @@
 /* Mate-fx: interfaz de investigación reproducible. */
 import {METHODS,methodById,methodConfig,cleanData} from './investigation-core.mjs';
-import {methodReport,generalReport,graphSVG} from './investigation-report.mjs';
+import {methodReport,generalReport} from './investigation-report.mjs';
+import {plotSpecifications,screenshotFromDesmos} from './investigation-desmos.mjs';
+import {setupDashboards,refreshDashboards} from './investigation-dashboards.mjs';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number.isFinite(n)?Number(n).toLocaleString('es-EC',{maximumFractionDigits:4}):'—';
 const pct=n=>Number.isFinite(n)?fmt(n)+' %':'—';
 const SYMBOLIC_KINDS=[['x','x'],['power','Potencias'],['ln','ln(x)'],['log1p','ln(1+x)'],['sqrt','Raíz'],['exp','Exponencial'],['sin','Seno'],['cos','Coseno'],['reciprocal','Recíproco'],['xln','x·ln(x)'],['xx','x^x'],['xexp','x·exp'],['xover','Cociente x/(x+p)'],['xsin','x·sin']];
 const GROUP_ORDER=['Métodos clásicos de ajuste','Métodos de corrección de funciones','Métodos basados en restricciones y cotas','Métodos de interpolación','Métodos de aproximación avanzada','Métodos de búsqueda y optimización'];
 const DEFAULT={n:10000,allowedKinds:SYMBOLIC_KINDS.map(k=>k[0]),decimals:3,magnitude:9999,degree:2,denominator:2,knots:8,harmonics:2,width:.6,quantile:.5,maxTerms:3,maxX:2,constant:true,generational:true,composition:'sum',families:['logarithmic','exponential','polynomial','trigonometric'],bounds:'shared',center:'auto',objective:'mape'};
-const state={project:null,projectName:'',source:null,entries:[],history:new Map(),results:new Map(),worker:null,running:false,paused:false,mode:'manual',active:'',done:0,total:0,seq:0,lastDraw:0};
+const state={project:null,projectName:'',source:null,entries:[],history:new Map(),results:new Map(),worker:null,running:false,paused:false,mode:'manual',active:'',done:0,total:0,seq:0,lastDraw:0,lastGraph:0,graphSerial:0,exporting:false};
 const select=(key,title,current,values)=>'<label>'+title+'<select data-setting="'+key+'">'+values.map(a=>'<option value="'+esc(a[0])+'"'+(String(a[0])===String(current)?' selected':'')+'>'+esc(a[1])+'</option>').join('')+'</select></label>';
 const field=(key,title,current,min,max,step='1')=>'<label>'+title+'<input type="number" data-setting="'+key+'" value="'+esc(current)+'" min="'+min+'" max="'+max+'" step="'+step+'"></label>';
 const methodsSelect=()=>GROUP_ORDER.map(group=>
@@ -86,20 +88,49 @@ function table(){
  $('inv-permethod').innerHTML=[...new Set(state.entries.filter(e=>state.history.has(e.id)).map(e=>e.method))].map(m=>
  '<button type="button" data-pdf="'+m+'">Reporte PDF · '+esc(methodById(m).name)+'</button>').join('');
  $('inv-permethod').querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>reportMethod(b.dataset.pdf));
- $('inv-general').disabled=!done;$('inv-json').disabled=!state.history.size;
+ $('inv-general').disabled=!done||state.exporting;$('inv-json').disabled=!state.history.size||state.exporting;
+ refreshDashboards();
 }
-function reportState(){return {...state,projectName:state.projectName,source:state.source}}
-function reportMethod(id){if(!methodReport(reportState(),id,methodById(id).name))note('No fue posible abrir el reporte. Comprueba el bloqueador de ventanas emergentes.')}
-function reportGeneral(){if(!generalReport(reportState(),id=>methodById(id).name))note('No fue posible abrir el reporte. Comprueba el bloqueador de ventanas emergentes.')}
-function graph(){
+function reportState(){
+ return {...state,entries:state.entries.map(e=>({...e,config:{...e.config}})),results:new Map(state.results),history:new Map(state.history),source:state.source};
+}
+async function generatePDF(task){
+ if(state.exporting)return;
+ state.exporting=true;buttons();table();
+ try{
+  const name=await task(s=>note(s));
+  note('PDF descargado correctamente: '+name);
+ }catch(error){console.error(error);note('Error al generar el PDF: '+(error.message||error))}
+ finally{state.exporting=false;buttons();table()}
+}
+async function reportMethod(id){
+ const snapshot=reportState();
+ await generatePDF(notify=>methodReport(snapshot,id,methodById(id).name,notify));
+}
+async function reportGeneral(){
+ const snapshot=reportState();
+ await generatePDF(notify=>generalReport(snapshot,id=>methodById(id).name,notify));
+}
+async function graph(force=false){
  if(!state.source)return;
- const m=state.results.get(state.active)?.best||[...state.results.values()].find(x=>x.best)?.best;
- $('inv-preview').innerHTML=graphSVG(state.source.points,m?.estimates);
- $('inv-preview-caption').textContent=(state.active||'Vista inicial')+' · Azul: observaciones; naranja: función estimada';
+ const current=performance.now();if(!force&&current-state.lastGraph<1100)return;
+ state.lastGraph=current;
+ const best=state.results.get(state.active)?.best||[...state.results.values()].find(x=>x.best)?.best;
+ const element=$('inv-preview');if(!element)return;
+ const token=++state.graphSerial;
+ if(!best){element.textContent='Los puntos y la curva se mostrarán aquí mediante el motor de Desmos.';return}
+ const spec=plotSpecifications(state.source,best,'fit');
+ $('inv-preview-caption').textContent=(state.active||'Ganadora')+' · Azul: puntos observados · naranja: estimación · Gráfica real de Desmos';
+ try{
+  const png=await screenshotFromDesmos(spec,{width:900,height:470,ratio:1.15});
+  if(token!==state.graphSerial||!element.isConnected)return;
+  const img=new Image();img.src=png;img.alt='Captura real de Desmos mostrando los datos y la ecuación ganadora.';
+  img.style.cssText='display:block;width:100%;height:auto;';element.replaceChildren(img);
+ }catch(e){if(token===state.graphSerial){element.textContent='Desmos no pudo capturar el gráfico: '+e.message}}
 }
 function note(s){$('inv-status').textContent=s}
 function buttons(){
- $('inv-start').disabled=state.running;$('inv-auto').disabled=state.running;
+ $('inv-start').disabled=state.running||state.exporting;$('inv-auto').disabled=state.running||state.exporting;
  $('inv-pause').disabled=!state.running||state.paused;$('inv-resume').disabled=!state.running||!state.paused;$('inv-stop').disabled=!state.running;
 }
 function progress(){
@@ -111,7 +142,7 @@ function stop(){
 }
 function finish(s){stop();table();graph();progress();note(s)}
 function run(mode){
- if(state.running)return;
+ if(state.running||state.exporting)return;
  const s=window.__gmrResearchSnapshot?.('y'),pts=cleanData(s?.source?.points);
  if(pts.length<5)return note('Importa datos con al menos 5 puntos distintos.');
  if(!state.entries.length)return note('Selecciona al menos un método.');
@@ -133,11 +164,11 @@ function run(mode){
    if(msg.best)state.results.set(msg.entryId,{id:msg.entryId,best:msg.best});
    if(performance.now()-state.lastDraw>250){state.lastDraw=performance.now();table();graph();progress()}
   }
-  if(msg.type==='method-complete'){state.results.set(msg.entryId,msg.result);table();graph();progress()}
+  if(msg.type==='method-complete'){state.results.set(msg.entryId,msg.result);table();graph(true);refreshDashboards(true);progress()}
   if(msg.type==='paused'){state.paused=true;buttons();note('Pausado.')}
   if(msg.type==='resumed'){state.paused=false;buttons();note('Reanudado.')}
   if(msg.type==='warning')note('Advertencia '+msg.entryId+': '+msg.message);
-  if(msg.type==='complete'){state.done=msg.done;finish('Experimentos terminados. Ya puedes generar los reportes.');if(mode==='automatic')note('Reporte automático terminado: elige los PDF individuales o el general.')}
+  if(msg.type==='complete'){state.done=msg.done;finish('Experimentos terminados. Los reportes se descargan directamente como PDF.');if(mode==='automatic')reportGeneral()}
   if(msg.type==='error')finish('Error: '+msg.message);
  };
  w.onerror=e=>finish('Error en el motor: '+(e.message||'desconocido'));
@@ -158,16 +189,19 @@ function setup(){
  '<main class="inv-content"><section class="gmr-research-group"><h3>Configuraciones por método · <small id="inv-config-count"></small></h3><p class="gmr-research-note">Cada configuración genera una fórmula ganadora. Duplica un método para comparar distintos decimales, límites y parámetros. En métodos simbólicos y acotación el motor admite hasta 3 decimales y 9 999 de magnitud; las constantes de normalización derivadas de X se declaran aparte.</p><div id="inv-cards"></div></section>'+
  '<section class="gmr-research-group"><div class="inv-actions"><label>Validación (%) <input id="inv-validation" type="number" min="0" max="40" step="5" value="20"></label><button id="inv-start">▶ Investigar en tiempo real</button><button id="inv-auto">▤ Reporte automático</button><button id="inv-pause">Pausar</button><button id="inv-resume">Reanudar</button><button id="inv-stop">Detener</button></div><div class="inv-status"><progress id="inv-progress" value="0" max="1"></progress><span id="inv-counter">0 / 0</span></div><p id="inv-status">Selecciona métodos para iniciar la investigación.</p></section>'+
  '<section class="gmr-research-group"><h3>Mejor curva en tiempo real</h3><div id="inv-preview"></div><small id="inv-preview-caption"></small></section>'+
+ '<section class="gmr-research-group" id="inv-dashboards"></section>'+ 
  '<section class="gmr-research-group"><h3>Mejores fórmulas · <small id="inv-completed"></small></h3><div class="gmr-history"><table><thead><tr><th>Configuración</th><th>Método</th><th>Función LaTeX</th><th>MAPE</th><th>Error máximo</th><th>Complejidad</th><th>Gráfica</th></tr></thead><tbody id="inv-winners"></tbody></table></div></section>'+
- '<section class="gmr-research-group"><h3>Reportes</h3><p>Reportes individuales: primeras páginas con puntos, gráfica y errores; resto con las iteraciones y funciones en LaTeX, sin gráficas. Reporte general: fórmulas ganadoras y gráficas exclusivamente.</p><div id="inv-permethod" class="inv-reports"></div><div class="inv-actions"><button id="inv-general">Reporte general · fórmulas y gráficas</button><button id="inv-json">Exportar historial JSON</button></div><p class="gmr-research-note">Los reportes se abren para imprimir o Guardar como PDF desde el navegador. La renderización matemática usa MathJax con conexión; el código LaTeX se incluye siempre.</p></section></main></div></div>';
+ '<section class="gmr-research-group"><h3>Reportes</h3><p>Reportes individuales: primeras páginas con puntos, gráfica y errores; resto con las iteraciones y funciones en LaTeX, sin gráficas. Reporte general: fórmulas ganadoras y gráficas exclusivamente.</p><div id="inv-permethod" class="inv-reports"></div><div class="inv-actions"><button id="inv-general">Reporte general · fórmulas y gráficas</button><button id="inv-json">Exportar historial JSON</button></div><p class="gmr-research-note">Cada botón descarga directamente un archivo PDF (.pdf), sin utilizar la impresión del navegador. Las gráficas provienen de capturas PNG oficiales de Desmos. LaTeX se incluye en cada reporte; MathJax mejora su presentación cuando está disponible.</p></section></main></div></div>';
  document.body.append(overlay);
+ setupDashboards(()=>state);
+ document.addEventListener('gmr:inv-select',()=>graph(true));
  b.onclick=()=>{
   const s=window.__gmrResearchSnapshot?.('y'),p=window.__gmrActiveProject?.();
   if(!s)return;
   if(state.project!==p?.id){stop();state.project=p?.id;state.projectName=p?.name||'';state.entries=[];state.history.clear();state.results.clear();state.source=null;for(const id of ['linear','polynomial','exponential','rational','chebyshev','symbolic','envelope'])state.entries.push(entry(id))}
   state.source={...s.source,points:cleanData(s.source.points)};
   $('inv-source').textContent=(p?.name||'Proyecto')+' · '+s.source.sourceName+' · '+state.source.points.length+' puntos distintos';
-  setMethodList();cards();table();graph();buttons();overlay.hidden=false;
+  setMethodList();cards();table();graph(true);refreshDashboards(true);buttons();overlay.hidden=false;
  };
  $('inv-close').onclick=()=>overlay.hidden=true;overlay.onclick=e=>{if(e.target===overlay)overlay.hidden=true};
  $('inv-start').onclick=()=>run('manual');$('inv-auto').onclick=()=>run('automatic');
