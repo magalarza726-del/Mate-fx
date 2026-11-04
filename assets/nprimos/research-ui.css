@@ -66,3 +66,36 @@ body:has(#primeTablePanel.open) #np-envelope-btn,body:has(.gmr-research-overlay:
 #np-envelope-panel .env-best-card p{margin:4px 0 8px}
 #np-envelope-panel .env-best-card code{display:block;overflow-wrap:anywhere;margin:5px 0;font-size:12px}
 @media(max-width:600px){#np-envelope-btn{right:9px;bottom:305px}#env-preview{height:210px}}
+/* Investigación · 6 secciones, configuración por método y reportes */
+#np-investigation-btn{position:fixed;right:14px;bottom:365px;z-index:4201;border:0;border-radius:12px;padding:12px 15px;background:#176b9d;color:#fff;font:700 13px system-ui;cursor:pointer;box-shadow:0 7px 20px #0002}
+#np-investigation-btn:hover{background:#12547e}
+body:has(#primeTablePanel.open) #np-investigation-btn,body:has(.gmr-research-overlay:not([hidden])) #np-investigation-btn{display:none!important}
+.inv-window{max-width:1490px}.inv-layout{display:grid;grid-template-columns:245px minmax(0,1fr);gap:15px;align-items:start}
+.inv-sidebar{min-width:0;max-height:calc(90vh - 110px);overflow:auto;border:1px solid #dce6f0;border-radius:10px;padding:12px;background:#f8fbfe;position:sticky;top:0}
+.inv-sidebar h3{font-size:16px;margin:0 0 10px;color:#163755}.inv-category{padding-bottom:10px;border-bottom:1px solid #dfe7f0;margin-bottom:9px}
+.inv-category h4{font-size:12px;margin:0 0 7px;color:#2a5781}
+.inv-category label{display:flex;align-items:flex-start;gap:5px;padding:4px 0;font-size:12px;line-height:1.2;cursor:pointer}
+.inv-category label input{flex-shrink:0;margin-top:1px}
+.inv-category small{color:#66798e;margin-left:auto}
+.inv-content{display:flex;flex-direction:column;gap:12px;min-width:0}
+.inv-content>.gmr-research-group h3{font-size:15px;margin:0 0 9px;color:#173b5e}
+.inv-card{border:1px solid #cbdbe9;border-radius:9px;background:#fff;padding:10px;margin:9px 0}
+.inv-card header{display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid #e7eef7;padding-bottom:6px;margin-bottom:8px}
+.inv-card header small{display:block;font-size:11px;color:#66758a}.inv-card header button{border:1px solid #dae2ec;border-radius:5px;padding:5px 9px;background:#f6f8fc;cursor:pointer}
+.inv-settings{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:8px}
+.inv-settings label,.inv-seed,.inv-actions label{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px}
+.inv-settings input,.inv-settings select,.inv-seed input{max-width:125px;min-width:70px;border:1px solid #c8d6e5;border-radius:6px;padding:6px;background:#fff;color:#16293c}
+.inv-family{display:flex;gap:7px;flex-wrap:wrap;grid-column:1/-1}
+.inv-family label{display:flex;gap:4px;justify-content:start}.inv-seed{margin-top:8px;width:190px}
+.inv-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.inv-actions button,.inv-reports button,.inv-links button,#inv-winners button{border:0;border-radius:8px;background:#216ca3;color:#fff;padding:9px 12px;font:600 12px system-ui;cursor:pointer}
+.inv-actions button:disabled,.inv-reports button:disabled{opacity:.4;cursor:not-allowed}
+#inv-auto{background:#1c8357}#inv-stop{background:#ae4545}#inv-pause,#inv-resume{background:#61758c}
+#inv-preview{width:100%;min-height:200px;background:#fff;border:1px solid #dce5ee;border-radius:8px;overflow:hidden}
+#inv-preview svg{display:block;width:100%;height:290px}.inv-status{display:flex;align-items:center;gap:9px;margin-top:12px}
+.inv-status progress{flex:1;height:14px}#inv-status{font-size:12px;color:#506780}
+#inv-winners{font-size:11px}#inv-winners .inv-latex{min-width:165px;overflow-wrap:anywhere;font:11px monospace}
+.inv-reports{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.inv-links{display:flex;flex-direction:column;gap:7px;margin-top:15px}.inv-links button{background:#e7eff9;color:#23577f;text-align:left}
+@media(max-width:900px){.inv-layout{grid-template-columns:1fr}.inv-sidebar{position:static;max-height:230px}.inv-settings{grid-template-columns:repeat(2,minmax(145px,1fr))}}
+@media(max-width:580px){#np-investigation-btn{right:9px;bottom:362px}.inv-settings{grid-template-columns:1fr}.inv-window .gmr-research-body{padding:9px}.inv-actions button{padding:8px}.inv-category label{font-size:11px}}
