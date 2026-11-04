@@ -383,5 +383,5 @@ export function evaluateMethod(methodId,train,all,opt={},rng=Math.random,iterati
  const estimates=all.map(p=>model.predict(p[0])),metrics=statistics(all,estimates);
  const trainMetrics=statistics(train,train.map(p=>model.predict(p[0])));
  if(!Number.isFinite(objective(trainMetrics,cfg.objective)))return null;
- return {iteration,method:methodId,latex:model.latex,ztex:model.ztex||null,complexity:model.complexity||1,metrics,trainMetrics,score:objective(trainMetrics,cfg.objective),estimates,params:cfg,model:model.model||null};
+ return {iteration,method:methodId,latex:model.latex,ztex:model.ztex||null,complexity:model.complexity||1,metrics,trainMetrics,score:objective(trainMetrics,cfg.objective),estimates,params:cfg,model:model.model||null,predictor:model.predict};
 }
