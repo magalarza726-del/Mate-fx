@@ -153,8 +153,8 @@ function interpolation(points,opt,id){
  if(id==='lagrange'||id==='newton'){
   if(id==='lagrange'){
    const w=knots.map(([xi],i)=>1/knots.reduce((prod,[xj],j)=>j===i?prod:prod*(xi-xj),1));
-   const formula=knots.map(([x,y],i)=>'('+fmt(y)+')\\prod_{j\\ne '+i+'}\\frac{x-x_j}{x_'+i+'-x_j}').join('+');
-   return {latex:'f(x)='+formula+'\\quad (x_j\\text{ son los nodos indicados})',complexity:knots.length*4,predict:x=>{
+   const formula=knots.map(([xi,y],i)=>'('+fmt(y)+')'+knots.filter((_,j)=>j!==i).map(([xj])=>'\\frac{x-('+fmt(xj)+')}{'+fmt(xi-xj)+'}').join('')).join('+');
+   return {latex:'f(x)='+formula,complexity:knots.length*4,predict:x=>{
      let top=0,bot=0;for(let i=0;i<knots.length;i++){if(Math.abs(x-knots[i][0])<1e-12)return knots[i][1];const t=w[i]/(x-knots[i][0]);top+=t*knots[i][1];bot+=t}return clean(top/bot)}};
   }
   const dd=knots.map(p=>p[1]),coef=[dd[0]];
@@ -225,14 +225,18 @@ function linearMethod(id,points,opt,seed){
  if(['linear_interp','lagrange','newton','hermite','pchip','spline'].includes(id))return interpolation(points,opt,id);
  if(id==='least_squares'||id==='taylor')return polynomial(points,opt,opt.degree);
  if(id==='quantile'||id==='minimax'||id==='least_absolute'||id==='remez'){
-  const {basis,labels,norm}=customBasis(['least_absolute','remez'].includes(id)?'minimax':id,points,opt),feature=x=>basis.map(fn=>fn(norm.z(x),x));
-  let weights=Array(points.length).fill(1),model=null;
+  const {basis,labels,norm}=customBasis(['least_absolute','remez'].includes(id)?'minimax':id,points,opt);
+  let weights=Array(points.length).fill(1),model=null,best=null,bestLoss=Infinity;
   for(let k=0;k<Math.min(25,Math.max(6,opt.degree*4));k++){
-   model=basisModel(points,basis,labels,opt,null,(_,p)=>weights[points.indexOf(p)]||1);if(!model)return null;
+   model=basisModel(points,basis,labels,opt,null,(_,p)=>weights[points.indexOf(p)]||1);if(!model)break;
    const e=points.map(p=>p[1]-model.predict(p[0]));
-   const scale=Math.max(1e-8,e.reduce((s,v)=>s+Math.abs(v),0)/e.length*.01);
-   weights=e.map(v=>['minimax','remez'].includes(id)?Math.min(1e6,(Math.abs(v)+scale)**Math.min(3,1+k/5)):Math.min(1e6,(v>=0?opt.quantile:1-opt.quantile)/Math.max(scale,Math.abs(v))));
-  }return model;
+   const metric=statistics(points,points.map(p=>model.predict(p[0])));
+   const loss=['minimax','remez'].includes(id)?metric.maxAbs:(id==='least_absolute'?metric.mae:(id==='quantile'?e.reduce((sum,v)=>sum+(v>=0?opt.quantile:1-opt.quantile)*Math.abs(v),0):objective(metric,opt.objective)));
+   if(Number.isFinite(loss)&&loss<bestLoss){bestLoss=loss;best=model}
+   const scale=Math.max(1e-8,e.reduce((sum,v)=>sum+Math.abs(v),0)/e.length*.01);
+   weights=e.map(v=>['minimax','remez'].includes(id)?Math.min(1e6,(Math.abs(v)+scale)**Math.min(3,1+k/5)):Math.min(1e6,(v>=0?(id==='least_absolute'?.5:opt.quantile):(id==='least_absolute'?.5:1-opt.quantile))/Math.max(scale,Math.abs(v))));
+  }
+  return best;
  }
  const {basis,labels}=customBasis(id,points,opt,seed);
  return basis.length?basisModel(points,basis,labels,opt):null;
@@ -255,23 +259,27 @@ function predictorModel(id,points,opt,rng,step,session){
  }
 
  if(id==='bayesian'){
-  // One-dimensional Bayesian optimization of an exponential correction rate.
-  const s=session||{},history=s.bayes||(s.bayes=[]),trial=t=>linearMethod('correction_exp',points,opt,t);
+  const sessionState=session||{},history=sessionState.bayes||(sessionState.bayes=[]);
+  const trial=t=>linearMethod('correction_exp',points,opt,t);
   const score=t=>{const m=trial(t);return m?objective(statistics(points,points.map(p=>m.predict(p[0]))),opt.objective):Infinity};
-  let choice=(rng()*10-5);
+  let choice=rng()*10-5;
   if(history.length>=4){
-   const recent=history.slice(-24),min=Math.min(...recent.map(v=>v.score)),scale=1.15;
-   let acquisition=-Infinity;
-   for(let j=0;j<48;j++){
-    const t=-5+10*(j+rng())/48,mat=recent.map((a,i)=>recent.map((b,k)=>Math.exp(-(((a.x-b.x)/scale)**2))+(i===k?0.015:0)));
-    const ks=recent.map(a=>Math.exp(-(((t-a.x)/scale)**2))),mean=recent.reduce((a,v)=>a+v.score,0)/recent.length;
-    const y=recent.map(v=>v.score-mean),alpha=solver(mat,y),v=solver(mat,ks);
-    if(!alpha||!v)continue;
-    const mu=mean+ks.reduce((a,k,i)=>a+k*alpha[i],0),variance=Math.max(.000001,1-ks.reduce((a,k,i)=>a+k*v[i],0));
-    const sigma=Math.sqrt(variance)*Math.max(.05,Math.abs(min)*.1),z=(min-mu)/sigma;
-    const phi=Math.exp(-.5*z*z)/Math.sqrt(2*Math.PI),cdf=1/(1+Math.exp(-1.702*z));
-    const expected=(min-mu)*cdf+sigma*phi;
-    if(expected>acquisition){acquisition=expected;choice=t}
+   const recent=history.slice(-8),min=Math.min(...recent.map(v=>v.score)),scale=1.15;
+   const mat=recent.map((a,i)=>recent.map((b,k)=>Math.exp(-(((a.x-b.x)/scale)**2))+(i===k?0.025:0)));
+   const mean=recent.reduce((sum,v)=>sum+v.score,0)/recent.length;
+   const alpha=solver(mat,recent.map(v=>v.score-mean));
+   if(alpha){
+    let acquisition=-Infinity;
+    for(let j=0;j<18;j++){
+     const t=-5+10*(j+rng())/18;
+     const ks=recent.map(a=>Math.exp(-(((t-a.x)/scale)**2))),v=solver(mat,ks);
+     if(!v)continue;
+     const mu=mean+ks.reduce((sum,k,i)=>sum+k*alpha[i],0),variance=Math.max(.000001,1-ks.reduce((sum,k,i)=>sum+k*v[i],0));
+     const sigma=Math.sqrt(variance)*Math.max(.05,Math.abs(min)*.1),z=(min-mu)/sigma;
+     const phi=Math.exp(-.5*z*z)/Math.sqrt(2*Math.PI),cdf=1/(1+Math.exp(-1.702*z));
+     const expected=(min-mu)*cdf+sigma*phi;
+     if(expected>acquisition){acquisition=expected;choice=t}
+    }
    }
   }
   const loss=score(choice);if(Number.isFinite(loss)){history.push({x:choice,score:loss});if(history.length>60)history.shift()}
@@ -281,8 +289,9 @@ function predictorModel(id,points,opt,rng,step,session){
   const norm=normalized(points),k=Math.min(points.length,opt.knots),indices=Array.from({length:k},(_,i)=>Math.round(i*(points.length-1)/(k-1))),
    centers=indices.map(i=>norm.z(points[i][0])),width=opt.width,ker=(a,b)=>Math.exp(-(((a-b)/width)**2));
   const A=centers.map((u,i)=>centers.map((v,j)=>ker(u,v)+(i===j?0.001:0)));
-  const y=indices.map(i=>points[i][1]),alpha=solver(A,y);if(!alpha)return null;
-  return {latex:'f(x)='+alpha.map((a,i)=>'('+fmt(fix(a,opt.decimals,opt.magnitude))+')e^{-((z-('+fmt(centers[i])+'))/'+fmt(width)+')^2}').join('+'),
+  const y=indices.map(i=>points[i][1]),sol=solver(A,y);if(!sol)return null;
+  const alpha=sol.map(a=>fix(a,opt.decimals,opt.magnitude));
+  return {latex:'f(x)='+alpha.map((a,i)=>'('+fmt(a)+')e^{-((z-('+fmt(centers[i])+'))/'+fmt(width)+')^2}').join('+'),
    ztex:norm.tex,complexity:k*4,predict:x=>clean(alpha.reduce((sum,v,i)=>sum+v*ker(norm.z(x),centers[i]),0))};
  }
  if(id==='levenberg'){
