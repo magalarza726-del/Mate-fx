@@ -1,5 +1,6 @@
 /* Capturas REALES del motor Desmos v1.12 para Investigación (sin dibujar SVG/canvas propios). */
 let calculator=null,container=null,tail=Promise.resolve();
+let ticket=0;const latest=new Map();
 const finite=p=>Array.isArray(p)&&p.length>=2&&Number.isFinite(+p[0])&&Number.isFinite(+p[1]);
 const number=v=>String(Number(Number(v).toPrecision(13)));
 export function plotSpecifications(source,best,kind='fit',entries=[]){
@@ -74,7 +75,13 @@ function capture(spec,opts={}){
 }
 /** Serial queue to avoid simultaneous mutation of the dedicated Desmos screenshot calculator. */
 export function screenshotFromDesmos(spec,opts={}){
- const next=tail.catch(()=>{}).then(()=>capture(spec,opts));tail=next.then(()=>{},()=>{});return next;
+ const key=opts.previewKey,token=++ticket;
+ if(key)latest.set(key,token);
+ const next=tail.catch(()=>{}).then(()=>{
+  if(key&&latest.get(key)!==token)throw Error('Captura anterior sustituida por una nueva');
+  return capture(spec,opts);
+ });
+ tail=next.then(()=>{},()=>{});return next;
 }
 export async function updateDesmosImage(element,spec,opts={}){
  if(!element)return;
