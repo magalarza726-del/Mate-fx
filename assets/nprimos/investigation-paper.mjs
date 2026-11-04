@@ -281,7 +281,8 @@ class Paper{
    const note=raw.includes('\\begin{cases}')?
     'Función definida por tramos ('+(no+1)+' expresiones). Se reproduce completa en el anexo de fórmulas.':
     'Expresión extensa. El código LaTeX íntegro se conserva en el anexo de fórmulas.';
-   this.writeLines(note,9,4.2,GRAY,INNER-10,L+5);
+   this.writeLines(note,8.8,4,GRAY,INNER-10,L+5);
+   if(!compact)this.writeLines(raw.slice(0,110)+(raw.length>110?' ...':''),7.5,3.4,BLUE,INNER-10,L+5);
   }else{
    const img=await equationPNG(raw);
    if(img){
@@ -376,7 +377,7 @@ class Paper{
   this.next();this.heading('3. Resultados: '+entry.label+' - '+entry.id);
   this.heading('Configuración del experimento',2);
   this.infoTiles([
-   ['Método',entry.label],['Semilla',String(entry.seed)],
+   ['Configuración',entry.id],['Semilla',String(entry.seed)],
    ['Intentos',String(entry.iterations)],['Duración',norm(entry.elapsedMs/1000)+' s']
   ],4);
   if(!best){
