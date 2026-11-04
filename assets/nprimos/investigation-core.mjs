@@ -16,7 +16,7 @@ export const METHODS=[
  {id:'logarithmic',name:'Regresión logarítmica',group:'Métodos clásicos de ajuste',type:'direct'},
  {id:'power',name:'Regresión potencial',group:'Métodos clásicos de ajuste',type:'direct'},
  {id:'rational',name:'Regresión racional',group:'Métodos clásicos de ajuste',type:'direct'},
- {id:'pade',name:'Padé desde serie local ajustada',group:'Métodos clásicos de ajuste',type:'direct'},
+ {id:'pade',name:'Padé desde serie local ajustada',group:'Métodos de aproximación avanzada',type:'direct'},
  {id:'reciprocal',name:'Regresión recíproca',group:'Métodos clásicos de ajuste',type:'direct'},
  {id:'sqrt',name:'Regresión de raíz cuadrada',group:'Métodos clásicos de ajuste',type:'direct'},
  {id:'correction_poly',name:'Exponencial con corrección polinómica',group:'Métodos de corrección de funciones',type:'direct'},
