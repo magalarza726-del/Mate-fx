@@ -99,3 +99,23 @@ body:has(#primeTablePanel.open) #np-investigation-btn,body:has(.gmr-research-ove
 .inv-links{display:flex;flex-direction:column;gap:7px;margin-top:15px}.inv-links button{background:#e7eff9;color:#23577f;text-align:left}
 @media(max-width:900px){.inv-layout{grid-template-columns:1fr}.inv-sidebar{position:static;max-height:230px}.inv-settings{grid-template-columns:repeat(2,minmax(145px,1fr))}}
 @media(max-width:580px){#np-investigation-btn{right:9px;bottom:362px}.inv-settings{grid-template-columns:1fr}.inv-window .gmr-research-body{padding:9px}.inv-actions button{padding:8px}.inv-category label{font-size:11px}}
+
+/* Dashboards del Laboratorio de Investigación: imágenes y gráficos reales de Desmos */
+#inv-dashboards{min-width:0}
+.inv-dashboard-filters{display:flex;flex-wrap:wrap;gap:9px;margin:10px 0}
+.inv-dashboard-filters label{display:flex;gap:5px;align-items:center;justify-content:flex-start;font-size:12px;color:#35516c}
+.inv-dashboard-filters select{padding:7px 9px;border:1px solid #bed0e3;border-radius:7px;background:#fff;color:#18364f;max-width:250px;width:auto}
+.inv-dashboard-kpis{display:grid;grid-template-columns:repeat(5,minmax(115px,1fr));gap:10px;margin:12px 0}
+.inv-kpi{background:#fff;border:1px solid #d7e1ed;padding:12px 10px;border-radius:9px;min-width:0}
+.inv-kpi small{font-size:10px;display:block;color:#516983;margin-bottom:5px}
+.inv-kpi strong{font-size:14px;overflow-wrap:anywhere;display:block;color:#214666}
+.inv-dashboard-plot{background:#fff;border:1px solid #cbdce9;border-radius:10px;overflow:hidden;min-height:200px;display:grid;place-items:center;color:#657c93;padding:5px}
+.inv-dashboard-plot img{display:block;width:100%;height:auto}
+.inv-dashboard-plot[aria-busy=true]{opacity:.7}
+.inv-dash-table{max-height:350px;margin:10px 0}
+.inv-dash-table th{position:sticky;top:0;background:#e5eff7}
+.inv-dash-table button{border:0;background:#286c9b;color:#fff;border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer}
+#inv-preview{display:grid;place-items:center;min-height:220px}
+#inv-preview img{display:block;max-width:100%;height:auto}
+@media(max-width:1100px){.inv-dashboard-kpis{grid-template-columns:repeat(3,minmax(115px,1fr))}}
+@media(max-width:650px){.inv-dashboard-kpis{grid-template-columns:repeat(2,minmax(120px,1fr))}.inv-dashboard-filters{display:flex;flex-direction:column}.inv-dashboard-filters label{justify-content:space-between}}
