@@ -378,7 +378,7 @@ class Paper{
   this.infoTiles([
    ['Método',entry.label],['Semilla',String(entry.seed)],
    ['Intentos registrados',String(entry.iterations)],['Tiempo de cálculo',norm(entry.elapsedMs/1000)+' s']
-  ]);
+  ],4);
   if(!best){
    this.highlightNote('Sin ecuación','No hubo una función válida con las restricciones indicadas. El historial se conserva en los anexos.');
    return;
@@ -389,21 +389,21 @@ class Paper{
   this.metricGrid(best,{six:true});
   this.heading('Observaciones y distribución de errores',2);
   const a=plotSpecifications(src,best,'fit'),b=plotSpecifications(src,best,'histogram');
+  this.ensure(53);
   const top=this.y;
-  this.ensure(66);
   progress?.('Gráfica Desmos de '+entry.id);
-  const left=await screenshotFromDesmos(a,{width:740,height:360,ratio:1.2});
-  const right=await screenshotFromDesmos(b,{width:600,height:500,ratio:1.2});
+  const left=await screenshotFromDesmos(a,{width:740,height:320,ratio:1.2});
+  const right=await screenshotFromDesmos(b,{width:600,height:370,ratio:1.2});
   p.setDrawColor(...LIGHT);
-  p.roundedRect(L,top-2,104,57,1.5,1.5,'S');
-  p.addImage(left,'PNG',L+1,top,102,52);
-  p.roundedRect(L+108,top-2,INNER-108,57,1.5,1.5,'S');
-  p.addImage(right,'PNG',L+109,top,INNER-110,52);
-  this.y=top+60;
+  p.roundedRect(L,top-2,104,46,1.5,1.5,'S');
+  p.addImage(left,'PNG',L+1,top,102,42);
+  p.roundedRect(L+108,top-2,INNER-108,46,1.5,1.5,'S');
+  p.addImage(right,'PNG',L+109,top,INNER-110,42);
+  this.y=top+49;
   this.figureNumber+=2;
   this.writeLines('Izquierda: referencia y curva estimada de '+txt(src.yName||'Y')+'. Derecha: distribución central del error relativo firmado, con valores extremos excluidos de la visualización (sin excluirlos de las métricas). Figuras capturadas en Desmos.',7.9,3.7,GRAY);
   this.heading('Valores observados y estimados (muestra)',2);
-  const selected=sampleIndices(src.points.length,5).map(i=>{
+  const selected=sampleIndices(src.points.length,4).map(i=>{
    const pt=src.points[i],estimated=best.estimates?.[i];
    return [norm(pt[0]),norm(pt[1]),norm(estimated),
      pt[1]!==0&&Number.isFinite(estimated)?percent(100*(estimated-pt[1])/Math.abs(pt[1])):'N/D'];
@@ -411,7 +411,7 @@ class Paper{
   this.table(['z','Y observada','Y estimada','Error rel. firmado'],selected,[31,49,49,45],{font:8.4});
   const m=best.metrics||{};
   this.highlightNote('Lectura técnica','MAPE '+percent(m.mape)+'; MaxAPE '+percent(m.maxape)+
-   '; complejidad '+norm(best.complexity)+'. La aptitud de este modelo depende del error tolerable y de la validez física dentro del intervalo estudiado.');
+   '; complejidad '+norm(best.complexity)+'. El modelo requiere validación física dentro del intervalo de datos.');
  }
  annexLatex(entry){
   const formula=reportLatex(entry.best?.latex,entry.best?.ztex),raw=formula.latex;
