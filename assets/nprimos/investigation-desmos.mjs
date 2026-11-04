@@ -7,19 +7,19 @@ export function plotSpecifications(source,best,kind='fit',entries=[]){
  const points=(source?.points||[]).filter(finite).map(p=>[+p[0],+p[1]]);
  if(kind==='fit'){
   const curve=(best?.curvePoints?.length?best.curvePoints:points.map((p,i)=>[p[0],best?.estimates?.[i]])).filter(finite).map(p=>[+p[0],+p[1]]);
-  return {title:'Datos observados y ecuación ganadora',useZ:true,xName:source?.xName||'z',yName:source?.yName||'Y',series:[{points,color:'#2578c5',mode:'points'},{points:curve,color:'#e0782f',mode:'lines'}]};
+  return {title:'Datos observados y ecuación ganadora',useX:true,xName:source?.xName||'X',yName:source?.yName||'Y',series:[{points,color:'#2578c5',mode:'points'},{points:curve,color:'#e0782f',mode:'lines'}]};
  }
  if(kind==='residual'){
   const residual=points.map((p,i)=>[p[0],Number.isFinite(best?.estimates?.[i])?best.estimates[i]-p[1]:NaN]).filter(finite);
-  return {title:'Residuos según z (estimado menos observado)',useZ:true,xName:source?.xName||'X',yName:'Error',series:[{points:residual,color:'#c45061',mode:'points'}],zeroLine:true};
+  return {title:'Residuos según x (estimado menos observado)',useX:true,xName:source?.xName||'X',yName:'Error',series:[{points:residual,color:'#c45061',mode:'points'}],zeroLine:true};
  }
  if(kind==='absolute'){
   const errors=points.map((p,i)=>[p[0],Number.isFinite(best?.estimates?.[i])?Math.abs(best.estimates[i]-p[1]):NaN]).filter(finite);
-  return {title:'Error absoluto por z',useZ:true,xName:source?.xName||'X',yName:'Error absoluto',series:[{points:errors,color:'#bd4b76',mode:'points'}]};
+  return {title:'Error absoluto por x',useX:true,xName:source?.xName||'X',yName:'Error absoluto',series:[{points:errors,color:'#bd4b76',mode:'points'}]};
  }
  if(kind==='percentage'){
   const errors=points.map((p,i)=>[p[0],p[1]!==0&&Number.isFinite(best?.estimates?.[i])?100*Math.abs(best.estimates[i]-p[1])/Math.abs(p[1]):NaN]).filter(finite);
-  return {title:'Error porcentual absoluto por z',useZ:true,xName:source?.xName||'X',yName:'Error (%)',series:[{points:errors,color:'#a63f83',mode:'points'}]};
+  return {title:'Error porcentual absoluto por x',useX:true,xName:source?.xName||'X',yName:'Error (%)',series:[{points:errors,color:'#a63f83',mode:'points'}]};
  }
  if(kind==='complexity'){
   const valid=entries.filter(e=>Number.isFinite(e.best?.metrics?.mape)&&e.best.metrics.mape>=0&&Number.isFinite(e.best.complexity));
@@ -73,7 +73,7 @@ function capture(spec,opts={}){
  const series=(spec.series||[]).filter(s=>s.points?.some(finite));
  if(!series.length)throw Error('No hay puntos finitos disponibles para representar con Desmos.');
  calc.setBlank();
- calc.updateSettings?.({xAxisLabel:spec.useZ?'z  ('+(spec.xName||'variable')+')':(spec.xName||''),yAxisLabel:spec.yName||''});
+ calc.updateSettings?.({xAxisLabel:spec.useX?'x  ('+(spec.xName||'variable')+')':(spec.xName||''),yAxisLabel:spec.yName||''});
  const expressions=series.map((s,i)=>columns(s.points,100+i,s.color||'#206bb4',s.mode||'points'));
  if(spec.zeroLine)expressions.push({id:'inv_axis_0',latex:'y=0',color:'#6e8996',lineStyle:window.Desmos.Styles.DASHED});
  calc.setExpressions(expressions);
