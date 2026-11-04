@@ -6,7 +6,7 @@ import {setupDashboards,refreshDashboards} from './investigation-dashboards.mjs'
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number.isFinite(n)?Number(n).toLocaleString('es-EC',{maximumFractionDigits:4}):'—';
 const pct=n=>Number.isFinite(n)?fmt(n)+' %':'—';
-const SYMBOLIC_KINDS=[['x','x'],['power','Potencias'],['ln','ln(x)'],['log1p','ln(1+x)'],['sqrt','Raíz'],['exp','Exponencial'],['sin','Seno'],['cos','Coseno'],['reciprocal','Recíproco'],['xln','x·ln(x)'],['xx','x^x'],['xexp','x·exp'],['xover','Cociente x/(x+p)'],['xsin','x·sin']];
+const SYMBOLIC_KINDS=[['x','z'],['power','Potencias'],['ln','ln(z)'],['log1p','ln(1+z)'],['sqrt','Raíz'],['exp','Exponencial'],['sin','Seno'],['cos','Coseno'],['reciprocal','Recíproco'],['xln','z·ln(z)'],['xx','z^z'],['xexp','z·exp'],['xover','Cociente z/(z+p)'],['xsin','z·sin']];
 const GROUP_ORDER=['Métodos clásicos de ajuste','Métodos de corrección de funciones','Métodos basados en restricciones y cotas','Métodos de interpolación','Métodos de aproximación avanzada','Métodos de búsqueda y optimización'];
 const DEFAULT={n:10000,allowedKinds:SYMBOLIC_KINDS.map(k=>k[0]),decimals:3,magnitude:9999,degree:2,denominator:2,knots:8,harmonics:2,width:.6,quantile:.5,maxTerms:3,maxX:2,constant:true,generational:true,composition:'sum',families:['logarithmic','exponential','polynomial','trigonometric'],bounds:'shared',center:'auto',objective:'mape'};
 const state={project:null,projectName:'',source:null,entries:[],history:new Map(),results:new Map(),worker:null,running:false,paused:false,mode:'manual',active:'',done:0,total:0,seq:0,lastDraw:0,lastGraph:0,graphSerial:0,exporting:false};
@@ -40,7 +40,7 @@ function getCard(e){
  if(m.id==='fourier')f+=field('harmonics','Armónicos',c.harmonics,1,5);
  if(m.id==='quantile')f+=field('quantile','Cuantil',c.quantile,.01,.99,.05);
  if(m.id==='symbolic'||m.id==='constrained'){
-  f+=field('maxTerms','Máx. términos',c.maxTerms,1,3)+field('maxX','Máx. apariciones de x',c.maxX,1,2)+
+  f+=field('maxTerms','Máx. términos',c.maxTerms,1,3)+field('maxX','Máx. apariciones de z',c.maxX,1,2)+
    select('composition','Operaciones de combinación',c.composition,[['sum','Suma'],['product','Producto'],['pair_plus','Producto + suma']])+
    select('generational','Aprendizaje generacional',c.generational,[['true','Activado'],['false','Desactivado']])+
    select('constant','Constante aditiva',c.constant,[['true','Permitida'],['false','Prohibida']])+
@@ -89,7 +89,6 @@ function table(){
  '<button type="button" data-pdf="'+m+'">Reporte PDF · '+esc(methodById(m).name)+'</button>').join('');
  $('inv-permethod').querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>reportMethod(b.dataset.pdf));
  $('inv-general').disabled=!done||state.exporting;$('inv-json').disabled=!state.history.size||state.exporting;
- $('inv-all-pdf').disabled=!done||state.exporting;
  refreshDashboards();
 }
 function reportState(){
@@ -107,19 +106,6 @@ async function generatePDF(task){
 async function reportMethod(id){
  const snapshot=reportState();
  await generatePDF(notify=>methodReport(snapshot,id,methodById(id).name,notify));
-}
-async function reportAll(){
- const snapshot=reportState(),methods=[...new Set(snapshot.entries.filter(e=>snapshot.results.get(e.id)?.best).map(e=>e.method))];
- if(!methods.length)return note('No hay ecuaciones válidas para descargar.');
- await generatePDF(async notify=>{
-  const outputs=[];
-  for(let i=0;i<methods.length;i++){
-   const id=methods[i];notify('Descargando reporte por método '+(i+1)+' / '+methods.length+': '+methodById(id).name);
-   outputs.push(await methodReport(snapshot,id,methodById(id).name,notify));
-  }
-  outputs.push(await generalReport(snapshot,id=>methodById(id).name,notify));
-  return outputs.length+' archivos PDF: '+outputs.join(', ');
- });
 }
 async function reportGeneral(){
  const snapshot=reportState();
@@ -182,7 +168,7 @@ function run(mode){
   if(msg.type==='paused'){state.paused=true;buttons();note('Pausado.')}
   if(msg.type==='resumed'){state.paused=false;buttons();note('Reanudado.')}
   if(msg.type==='warning')note('Advertencia '+msg.entryId+': '+msg.message);
-  if(msg.type==='complete'){state.done=msg.done;finish('Experimentos terminados. Los reportes se descargan directamente como PDF.');if(mode==='automatic')reportAll()}
+  if(msg.type==='complete'){state.done=msg.done;finish('Experimentos terminados. Los reportes se descargan directamente como PDF.');if(mode==='automatic')reportGeneral()}
   if(msg.type==='error')finish('Error: '+msg.message);
  };
  w.onerror=e=>finish('Error en el motor: '+(e.message||'desconocido'));
@@ -200,12 +186,12 @@ function setup(){
  const overlay=document.createElement('div');overlay.id='np-investigation-panel';overlay.className='gmr-research-overlay';overlay.hidden=true;
  overlay.innerHTML='<div class="gmr-research-window inv-window" role="dialog" aria-modal="true" aria-label="Investigación"><div class="gmr-research-heading"><div><h2>Investigación · Métodos de aproximación</h2><small id="inv-source"></small></div><button id="inv-close" type="button" aria-label="Cerrar">×</button></div><div class="gmr-research-body inv-layout">'+
  '<aside class="inv-sidebar"><h3>Métodos clasificados</h3><p class="gmr-research-note">● Directos · ↻ Iterativos</p><div id="inv-methods"></div><div class="inv-links"><b>Módulos existentes</b><button id="inv-original-generator">Generador original</button><button id="inv-original-envelope">Acotación original</button><button id="inv-original-dashboard">Dashboards</button></div></aside>'+
- '<main class="inv-content"><section class="gmr-research-group"><h3>Configuraciones por método · <small id="inv-config-count"></small></h3><p class="gmr-research-note">Cada configuración genera una fórmula ganadora. Duplica un método para comparar distintos decimales, límites y parámetros. En métodos simbólicos y acotación el motor admite hasta 3 decimales y 9 999 de magnitud; las constantes de normalización derivadas de X se declaran aparte.</p><div id="inv-cards"></div></section>'+
+ '<main class="inv-content"><section class="gmr-research-group"><h3>Configuraciones por método · <small id="inv-config-count"></small></h3><p class="gmr-research-note">Cada configuración genera una fórmula ganadora. Duplica un método para comparar distintos decimales, límites y parámetros. En métodos simbólicos y acotación el motor admite hasta 3 decimales y 9 999 de magnitud; las constantes de normalización derivadas de z se declaran aparte.</p><div id="inv-cards"></div></section>'+
  '<section class="gmr-research-group"><div class="inv-actions"><label>Validación (%) <input id="inv-validation" type="number" min="0" max="40" step="5" value="20"></label><button id="inv-start">▶ Investigar en tiempo real</button><button id="inv-auto">▤ Reporte automático</button><button id="inv-pause">Pausar</button><button id="inv-resume">Reanudar</button><button id="inv-stop">Detener</button></div><div class="inv-status"><progress id="inv-progress" value="0" max="1"></progress><span id="inv-counter">0 / 0</span></div><p id="inv-status">Selecciona métodos para iniciar la investigación.</p></section>'+
  '<section class="gmr-research-group"><h3>Mejor curva en tiempo real</h3><div id="inv-preview"></div><small id="inv-preview-caption"></small></section>'+
  '<section class="gmr-research-group" id="inv-dashboards"></section>'+ 
  '<section class="gmr-research-group"><h3>Mejores fórmulas · <small id="inv-completed"></small></h3><div class="gmr-history"><table><thead><tr><th>Configuración</th><th>Método</th><th>Función LaTeX</th><th>MAPE</th><th>Error máximo</th><th>Complejidad</th><th>Gráfica</th></tr></thead><tbody id="inv-winners"></tbody></table></div></section>'+
- '<section class="gmr-research-group"><h3>Reportes</h3><p>Nuevo diseño académico A4: resumen, metodología, tabla comparativa, ecuaciones LaTeX y figuras Desmos con pies. Los reportes por método incorporan los errores, los datos y todas las iteraciones en anexos sin gráficas. El general incluye el catálogo comparativo.</p><div id="inv-permethod" class="inv-reports"></div><div class="inv-actions"><button id="inv-general">Reporte general · formato paper PDF</button><button id="inv-all-pdf">Descargar todos los PDF</button><button id="inv-json">Exportar historial JSON</button></div><p class="gmr-research-note">Cada botón descarga directamente PDF. «Reporte automático» descarga todos los informes individuales y el general al finalizar; tu navegador puede solicitar autorización para descargas múltiples. Las gráficas provienen de capturas PNG oficiales de Desmos. LaTeX se incluye en cada reporte; MathJax mejora su presentación cuando está disponible.</p></section></main></div></div>';
+ '<section class="gmr-research-group"><h3>Reportes</h3><p>Nuevo diseño académico A4: resumen, metodología, tabla comparativa, ecuaciones LaTeX y figuras Desmos con pies. Los reportes por método incorporan los errores, los datos y todas las iteraciones en anexos sin gráficas. El general incluye el catálogo comparativo.</p><div id="inv-permethod" class="inv-reports"></div><div class="inv-actions"><button id="inv-general">Reporte general · formato paper PDF</button><button id="inv-json">Exportar historial JSON</button></div><p class="gmr-research-note">Cada botón descarga directamente PDF. «Reporte automático» descarga solo el PDF general al finalizar. Los informes individuales se descargan manualmente desde el botón correspondiente a cada método. Las gráficas provienen de capturas PNG oficiales de Desmos. LaTeX se incluye en cada reporte; MathJax mejora su presentación cuando está disponible.</p></section></main></div></div>';
  document.body.append(overlay);
  setupDashboards(()=>state);
  document.addEventListener('gmr:inv-select',()=>graph(true));
@@ -222,7 +208,7 @@ function setup(){
  $('inv-pause').onclick=()=>state.worker?.postMessage({type:'pause'});
  $('inv-resume').onclick=()=>state.worker?.postMessage({type:'resume'});
  $('inv-stop').onclick=()=>{stop();note('Detenido. Los resultados parciales permanecen disponibles.')};
- $('inv-general').onclick=reportGeneral;$('inv-all-pdf').onclick=reportAll;$('inv-json').onclick=exportJSON;
+ $('inv-general').onclick=reportGeneral;$('inv-json').onclick=exportJSON;
  for(const [a,b] of [['inv-original-generator','np-generator-btn'],['inv-original-envelope','np-envelope-btn'],['inv-original-dashboard','np-dashboard-btn']])
   $(a).onclick=()=>{overlay.hidden=true;$(b)?.click()};
  window.addEventListener('gmr:project-switched',e=>{if(e.detail?.lab!=='prime')return;stop();state.project=null;state.source=null;overlay.hidden=true});
