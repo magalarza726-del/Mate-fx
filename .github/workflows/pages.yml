@@ -22,7 +22,7 @@ jobs:
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
       - name: Verificar motor de investigación
-        run: node --test tests/investigation-core.test.mjs
+        run: node --test tests/investigation-core.test.mjs tests/investigation-pdf.test.mjs
       - name: Preparar sitio web
         run: |
           mkdir -p public
