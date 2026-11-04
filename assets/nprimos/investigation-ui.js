@@ -27,8 +27,9 @@ function setMethodList(){
 }
 function getCard(e){
  const m=methodById(e.method),c=e.config;
- let f=field('n','Iteraciones',c.n,1,100000)+select('decimals','Decimales',c.decimals,Array.from({length:7},(_,i)=>[i,i.toString()]))+
- select('magnitude','Magnitud máxima',c.magnitude,[[9,'9'],[99,'99'],[999,'999'],[9999,'9 999'],[99999,'99 999'],[999999,'999 999']])+
+ const limitedPrecision=['symbolic','constrained','envelope'].includes(m.id);
+ let f=field('n','Iteraciones',c.n,1,100000)+select('decimals','Decimales',Math.min(c.decimals,limitedPrecision?3:6),Array.from({length:limitedPrecision?4:7},(_,i)=>[i,i.toString()]))+
+ select('magnitude','Magnitud máxima',Math.min(c.magnitude,limitedPrecision?9999:999999),[[9,'9'],[99,'99'],[999,'999'],[9999,'9 999'],...(!limitedPrecision?[[99999,'99 999'],[999999,'999 999']]:[])])+
  select('objective','Criterio de selección',c.objective,[['mape','Error relativo medio'],['max','Error relativo máximo'],['mae','MAE'],['rmse','RMSE'],['balanced','Equilibrado']]);
  if(['polynomial','rational','pade','chebyshev','minimax','quantile','taylor','remez'].includes(m.id))f+=field('degree','Grado',c.degree,1,5);
  if(['rational','pade'].includes(m.id))f+=field('denominator','Grado denominador',c.denominator,1,4);
@@ -154,7 +155,7 @@ function setup(){
  const overlay=document.createElement('div');overlay.id='np-investigation-panel';overlay.className='gmr-research-overlay';overlay.hidden=true;
  overlay.innerHTML='<div class="gmr-research-window inv-window" role="dialog" aria-modal="true" aria-label="Investigación"><div class="gmr-research-heading"><div><h2>Investigación · Métodos de aproximación</h2><small id="inv-source"></small></div><button id="inv-close" type="button" aria-label="Cerrar">×</button></div><div class="gmr-research-body inv-layout">'+
  '<aside class="inv-sidebar"><h3>Métodos clasificados</h3><p class="gmr-research-note">● Directos · ↻ Iterativos</p><div id="inv-methods"></div><div class="inv-links"><b>Módulos existentes</b><button id="inv-original-generator">Generador original</button><button id="inv-original-envelope">Acotación original</button><button id="inv-original-dashboard">Dashboards</button></div></aside>'+
- '<main class="inv-content"><section class="gmr-research-group"><h3>Configuraciones por método · <small id="inv-config-count"></small></h3><p class="gmr-research-note">Cada configuración genera una fórmula ganadora. Duplica un método para comparar distintos decimales, límites y parámetros.</p><div id="inv-cards"></div></section>'+
+ '<main class="inv-content"><section class="gmr-research-group"><h3>Configuraciones por método · <small id="inv-config-count"></small></h3><p class="gmr-research-note">Cada configuración genera una fórmula ganadora. Duplica un método para comparar distintos decimales, límites y parámetros. En métodos simbólicos y acotación el motor admite hasta 3 decimales y 9 999 de magnitud; las constantes de normalización derivadas de X se declaran aparte.</p><div id="inv-cards"></div></section>'+
  '<section class="gmr-research-group"><div class="inv-actions"><label>Validación (%) <input id="inv-validation" type="number" min="0" max="40" step="5" value="20"></label><button id="inv-start">▶ Investigar en tiempo real</button><button id="inv-auto">▤ Reporte automático</button><button id="inv-pause">Pausar</button><button id="inv-resume">Reanudar</button><button id="inv-stop">Detener</button></div><div class="inv-status"><progress id="inv-progress" value="0" max="1"></progress><span id="inv-counter">0 / 0</span></div><p id="inv-status">Selecciona métodos para iniciar la investigación.</p></section>'+
  '<section class="gmr-research-group"><h3>Mejor curva en tiempo real</h3><div id="inv-preview"></div><small id="inv-preview-caption"></small></section>'+
  '<section class="gmr-research-group"><h3>Mejores fórmulas · <small id="inv-completed"></small></h3><div class="gmr-history"><table><thead><tr><th>Configuración</th><th>Método</th><th>Función LaTeX</th><th>MAPE</th><th>Error máximo</th><th>Complejidad</th><th>Gráfica</th></tr></thead><tbody id="inv-winners"></tbody></table></div></section>'+
