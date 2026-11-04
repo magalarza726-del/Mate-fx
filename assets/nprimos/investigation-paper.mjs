@@ -15,6 +15,20 @@ const slug=v=>String(v||'Reporte').normalize('NFD').replace(/[\u0300-\u036f]/g,'
 const idle=()=>new Promise(resolve=>setTimeout(resolve,0));
 const scalar=v=>Number.isFinite(v)?v:Infinity;
 
+/** Present the independent variable as z without changing the numerical engine's x values.
+ * The engine's old normalized variable z becomes u to prevent ambiguous formulas. */
+export function reportLatex(latex='',ztex=''){
+ const renameIndependent=source=>String(source||'').replace(/\bx_/g,'z_').replace(/\bx\b/g,'z');
+ if(ztex){
+  const renamed=String(latex).replace(/\bz\b/g,'u');
+  return {latex:renameIndependent(renamed),definition:'u='+renameIndependent(ztex)};
+ }
+ return {latex:renameIndependent(latex),definition:''};
+}
+const namedZ=(name='')=>String(name||'Variable')+' [z]';
+const sampleIndices=(n,count=4)=>[...new Set(Array.from({length:Math.min(n,count)},(_,i)=>Math.round(i*(n-1)/Math.max(1,Math.min(n,count)-1))))];
+
+
 let loadingPDF,loadingMath;
 async function loadScript(src){
  await new Promise((resolve,reject)=>{
@@ -51,7 +65,7 @@ async function equationPNG(latex){
  if(!mj)return null;
  let url=null,holder=null;
  try{
-  const node=await mj.tex2svgPromise(String(latex).replace(/^f\(x\)=/,'f(x)='),{display:true});
+  const node=await mj.tex2svgPromise(String(latex),{display:true});
   const svg=node.querySelector('svg');if(!svg)return null;
   holder=document.createElement('div');
   Object.assign(holder.style,{position:'fixed',left:'-30000px',top:'0',background:'#fff'});
@@ -203,7 +217,7 @@ class Paper{
   this.y+=4;
  }
  async displayEquation(entry,{compact=false}={}){
-  const best=entry.best||entry,raw=best?.latex||'',z=best?.ztex||'',long=raw.length>105||raw.includes('\\begin{cases}');
+  const best=entry.best||entry,display=reportLatex(best?.latex,best?.ztex),raw=display.latex,z=best?.ztex||'',long=raw.length>105||raw.includes('\\begin{cases}');
   if(!raw){this.writeLines('No se encontró una expresión válida.',9);return}
   const title='Ecuación '+(entry.id||'')+(long?' (expresión extensa)':'');
   this.ensure(long?28:24);
@@ -227,7 +241,7 @@ class Paper{
     this.writeLines(raw,8.7,4.4,NAVY,INNER-8,L+4);
    }
   }
-  if(z&&!compact){this.writeLines('Variable normalizada: z = '+z,8.2,3.9,GRAY)}
+  if(z&&!compact){this.writeLines('Variable auxiliar normalizada: '+reportLatex('',z).definition,8.2,3.9,GRAY)}
  }
  async figure(spec,description,{width=INNER,height=76}={}){
   this.ensure(height+19);
@@ -266,10 +280,10 @@ class Paper{
    {width:INNER,height:55});
  }
  annexLatex(entry){
-  const raw=entry.best?.latex||'';
+  const formula=reportLatex(entry.best?.latex,entry.best?.ztex),raw=formula.latex;
   if(!raw)return;
   this.ensure(20);this.heading(entry.id+' - '+entry.label,2);
-  if(entry.best.ztex)this.writeLines('z = '+entry.best.ztex,8.2,4,GRAY);
+  if(formula.definition)this.writeLines(formula.definition,8.2,4,GRAY);
   // Code lines remain exact, but are wrapped on page so no symbols are clipped.
   this.setFont('courier','normal',7.2,NAVY);
   const lines=this.pdf.splitTextToSize(raw,INNER-8);
@@ -281,7 +295,7 @@ class Paper{
   this.writeLines('Cada registro conserva la fórmula LaTeX y sus errores. Este anexo no incorpora gráficas.',9);
   const p=this.pdf;
   for(let i=0;i<items.length;i++){
-   const it=items[i],raw=(it.ztex?'z='+it.ztex+'; ':'')+(it.latex||it.reason||'Intento no válido');
+   const it=items[i],formatted=reportLatex(it.latex||'',it.ztex),raw=formatted.latex?(formatted.definition?formatted.definition+'; ':'')+formatted.latex:(it.reason||'Intento no válido');
    this.setFont('courier','normal',7.2,NAVY);
    const lines=p.splitTextToSize(raw,INNER-10),h=11+lines.length*3.85;
    this.ensure(h);
@@ -434,10 +448,10 @@ export async function methodReport(state,id,name,onProgress=()=>{}){
   paper.heading('3.3 Distribución de errores',2);
   await paper.figure(plotSpecifications(state.source,e.best,'percentage'),
    'Error porcentual absoluto según el valor de '+txt(state.source.xName)+'.',{height:83});
-  paper.table(['Intervalo de X','N.º puntos','MAPE','MaxAPE'],perInterval(state.source.points,e.best.estimates),
+  paper.table(['Intervalo de z','N.º puntos','MAPE','MaxAPE'],perInterval(state.source.points,e.best.estimates),
    [61,27,43,43],{font:8.5});
   paper.heading('3.4 Valores observados y estimados',2);
-  paper.table(['X','Y real','Y calculada','Error abs.','Error (%)'],
+  paper.table(['z','Y real','Y calculada','Error abs.','Error (%)'],
    allValueErrors(state.source.points,e.best.estimates),[30,35,38,36,35],{font:8});
   paper.next();paper.heading('Anexo. Ecuación completa en LaTeX');
   paper.annexLatex(e);
