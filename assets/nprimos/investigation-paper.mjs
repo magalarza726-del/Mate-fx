@@ -15,17 +15,11 @@ const slug=v=>String(v||'Reporte').normalize('NFD').replace(/[\u0300-\u036f]/g,'
 const idle=()=>new Promise(resolve=>setTimeout(resolve,0));
 const scalar=v=>Number.isFinite(v)?v:Infinity;
 
-/** Present the independent variable as z without changing the numerical engine's x values.
- * The engine's old normalized variable z becomes u to prevent ambiguous formulas. */
+/** Display the original independent x and, when used, normalized z. Never alter model coefficients. */
 export function reportLatex(latex='',ztex=''){
- const renameIndependent=source=>String(source||'').replace(/\bx_/g,'z_').replace(/\bx\b/g,'z');
- if(ztex){
-  const renamed=String(latex).replace(/\bz\b/g,'u');
-  return {latex:renameIndependent(renamed),definition:'u='+renameIndependent(ztex)};
- }
- return {latex:renameIndependent(latex),definition:''};
+ return {latex:String(latex||''),definition:ztex?'z='+String(ztex):''};
 }
-const namedZ=(name='')=>String(name||'Variable')+' [z]';
+const namedX=(name='')=>String(name||'Variable')+' [x]';
 const sampleIndices=(n,count=4)=>[...new Set(Array.from({length:Math.min(n,count)},(_,i)=>Math.round(i*(n-1)/Math.max(1,Math.min(n,count)-1))))];
 
 
@@ -296,7 +290,7 @@ class Paper{
     this.writeLines(raw,8.7,4.4,NAVY,INNER-8,L+4);
    }
   }
-  if(z){this.writeLines('Normalización: '+reportLatex('',z).definition,compact?7.2:8.2,compact?3.3:3.9,GRAY)}
+  if(z){this.writeLines('Variable normalizada: '+reportLatex('',z).definition,compact?7.2:8.2,compact?3.3:3.9,GRAY)}
  }
  async figure(spec,description,{width=INNER,height=76}={}){
   this.ensure(height+19);
@@ -338,7 +332,7 @@ class Paper{
   this.setFont('helvetica','bold',7,[255,255,255]);p.text('Muestra de observaciones',x+2,y+4.8);
   const cols=[x+1,x+16,x+37];
   this.setFont('helvetica','bold',6.7,BLUE);
-  ['z','Observado','Estimado'].forEach((lab,i)=>p.text(lab,cols[i],y+12));
+  ['x','Observado','Estimado'].forEach((lab,i)=>p.text(lab,cols[i],y+12));
   sampleIndices(points.length,4).forEach((index,j)=>{
    const [z,observed]=points[index],estimated=best.estimates?.[index],yy=y+18+j*7.1;
    if(j%2===0){p.setFillColor(244,248,251);p.rect(x,yy-4.7,w,6.8,'F')}
@@ -409,7 +403,7 @@ class Paper{
    return [norm(pt[0]),norm(pt[1]),norm(estimated),
      pt[1]!==0&&Number.isFinite(estimated)?percent(100*(estimated-pt[1])/Math.abs(pt[1])):'N/D'];
   });
-  this.table(['z','Y observada','Y estimada','Error rel. firmado'],selected,[31,49,49,45],{font:8.4});
+  this.table(['x','Y observada','Y estimada','Error rel. firmado'],selected,[31,49,49,45],{font:8.4});
   const m=best.metrics||{};
   this.highlightNote('Lectura técnica','MAPE '+percent(m.mape)+'; MaxAPE '+percent(m.maxape)+
    '; complejidad '+norm(best.complexity)+'. El modelo requiere validación física dentro del intervalo de datos.');
@@ -460,7 +454,7 @@ async function cover(paper,state,entries,kind){
  paper.infoTiles([
   ['Proyecto',state.projectName||'Sin título'],
   ['Fuente',state.source?.sourceName||'Datos importados'],
-  ['Variable independiente',namedZ(state.source?.xName||'Variable')],
+  ['Variable independiente',namedX(state.source?.xName||'Variable')],
   ['Propiedad aproximada',state.source?.yName||'Y'],
   ['Observaciones',String(r.observations)],
   ['Intervalo observado',norm(r.xmin)+' a '+norm(r.xmax)],
@@ -595,11 +589,11 @@ export async function methodReport(state,id,name,onProgress=()=>{}){
   paper.heading('Errores y validación',2);
   paper.table(['Indicador','Valor'],metricRows(e.best),[114,60],{font:9});
   if(e.best){
-   paper.heading('Errores por intervalos de z',2);
-   paper.table(['Intervalo de z','N.º puntos','MAPE','MaxAPE'],
+   paper.heading('Errores por intervalos de x',2);
+   paper.table(['Intervalo de x','N.º puntos','MAPE','MaxAPE'],
     perInterval(state.source.points,e.best.estimates),[61,27,43,43],{font:8.5});
    paper.heading('Datos observados y calculados',2);
-   paper.table(['z','Y real','Y calculada','Error abs.','Error (%)'],
+   paper.table(['x','Y real','Y calculada','Error abs.','Error (%)'],
     allValueErrors(state.source.points,e.best.estimates),[30,35,38,36,35],{font:8});
    paper.next();paper.heading('Anexo B. Ecuación completa en LaTeX');
    paper.annexLatex(e);
