@@ -35,7 +35,7 @@ export const METHODS=[
  {id:'quantile',name:'Regresión cuantílica (IRLS)',group:'Métodos basados en restricciones y cotas',type:'direct'},
  {id:'fourier',name:'Serie de Fourier',group:'Métodos de aproximación avanzada',type:'direct'},
  {id:'rbf',name:'Funciones radiales gaussianas (RBF)',group:'Métodos de aproximación avanzada',type:'direct'},
- {id:'symbolic',name:'Regresión simbólica evolutiva',group:'Métodos de búsqueda y optimización',type:'search'},
+ {id:'symbolic',name:'Regresión simbólica evolutiva',group:'Métodos de aproximación avanzada',type:'search'},
  {id:'differential',name:'Evolución diferencial',group:'Métodos de búsqueda y optimización',type:'search'},
  {id:'genetic',name:'Algoritmo genético',group:'Métodos de búsqueda y optimización',type:'search'},
  {id:'annealing',name:'Recocido simulado',group:'Métodos de búsqueda y optimización',type:'search'},
@@ -239,7 +239,7 @@ function linearMethod(id,points,opt,seed){
 }
 function predictorModel(id,points,opt,rng,step,session){
  if(id==='symbolic'||id==='constrained'){
-  const config={maxTerms:opt.maxTerms,maxX:opt.maxX,constant:opt.constant,composition:opt.composition,families:opt.families,trendRate:inferTrend(points).rate};
+  const config={maxTerms:opt.maxTerms,maxX:opt.maxX,constant:opt.constant,composition:opt.composition,families:opt.families,allowedKinds:opt.allowedKinds,trendRate:inferTrend(points).rate};
   const shape=makeCandidate(config,Math.max(1,...points.map(p=>Math.abs(p[0]))),rng,session?.elite?.model||null);
   const model=fitCandidate(shape,points,Math.min(3,opt.decimals),Math.min(9999,opt.magnitude));if(!model)return null;
   const formula=modelToLatex(model);if(!formula)return null;
@@ -330,7 +330,7 @@ function predictorModel(id,points,opt,rng,step,session){
 }
 export function methodConfig(input={}){
  const allowed=['logarithmic','exponential','polynomial','trigonometric'];
- return {n:cap(Math.trunc(+input.n||1000),1,100000),degree:cap(Math.trunc(+input.degree||2),1,5),denominator:cap(Math.trunc(+input.denominator||2),1,4),knots:cap(Math.trunc(+input.knots||8),3,16),harmonics:cap(Math.trunc(+input.harmonics||2),1,5),width:cap(+input.width||.6,.05,3),quantile:cap(+input.quantile||.5,.01,.99),decimals:cap(Math.trunc(+input.decimals||0),0,6),magnitude:Math.max(9,Math.min(999999,Math.abs(+input.magnitude||9999))),maxTerms:cap(Math.trunc(+input.maxTerms||3),1,3),maxX:cap(Math.trunc(+input.maxX||2),1,2),constant:input.constant!==false,generational:input.generational!==false,composition:['sum','product','pair_plus'].includes(input.composition)?input.composition:'sum',families:(input.families||allowed).filter(v=>allowed.includes(v)),bounds:input.bounds==='independent'?'independent':'shared',center:['auto','arithmetic','geometric','harmonic'].includes(input.center)?input.center:'auto',objective:['mape','max','mae','rmse','balanced'].includes(input.objective)?input.objective:'mape',validation:cap(+input.validation||0,0,40)};
+ return {n:cap(Math.trunc(+input.n||1000),1,100000),degree:cap(Math.trunc(+input.degree||2),1,5),denominator:cap(Math.trunc(+input.denominator||2),1,4),knots:cap(Math.trunc(+input.knots||8),3,16),harmonics:cap(Math.trunc(+input.harmonics||2),1,5),width:cap(+input.width||.6,.05,3),quantile:cap(+input.quantile||.5,.01,.99),decimals:cap(Math.trunc(+input.decimals||0),0,6),magnitude:Math.max(9,Math.min(999999,Math.abs(+input.magnitude||9999))),maxTerms:cap(Math.trunc(+input.maxTerms||3),1,3),maxX:cap(Math.trunc(+input.maxX||2),1,2),constant:input.constant!==false,generational:input.generational!==false,composition:['sum','product','pair_plus'].includes(input.composition)?input.composition:'sum',families:(input.families||allowed).filter(v=>allowed.includes(v)),allowedKinds:Array.isArray(input.allowedKinds)?input.allowedKinds.filter(v=>['x','power','ln','log1p','sqrt','exp','sin','cos','reciprocal','xln','xx','xexp','xover','xsin'].includes(v)):null,bounds:input.bounds==='independent'?'independent':'shared',center:['auto','arithmetic','geometric','harmonic'].includes(input.center)?input.center:'auto',objective:['mape','max','mae','rmse','balanced'].includes(input.objective)?input.objective:'mape',validation:cap(+input.validation||0,0,40)};
 }
 export function evaluateMethod(methodId,train,all,opt={},rng=Math.random,iteration=1,session={}){
  const method=methodById(methodId);if(!method)return null;
