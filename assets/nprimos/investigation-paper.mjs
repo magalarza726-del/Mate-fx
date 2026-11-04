@@ -156,18 +156,24 @@ class Paper{
  kicker(text){
   this.ensure(8);this.setFont('helvetica','bold',8,BLUE);this.pdf.text(txt(text).toUpperCase(),L,this.y);this.y+=8;
  }
+
  titleBlock(title,subtitle=''){
-  this.ensure(45);this.kicker('Documento técnico automatizado');
+  this.ensure(44);
+  const p=this.pdf,start=this.y;
+  p.setFillColor(...BLUE);p.rect(L,start-2,2.4,23,'F');
   this.setFont('times','bold',21,NAVY);
-  const lines=this.pdf.splitTextToSize(txt(title),INNER);
-  this.pdf.text(lines,L,this.y);this.y+=lines.length*9+5;
-  if(subtitle){this.setFont('times','italic',11,GRAY);this.writeLines(subtitle,11,4.7)}
-  this.separator();
+  const lines=p.splitTextToSize(txt(title),INNER-10);
+  p.text(lines,L+7,this.y+3);this.y+=lines.length*8.6+7;
+  if(subtitle){this.setFont('times','italic',11,GRAY);this.writeLines(subtitle,11,4.7,GRAY,INNER-10,L+7)}
+  this.y+=5;
  }
  heading(title,n=1){
-  this.ensure(n===1?16:13);
-  this.setFont('times','bold',n===1?14:11,NAVY);this.pdf.text(txt(title),L,this.y);
-  this.y+=n===1?10:8;
+  const p=this.pdf;this.ensure(n===1?16:13);
+  p.setFillColor(...BLUE);p.rect(L,this.y-4,n===1?2.4:2,7,'F');
+  this.setFont('times','bold',n===1?14.5:11.4,NAVY);
+  const label=p.splitTextToSize(txt(title),INNER-10);
+  for(const line of label){this.ensure(7);p.text(line,L+6,this.y);this.y+=n===1?8.2:6.5}
+  if(n===1){p.setDrawColor(...LIGHT);p.line(L+6,this.y-3,RIGHT,this.y-3);this.y+=4}else this.y+=2;
  }
  writeLines(text,size=10,line=4.5,color=NAVY,maxWidth=INNER,indent=L){
   this.setFont('times','normal',size,color);
@@ -176,17 +182,65 @@ class Paper{
   this.y+=3;
  }
  caption(text){
-  this.setFont('times','italic',8.3,GRAY);
-  const lines=this.pdf.splitTextToSize(txt(text),INNER-4);
+  this.setFont('times','italic',8.1,GRAY);
+  const lines=this.pdf.splitTextToSize(txt(text),INNER-5);
   for(const line of lines){this.ensure(4.5);this.pdf.text(line,L+2,this.y);this.y+=4.3}
-  this.y+=5;
+  this.y+=4;
  }
  field(label,value){
-  this.ensure(6);this.setFont('helvetica','bold',8,GRAY);this.pdf.text(txt(label),L+1,this.y);
+  const p=this.pdf,val=txt(value),column=INNER-59;
   this.setFont('times','normal',9,NAVY);
-  const lines=this.pdf.splitTextToSize(txt(value),INNER-57);
-  lines.forEach((line,i)=>{if(i)this.ensure(5);this.pdf.text(line,L+56,this.y);if(i)this.y+=4.5});
-  this.y+=7;
+  const lines=p.splitTextToSize(val,column),lineH=4.8;
+  this.ensure(Math.max(8,lines.length*lineH+4));
+  this.setFont('helvetica','bold',8,GRAY);p.text(txt(label),L+1,this.y);
+  this.setFont('times','normal',9,NAVY);
+  for(const [i,line] of lines.entries())p.text(line,L+57,this.y+i*lineH);
+  this.y+=Math.max(8,lines.length*lineH+3);
+ }
+ infoTiles(fields,columns=2){
+  const p=this.pdf,gap=3,cw=(INNER-gap*(columns-1))/columns;
+  for(let i=0;i<fields.length;i+=columns){
+   this.ensure(19);const row=fields.slice(i,i+columns),y=this.y;
+   row.forEach(([label,value],j)=>{
+    const x=L+j*(cw+gap);
+    p.setFillColor(248,251,253);p.setDrawColor(...LIGHT);
+    p.roundedRect(x,y-4,cw,17,1.4,1.4,'FD');
+    p.setFillColor(...PALE);p.rect(x+1.2,y-3,11,15,'F');
+    p.setDrawColor(...BLUE);p.line(x+15,y-2,x+15,y+11);
+    this.setFont('helvetica','bold',6.6,GRAY);p.text(txt(label).toUpperCase(),x+18,y+1);
+    this.setFont('times','normal',9.1,NAVY);
+    const fitted=p.splitTextToSize(txt(value),cw-21);
+    fitted.slice(0,2).forEach((line,k)=>p.text(line,x+18,y+7+k*3.6));
+   });
+   this.y+=20.4;
+  }
+  this.y+=3;
+ }
+ criteriaCards(definitions){
+  const p=this.pdf,gap=2.2,cw=(INNER-gap*(definitions.length-1))/definitions.length;
+  this.ensure(34);
+  for(let i=0;i<definitions.length;i++){
+   const [name,definition]=definitions[i],x=L+i*(cw+gap),start=this.y;
+   p.setDrawColor(...LIGHT);p.roundedRect(x,start-4,cw,29,1.5,1.5,'S');
+   p.setFillColor(...BLUE);p.rect(x,start-4,cw,7,'F');
+   this.setFont('helvetica','bold',8,[255,255,255]);p.text(name,x+2,start+0.8);
+   this.setFont('times','normal',7.4,NAVY);
+   const lines=p.splitTextToSize(txt(definition),cw-4);
+   lines.slice(0,5).forEach((line,k)=>p.text(line,x+2,start+7+k*3.5));
+  }
+  this.y+=36;
+ }
+ highlightNote(title,body){
+  const p=this.pdf;
+  this.setFont('times','normal',8.8,NAVY);
+  const lines=p.splitTextToSize(txt(body),INNER-44),height=Math.max(15,lines.length*4.3+6);
+  this.ensure(height+4);const y=this.y;
+  p.setFillColor(...PALE);p.roundedRect(L,y-3,INNER,height,2,2,'F');
+  p.setDrawColor(...BLUE);p.line(L+6,y,L+6,y+height-7);
+  this.setFont('times','bold',10,BLUE);p.text(txt(title),L+10,y+4);
+  this.setFont('times','normal',8.6,NAVY);
+  lines.forEach((line,k)=>p.text(line,L+44,y+4+k*4.3));
+  this.y+=height+5;
  }
  // Dense, clean scientific table with variable-height rows and repeated headers.
  table(headers,rows,widths,{font=8,number=null}={}){
