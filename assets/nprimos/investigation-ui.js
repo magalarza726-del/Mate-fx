@@ -1,6 +1,7 @@
 /* Mate-fx: interfaz de investigación reproducible. */
 import {METHODS,methodById,methodConfig,cleanData} from './investigation-core.mjs';
 import {methodReport,generalReport} from './investigation-report.mjs';
+import {reportLatex} from './investigation-paper.mjs';
 import {plotSpecifications,screenshotFromDesmos} from './investigation-desmos.mjs';
 import {setupDashboards,refreshDashboards} from './investigation-dashboards.mjs';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -80,7 +81,7 @@ function cards(){
 function table(){
  $('inv-winners').innerHTML=state.entries.map(e=>{
   const r=state.results.get(e.id)?.best,met=r?.metrics;
-  return '<tr><td>'+esc(e.id)+'</td><td>'+esc(methodById(e.method)?.name)+'</td><td class="inv-latex">'+esc(r?.latex||'—')+'</td><td>'+pct(met?.mape)+'</td><td>'+pct(met?.maxape)+'</td><td>'+fmt(r?.complexity)+'</td><td><button data-show="'+e.id+'"'+(!r?' disabled':'')+'>Ver</button></td></tr>';
+  return '<tr><td>'+esc(e.id)+'</td><td>'+esc(methodById(e.method)?.name)+'</td><td class="inv-latex">'+esc(r?.latex?reportLatex(r.latex,r.ztex).latex:'—')+'</td><td>'+pct(met?.mape)+'</td><td>'+pct(met?.maxape)+'</td><td>'+fmt(r?.complexity)+'</td><td><button data-show="'+e.id+'"'+(!r?' disabled':'')+'>Ver</button></td></tr>';
  }).join('');
  $('inv-winners').querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>{state.active=b.dataset.show;graph()});
  const done=state.entries.filter(e=>state.results.get(e.id)?.best).length;
@@ -175,7 +176,7 @@ function run(mode){
  w.postMessage({type:'start',points:pts,entries,validation});
 }
 function exportJSON(){
- const document={version:1,date:new Date().toISOString(),project:state.projectName,source:state.source,entries:state.entries.map(e=>({...e,best:state.results.get(e.id)?.best||null,history:state.history.get(e.id)||[]}))};
+ const document={version:1,date:new Date().toISOString(),variableDisplay:'z',project:state.projectName,source:state.source,entries:state.entries.map(e=>({...e,best:state.results.get(e.id)?.best||null,history:state.history.get(e.id)||[]}))};
  const url=URL.createObjectURL(new Blob([JSON.stringify(document)],{type:'application/json'}));
  const a=document.createElement('a');a.href=url;a.download='Matefx_investigacion_'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
 }
