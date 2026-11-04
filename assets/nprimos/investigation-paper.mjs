@@ -373,23 +373,29 @@ function coverText(state,reportKind,entries){
 async function cover(paper,state,entries,kind){
  const {title,subtitle,r}=coverText(state,kind,entries);
  paper.titleBlock(title,subtitle);
- paper.heading('Resumen');
- paper.writeLines('Se presenta un catálogo de las mejores ecuaciones encontradas por método y configuración, a partir de un conjunto de datos definido por el usuario. Se conservan las restricciones del experimento y se comparan la precisión y la complejidad de cada expresión. Los resultados no implican el descubrimiento de una ley física ni garantizan una aproximación fuera del intervalo estudiado.',10.2,4.8);
- paper.heading('Datos y alcance');
- paper.field('Proyecto',state.projectName||'Sin título');
- paper.field('Fuente proporcionada',state.source?.sourceName||'Datos importados');
- paper.field('Variable independiente',state.source?.xName||'X');
- paper.field('Propiedad aproximada',state.source?.yName||'Y');
- paper.field('Observaciones',String(r.observations));
- paper.field('Intervalo observado',norm(r.xmin)+' a '+norm(r.xmax));
- paper.field('Configuraciones',r.configs+' ('+r.methods+' métodos distintos)');
- paper.field('Iteraciones registradas',String(r.runs));
+ paper.heading('Resumen ejecutivo');
+ paper.writeLines('Se presenta un catálogo de las mejores ecuaciones encontradas por método y configuración a partir de los datos proporcionados. Se documentan restricciones, parámetros, precisión y complejidad para facilitar la selección de modelos. Ninguna curva se interpreta automáticamente como ley física ni se garantiza su extrapolación.',9.7,4.4);
+ paper.heading('Datos del estudio');
+ paper.infoTiles([
+  ['Proyecto',state.projectName||'Sin título'],
+  ['Fuente',state.source?.sourceName||'Datos importados'],
+  ['Variable independiente',namedZ(state.source?.xName||'Variable')],
+  ['Propiedad aproximada',state.source?.yName||'Y'],
+  ['Observaciones',String(r.observations)],
+  ['Intervalo observado',norm(r.xmin)+' a '+norm(r.xmax)],
+  ['Configuraciones',String(r.configs)],
+  ['Iteraciones registradas',String(r.runs)]
+ ]);
  paper.heading('Criterios de lectura');
- paper.writeLines('MAPE: error porcentual absoluto medio, calculado solo donde el valor observado es distinto de cero. MaxAPE: mayor error porcentual absoluto. MAE: error absoluto medio en las unidades de la propiedad. El índice de complejidad describe la expresión generada y no representa un costo de CPU medido experimentalmente.',9.5,4.5);
- paper.writeLines('Los resultados proceden del proyecto de Mate-fx indicado arriba. La validez física, la incertidumbre de los datos de referencia y las extrapolaciones deben evaluarse antes del uso ingenieril.',9,4.3,GRAY);
- paper.separator();
- paper.kicker('Documento generado automáticamente | No revisado por pares');
+ paper.criteriaCards([
+  ['MAPE','Error porcentual absoluto medio, sin valores reales cero.'],
+  ['MaxAPE','Mayor error porcentual absoluto observado.'],
+  ['MAE','Error absoluto medio en las unidades de la propiedad.'],
+  ['Complejidad','Índice de estructura de la expresión, no costo de CPU.']
+ ]);
+ paper.highlightNote('Nota científica','Informe automatizado; no revisado por pares. La validez física y los límites del intervalo deben comprobarse.');
 }
+
 async function methodology(paper,state){
  paper.next();paper.heading('1. Metodología');
  paper.writeLines('Se evaluaron los métodos y configuraciones seleccionados en Mate-fx. Los métodos deterministas obtienen una solución por configuración; los procedimientos estocásticos exploran los candidatos autorizados durante las iteraciones disponibles. Se registra la mejor ecuación encontrada para cada configuración, no necesariamente el óptimo global.',10.2,4.7);
