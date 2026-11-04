@@ -409,8 +409,9 @@ export async function methodReport(state,id,name,onProgress=()=>{}){
  const ctor=await PDFConstructor(),pdf=new ctor({orientation:'portrait',unit:'mm',format:'a4',compress:true});
  pdf.setProperties({title:'Mate-fx - '+name,creator:'Mate-fx',subject:'Informe de método e historial de iteraciones'});
  const paper=new Paper(pdf,name);
- await cover(paper,state,entries,'Estudio del método '+name);
- await methodology(paper,state);
+ const scoped={...state,entries:state.entries.filter(e=>e.method===id)};
+ await cover(paper,scoped,entries,'Estudio del método '+name);
+ await methodology(paper,scoped);
  paper.heading('2. Configuraciones analizadas');
  paper.table(['ID','Semilla','Iteraciones','MAPE','MaxAPE','Complejidad'],
   entries.map(e=>[e.id,e.seed,e.iterations,percent(e.best.metrics?.mape),percent(e.best.metrics?.maxape),norm(e.best.complexity)]),
