@@ -1,3 +1,11 @@
+## Actualización de reportes (4 noviembre 2026) · descarga única y diseño paper
+
+- El modo **Reporte automático** ejecuta los métodos seleccionados y, al terminar, **descarga solamente el PDF general**. No inicia descargas individuales ni descargas múltiples. Los PDF independientes por método siguen disponibles mediante sus botones manuales.
+- El generador A4 usa una portada con resumen ejecutivo, ocho tarjetas de metadatos y definiciones de métricas; metodología y comparativa con hallazgos derivados de los resultados; gráficos de Desmos con escala `log10(1+error)` en las comparaciones; fichas de resultados con una ecuación legible, indicadores, gráfica y muestra de observaciones; y un anexo de expresiones largas.
+- Cada informe individual tiene una ficha de resultados con parámetros esenciales, ecuación, seis indicadores, dos gráficas capturadas en Desmos y una tabla de valores. La configuración JSON completa, los datos detallados y **todas** las iteraciones van en anexos para evitar superposiciones y cortes de página.
+- **Notación en informes:** la variable matemática independiente se imprime como **z**, por ejemplo `f(z)`, aunque el motor numérico conserve internamente el nombre `x`. Cuando el modelo emplea la antigua variable normalizada `z`, se muestra como `u`; la sustitución completa se declara como `u=(z-centro)/escala`, evitando símbolos ambiguos.
+- Descarga directa `.pdf` desde jsPDF empaquetado; MathJax mejora la composición de ecuaciones si está disponible. No se inventan autores ni se atribuye revisión por pares.
+
 ## Edición académica de los informes PDF (noviembre 2026)
 
 Se ha rediseñado el generador de informes en `assets/nprimos/investigation-paper.mjs`, accesible a través de los mismos botones de Investigación. El contenido usa A4 con márgenes y tipografía académicos, numeración y cabeceras discretas, resumen, contexto de datos, metodología, explicación de métricas, tabla comparativa de resultados y análisis de complejidad frente a error. El catálogo conserva **una ecuación por método/configuración** y procura mostrar dos fichas compactas por página cuando hay espacio. Las ecuaciones largas y definidas por tramos se reproducen íntegramente en un anexo LaTeX, no encogidas sobre la gráfica.
@@ -6,13 +14,13 @@ Las figuras siguen procediendo exclusivamente de la API **Desmos asyncScreenshot
 
 ## Reportes PDF y Dashboards Desmos · Actualización noviembre 2026
 
-- **Descarga directa en PDF**, sin imprimir ni HTML intermedio. «Reporte automático» descarga los PDF individuales de todos los métodos seleccionados y el PDF general al finalizar; cada método conserva su botón de descarga independiente y también existe «Descargar todos los PDF».
+- **Descarga directa en PDF**, sin imprimir ni HTML intermedio. «Reporte automático» descarga solo el PDF general al finalizar; los informes individuales por método se solicitan manualmente.
 - **jsPDF 3.0.3 distribuido localmente** bajo licencia MIT, en assets/shared/vendor/, con CDN alternativo. Las ecuaciones incluyen código LaTeX y pueden componerse visualmente mediante MathJax si está disponible.
 - **Todas las gráficas de Investigación provienen del motor Desmos** mediante asyncScreenshot. Los datos observados y las curvas ajustadas se grafican en una instancia de Desmos; no se sustituyen por dibujos propios.
-- **Dashboards**: comparación MAPE/MaxAPE, precisión frente a complejidad, residuos, error porcentual por X, curva real/calculada. Filtros por familia, precisión, complejidad, validación y tiempo.
+- **Dashboards**: comparación MAPE/MaxAPE, precisión frente a complejidad, residuos, error porcentual por z (variable de presentación), curva real/calculada. Filtros por familia, precisión, complejidad, validación y tiempo.
 - **Reporte individual**: primeras páginas con fuente, fórmula, Desmos, datos reales/calculados, errores globales y por tramos. Después las iteraciones con LaTeX y métricas, sin gráficas.
 - **Reporte general**: fórmula ganadora y gráfica Desmos por configuración. No incluye tablas extensas de iteraciones.
-- El navegador puede solicitar permiso para descargar múltiples archivos cuando se ejecuta «Reporte automático».
+- No hay descargas múltiples en modo automático; únicamente se descarga el PDF general.
 - Se requiere cargar la API real de Desmos para las capturas. Un PDF con miles de puntos e iteraciones puede exigir memoria considerable.
 
 
