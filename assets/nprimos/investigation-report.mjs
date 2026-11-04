@@ -14,7 +14,7 @@ function inject(url){
 async function loadJsPDF(){
  if(window.jspdf?.jsPDF)return window.jspdf.jsPDF;
  jspdfLoading??=(async()=>{
-  for(const url of ['https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js','https://unpkg.com/jspdf@4.2.1/dist/jspdf.umd.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js']){
+  for(const url of [new URL('../shared/vendor/jspdf.umd.min.js',import.meta.url).href,'https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js','https://unpkg.com/jspdf@4.2.1/dist/jspdf.umd.min.js']){
    try{await inject(url);if(window.jspdf?.jsPDF)return window.jspdf.jsPDF}catch(e){console.warn(e)}
   }
   throw Error('No se ha podido cargar jsPDF; no generé un archivo de otro formato.');
@@ -103,7 +103,7 @@ class Report{
   this.ensure(height+12);
   const png=await screenshotFromDesmos(spec,{width:860,height:440,ratio:1.25});
   const p=this.pdf;p.setDrawColor(211,222,235);p.roundedRect(13,this.y-2,184,height+5,2,2,'S');
-  p.addImage(png,'PNG',15,this.y,180,height);this.y+=height+10;
+  const scaled=Math.min(height,180*440/860);p.addImage(png,'PNG',15,this.y,180,scaled);this.y+=scaled+10;
   this.text('Grafica original capturada con la API oficial de Desmos.',8,13,[83,108,128]);
  }
  table(head,rows,widths=[32,38,40,40,30]){
@@ -152,9 +152,9 @@ export async function methodReport(state,id,name,onProgress=()=>{}){
  const entries=state.entries.filter(e=>e.method===id&&state.history.has(e.id));
  if(!entries.length)throw Error('No hay iteraciones registradas para este método.');
  const jsPDF=await loadJsPDF();const pdf=makePdf(jsPDF,name),doc=new Report(pdf,name);
- for(const e of entries){
+ for(const [entryIndex,e] of entries.entries()){
   const r=state.results.get(e.id),best=r?.best;
-  doc.newPage();doc.heading('Investigacion: '+name,17);
+  if(entryIndex>0)doc.newPage();doc.heading('Investigacion: '+name,17);
   doc.text('Proyecto: '+state.projectName+'  |  Archivo: '+state.source.sourceName);
   doc.text('Eje X: '+state.source.xName+'  |  Eje Y: '+state.source.yName+'  |  Observaciones: '+state.source.points.length);
   doc.text('Configuracion '+e.id+'  |  Semilla '+e.seed+'  |  '+(state.history.get(e.id)||[]).length+' iteraciones  |  '+fmt((r?.elapsedMs||0)/1000)+' s');
