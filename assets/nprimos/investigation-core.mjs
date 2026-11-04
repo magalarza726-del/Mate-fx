@@ -16,7 +16,7 @@ export const METHODS=[
  {id:'logarithmic',name:'Regresión logarítmica',group:'Métodos clásicos de ajuste',type:'direct'},
  {id:'power',name:'Regresión potencial',group:'Métodos clásicos de ajuste',type:'direct'},
  {id:'rational',name:'Regresión racional',group:'Métodos clásicos de ajuste',type:'direct'},
- {id:'pade',name:'Aproximación racional tipo Padé',group:'Métodos clásicos de ajuste',type:'direct'},
+ {id:'pade',name:'Padé desde serie local ajustada',group:'Métodos clásicos de ajuste',type:'direct'},
  {id:'reciprocal',name:'Regresión recíproca',group:'Métodos clásicos de ajuste',type:'direct'},
  {id:'sqrt',name:'Regresión de raíz cuadrada',group:'Métodos clásicos de ajuste',type:'direct'},
  {id:'correction_poly',name:'Exponencial con corrección polinómica',group:'Métodos de corrección de funciones',type:'direct'},
@@ -143,6 +143,23 @@ function rational(points,opt,numerator=2,denominator=2){
  const formula=a=>a.map((v,k)=>'('+fmt(v)+')'+(k?'z^{'+k+'}':'')).join('+');
  return {latex:'f(x)=\\frac{'+formula(num)+'}{'+formula(den)+'}',ztex:norm.tex,complexity:count+4,predict:x=>{const z=norm.z(x);const d=den.reduce((s,v,k)=>s+v*z**k,0);return Math.abs(d)<1e-10?NaN:clean(num.reduce((s,v,k)=>s+v*z**k,0)/d)}};
 }
+function padeFromSeries(points,opt,numerator=2,denominator=2){
+ const norm=normalized(points),N=cap(numerator,1,5),D=cap(denominator,1,4),degree=N+D;
+ if(points.length<degree+2)return null;
+ // First estimate local power-series coefficients around the center of X.
+ const basis=x=>Array.from({length:degree+1},(_,k)=>norm.z(x)**k);
+ const c=ridgeFit(points,basis,opt);if(!c)return null;
+ // Pade condition: denominator(z) * sum(c_k z^k) - numerator(z) = O(z^(N+D+1)).
+ const A=[],rhs=[];
+ for(let k=N+1;k<=N+D;k++){A.push(Array.from({length:D},(_,j)=>c[k-j-1]||0));rhs.push(-c[k]||0)}
+ const q=solver(A,rhs);if(!q)return null;
+ const den=[1,...q.map(v=>fix(v,opt.decimals,opt.magnitude))],num=[];
+ for(let k=0;k<=N;k++){let v=0;for(let j=0;j<=Math.min(k,D);j++)v+=den[j]*c[k-j];num.push(fix(v,opt.decimals,opt.magnitude))}
+ const polynomial=c=>c.map((v,i)=>'('+fmt(v)+')'+(i?'z^{'+i+'}':'')).join('+');
+ return {latex:'f(x)=\\frac{'+polynomial(num)+'}{'+polynomial(den)+'}',ztex:norm.tex,complexity:N+D+5,predict:x=>{
+  const z=norm.z(x),d=den.reduce((sum,v,k)=>sum+v*z**k,0);
+  return Math.abs(d)<1e-10?NaN:clean(num.reduce((sum,v,k)=>sum+v*z**k,0)/d)}};
+}
 function sampleKnots(points,count){
  const n=cap(Math.trunc(count||8),3,Math.min(16,points.length)),index=new Set(Array.from({length:n},(_,i)=>Math.round(i*(points.length-1)/(n-1))));
  return [...index].map(i=>points[i]);
@@ -222,7 +239,7 @@ function linearMethod(id,points,opt,seed){
   return {latex:'f(x)=('+fmt(a)+')x^{('+fmt(c[1])+')}',complexity:4,predict:x=>x>0?clean(a*x**c[1]):NaN};
  }
  if(id==='rational')return rational(points,opt,opt.degree,Math.max(1,opt.denominator));
- if(id==='pade')return rational(points,opt,opt.degree,opt.denominator);
+ if(id==='pade')return padeFromSeries(points,opt,opt.degree,opt.denominator);
  if(['linear_interp','lagrange','newton','hermite','pchip','spline'].includes(id))return interpolation(points,opt,id);
  if(id==='least_squares')return polynomial(points,opt,opt.degree);
  if(id==='taylor'){
