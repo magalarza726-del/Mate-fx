@@ -371,6 +371,48 @@ class Paper{
   this.caption('Figura '+this.figureNumber+'. Datos de '+txt(state.source.xName)+' y curva calculada para '+entry.id+' (Desmos).');
   this.y+=1;
  }
+ async methodSummary(entry,state,progress){
+  const best=entry.best,p=this.pdf,src=state.source||{};
+  this.next();this.heading('3. Resultados: '+entry.label+' - '+entry.id);
+  this.heading('Configuración del experimento',2);
+  this.infoTiles([
+   ['Método',entry.label],['Semilla',String(entry.seed)],
+   ['Intentos registrados',String(entry.iterations)],['Tiempo de cálculo',norm(entry.elapsedMs/1000)+' s']
+  ]);
+  if(!best){
+   this.highlightNote('Sin ecuación','No hubo una función válida con las restricciones indicadas. El historial se conserva en los anexos.');
+   return;
+  }
+  this.heading('Ecuación del modelo ('+entry.id+')',2);
+  await this.displayEquation(entry,{compact:true});
+  this.heading('Indicadores de ajuste',2);
+  this.metricGrid(best,{six:true});
+  this.heading('Observaciones y distribución de errores',2);
+  const a=plotSpecifications(src,best,'fit'),b=plotSpecifications(src,best,'histogram');
+  const top=this.y;
+  this.ensure(66);
+  progress?.('Gráfica Desmos de '+entry.id);
+  const left=await screenshotFromDesmos(a,{width:740,height:360,ratio:1.2});
+  const right=await screenshotFromDesmos(b,{width:600,height:500,ratio:1.2});
+  p.setDrawColor(...LIGHT);
+  p.roundedRect(L,top-2,104,57,1.5,1.5,'S');
+  p.addImage(left,'PNG',L+1,top,102,52);
+  p.roundedRect(L+108,top-2,INNER-108,57,1.5,1.5,'S');
+  p.addImage(right,'PNG',L+109,top,INNER-110,52);
+  this.y=top+60;
+  this.figureNumber+=2;
+  this.writeLines('Izquierda: referencia y curva estimada de '+txt(src.yName||'Y')+'. Derecha: distribución central del error relativo firmado, con valores extremos excluidos de la visualización (sin excluirlos de las métricas). Figuras capturadas en Desmos.',7.9,3.7,GRAY);
+  this.heading('Valores observados y estimados (muestra)',2);
+  const selected=sampleIndices(src.points.length,5).map(i=>{
+   const pt=src.points[i],estimated=best.estimates?.[i];
+   return [norm(pt[0]),norm(pt[1]),norm(estimated),
+     pt[1]!==0&&Number.isFinite(estimated)?percent(100*(estimated-pt[1])/Math.abs(pt[1])):'N/D'];
+  });
+  this.table(['z','Y observada','Y estimada','Error rel. firmado'],selected,[31,49,49,45],{font:8.4});
+  const m=best.metrics||{};
+  this.highlightNote('Lectura técnica','MAPE '+percent(m.mape)+'; MaxAPE '+percent(m.maxape)+
+   '; complejidad '+norm(best.complexity)+'. La aptitud de este modelo depende del error tolerable y de la validez física dentro del intervalo estudiado.');
+ }
  annexLatex(entry){
   const formula=reportLatex(entry.best?.latex,entry.best?.ztex),raw=formula.latex;
   if(!raw)return;
@@ -530,29 +572,24 @@ export async function methodReport(state,id,name,onProgress=()=>{}){
   entries.map(e=>[e.id,e.seed,e.iterations,percent(e.best?.metrics?.mape),percent(e.best?.metrics?.maxape),norm(e.best?.complexity)]),
   [20,27,35,34,35,23],{font:8.8});
  for(const e of entries){
-  paper.next();paper.heading('3. Resultados de '+e.label+' - '+e.id);
+  await paper.methodSummary(e,state,onProgress);
+  paper.next();paper.heading('Anexo A. Configuración completa y resultados - '+e.id);
+  paper.field('Método',e.label);
   paper.field('Configuración',JSON.stringify(e.config));
-  paper.field('Semilla de ejecución',e.seed);
-  paper.field('Intentos registrados',e.iterations);
-  paper.field('Tiempo de cálculo',norm(e.elapsedMs/1000)+' s');
-  await paper.displayEquation(e);
-  if(!e.best){paper.writeLines('Ninguna iteración produjo una ecuación evaluable bajo estas restricciones. Se conserva el historial de intentos para auditoría.',9);await paper.iterationTable(state.history.get(e.id)||[],e.id,onProgress);continue}
-  paper.heading('3.1 Indicadores de ajuste',2);
+  paper.field('Semilla',String(e.seed));
+  paper.field('Tiempo',norm(e.elapsedMs/1000)+' s');
+  paper.heading('Errores y validación',2);
   paper.table(['Indicador','Valor'],metricRows(e.best),[114,60],{font:9});
-  paper.heading('3.2 Observaciones y curva',2);
-  onProgress('Capturando gráfica real de Desmos: '+e.id);
-  await paper.figure(plotSpecifications(state.source,e.best,'fit'),
-   'Observaciones originales frente a la ecuación ganadora de '+e.id+'. '+txt(state.source.xName)+' / '+txt(state.source.yName)+'.',{height:83});
-  paper.heading('3.3 Distribución de errores',2);
-  await paper.figure(plotSpecifications(state.source,e.best,'percentage'),
-   'Error porcentual absoluto según el valor de '+txt(state.source.xName)+'.',{height:83});
-  paper.table(['Intervalo de z','N.º puntos','MAPE','MaxAPE'],perInterval(state.source.points,e.best.estimates),
-   [61,27,43,43],{font:8.5});
-  paper.heading('3.4 Valores observados y estimados',2);
-  paper.table(['z','Y real','Y calculada','Error abs.','Error (%)'],
-   allValueErrors(state.source.points,e.best.estimates),[30,35,38,36,35],{font:8});
-  paper.next();paper.heading('Anexo. Ecuación completa en LaTeX');
-  paper.annexLatex(e);
+  if(e.best){
+   paper.heading('Errores por intervalos de z',2);
+   paper.table(['Intervalo de z','N.º puntos','MAPE','MaxAPE'],
+    perInterval(state.source.points,e.best.estimates),[61,27,43,43],{font:8.5});
+   paper.heading('Datos observados y calculados',2);
+   paper.table(['z','Y real','Y calculada','Error abs.','Error (%)'],
+    allValueErrors(state.source.points,e.best.estimates),[30,35,38,36,35],{font:8});
+   paper.next();paper.heading('Anexo B. Ecuación completa en LaTeX');
+   paper.annexLatex(e);
+  }
   await paper.iterationTable(state.history.get(e.id)||[],e.id,onProgress);
  }
  const filename='Matefx_Paper_'+slug(name)+'_'+slug(state.projectName)+'_'+new Date().toISOString().slice(0,10)+'.pdf';
