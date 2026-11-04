@@ -13,7 +13,7 @@ function next(){
  const entry=s.entries[s.index],cfg=entry.config,method=methodById(entry.method);
  if(!method){s.index++;setTimeout(next,0);return}
  const effective=method.type==='direct'?1:cfg.n;
- if(s.iteration===0){s.best=null;s.session={};s.rng=seeded((+entry.seed||28411)+s.index*10007);postMessage({type:'method-start',index:s.index,entryId:entry.id,method:entry.method,effective})}
+ if(s.iteration===0){s.best=null;s.entryStarted=Date.now();s.session={};s.rng=seeded((+entry.seed||28411)+s.index*10007);postMessage({type:'method-start',index:s.index,entryId:entry.id,method:entry.method,effective})}
  const rows=[];let passes=0;
  while(passes<12&&s.iteration<effective){
   passes++;s.iteration++;s.done++;
@@ -29,7 +29,7 @@ function next(){
  }
  postMessage({type:'progress',index:s.index,entryId:entry.id,done:s.done,total:s.total,methodDone:s.iteration,methodTotal:effective,rows,best:s.best});
  if(s.iteration>=effective){
-  s.results.push({id:entry.id,method:entry.method,config:cfg,best:s.best,iterations:s.iteration});
+  s.results.push({id:entry.id,method:entry.method,config:cfg,best:s.best,iterations:s.iteration,elapsedMs:Date.now()-s.entryStarted,seed:entry.seed});
   postMessage({type:'method-complete',entryId:entry.id,index:s.index,result:s.results[s.results.length-1]});
   s.index++;s.iteration=0;s.errorCount=0;
  }
