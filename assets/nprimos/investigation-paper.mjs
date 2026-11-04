@@ -118,7 +118,7 @@ function perInterval(points,predictions,count=6){
 
 class Paper{
  constructor(pdf,title){
-  this.pdf=pdf;this.title=title;this.y=29;this.page=1;this.figure=0;
+  this.pdf=pdf;this.title=title;this.y=29;this.page=1;this.figureNumber=0;
   this.createChrome();
  }
  setFont(kind='times',weight='normal',size=10,color=NAVY){
@@ -235,8 +235,8 @@ class Paper{
   const displayedHeight=width*captureHeight/920;
   this.pdf.addImage(png,'PNG',L,this.y,width,displayedHeight);
   this.y+=displayedHeight+4;
-  this.figure++;
-  this.caption('Figura '+this.figure+'. '+description+' (gráfica capturada directamente de Desmos).');
+  this.figureNumber++;
+  this.caption('Figura '+this.figureNumber+'. '+description+' (gráfica capturada directamente de Desmos).');
  }
  metricGrid(best){
   if(!best)return;
