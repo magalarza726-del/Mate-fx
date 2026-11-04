@@ -3,37 +3,44 @@ import {makeCandidate,fitCandidate,predict as predictSymbolic,modelToLatex,infer
 import {makeEnvelope, evaluateEnvelope, envelopeValues, centerValue, expressionFor} from './envelope-core.mjs';
 
 export const METHODS=[
- {id:'linear',name:'Regresión lineal',group:'Regresiones',type:'direct'},
- {id:'polynomial',name:'Regresión polinómica',group:'Regresiones',type:'direct'},
- {id:'exponential',name:'Regresión exponencial',group:'Regresiones',type:'direct'},
- {id:'logarithmic',name:'Regresión logarítmica',group:'Regresiones',type:'direct'},
- {id:'power',name:'Regresión potencial',group:'Regresiones',type:'direct'},
- {id:'rational',name:'Regresión racional',group:'Regresiones',type:'direct'},
- {id:'pade',name:'Aproximación racional tipo Padé',group:'Regresiones',type:'direct'},
- {id:'reciprocal',name:'Regresión recíproca',group:'Regresiones',type:'direct'},
- {id:'sqrt',name:'Regresión de raíz cuadrada',group:'Regresiones',type:'direct'},
- {id:'correction_poly',name:'Exponencial con corrección polinómica',group:'Correcciones',type:'direct'},
- {id:'correction_exp',name:'Doble exponencial',group:'Correcciones',type:'search'},
- {id:'correction_power',name:'Exponencial con corrección potencial',group:'Correcciones',type:'search'},
- {id:'correction_rational',name:'Exponencial con corrección racional',group:'Correcciones',type:'search'},
- {id:'correction_sigmoid',name:'Corrección sigmoidal',group:'Correcciones',type:'search'},
- {id:'linear_interp',name:'Interpolación lineal',group:'Interpolación',type:'direct'},
- {id:'lagrange',name:'Interpolación de Lagrange',group:'Interpolación',type:'direct'},
- {id:'newton',name:'Interpolación de Newton',group:'Interpolación',type:'direct'},
- {id:'hermite',name:'Interpolación cúbica de Hermite',group:'Interpolación',type:'direct'},
- {id:'pchip',name:'PCHIP monótona',group:'Interpolación',type:'direct'},
- {id:'spline',name:'Spline cúbico natural',group:'Interpolación',type:'direct'},
- {id:'chebyshev',name:'Polinomios de Chebyshev',group:'Aproximación avanzada',type:'direct'},
- {id:'minimax',name:'Minimax aproximado (IRLS)',group:'Aproximación avanzada',type:'direct'},
- {id:'quantile',name:'Regresión cuantílica (IRLS)',group:'Aproximación avanzada',type:'direct'},
- {id:'fourier',name:'Serie de Fourier',group:'Aproximación avanzada',type:'direct'},
- {id:'rbf',name:'Funciones radiales gaussianas (RBF)',group:'Aproximación avanzada',type:'direct'},
- {id:'symbolic',name:'Regresión simbólica evolutiva',group:'Búsqueda estocástica',type:'search'},
- {id:'differential',name:'Evolución diferencial',group:'Búsqueda estocástica',type:'search'},
- {id:'genetic',name:'Algoritmo genético',group:'Búsqueda estocástica',type:'search'},
- {id:'annealing',name:'Recocido simulado',group:'Búsqueda estocástica',type:'search'},
- {id:'levenberg',name:'Levenberg–Marquardt',group:'Optimización no lineal',type:'search'},
- {id:'envelope',name:'Acotación exponencial',group:'Optimización no lineal',type:'search'}
+ {id:'least_squares',name:'Mínimos cuadrados clásicos',group:'Métodos basados en restricciones y cotas',type:'direct'},
+ {id:'least_absolute',name:'Mínimos errores absolutos (IRLS)',group:'Métodos basados en restricciones y cotas',type:'direct'},
+ {id:'constrained',name:'Optimización restringida de expresiones',group:'Métodos basados en restricciones y cotas',type:'search'},
+ {id:'remez',name:'Aproximación minimax tipo Remez (IRLS)',group:'Métodos de aproximación avanzada',type:'direct'},
+ {id:'taylor',name:'Taylor local ajustada (polinomio)',group:'Métodos de aproximación avanzada',type:'direct'},
+ {id:'gaussian',name:'Proceso gaussiano RBF (media predictiva)',group:'Métodos de aproximación avanzada',type:'direct'},
+ {id:'bayesian',name:'Optimización bayesiana 1D (surrogado RBF)',group:'Métodos de búsqueda y optimización',type:'search'},
+ {id:'linear',name:'Regresión lineal',group:'Métodos clásicos de ajuste',type:'direct'},
+ {id:'polynomial',name:'Regresión polinómica',group:'Métodos clásicos de ajuste',type:'direct'},
+ {id:'exponential',name:'Regresión exponencial',group:'Métodos clásicos de ajuste',type:'direct'},
+ {id:'logarithmic',name:'Regresión logarítmica',group:'Métodos clásicos de ajuste',type:'direct'},
+ {id:'power',name:'Regresión potencial',group:'Métodos clásicos de ajuste',type:'direct'},
+ {id:'rational',name:'Regresión racional',group:'Métodos clásicos de ajuste',type:'direct'},
+ {id:'pade',name:'Aproximación racional tipo Padé',group:'Métodos clásicos de ajuste',type:'direct'},
+ {id:'reciprocal',name:'Regresión recíproca',group:'Métodos clásicos de ajuste',type:'direct'},
+ {id:'sqrt',name:'Regresión de raíz cuadrada',group:'Métodos clásicos de ajuste',type:'direct'},
+ {id:'correction_poly',name:'Exponencial con corrección polinómica',group:'Métodos de corrección de funciones',type:'direct'},
+ {id:'correction_exp',name:'Doble exponencial',group:'Métodos de corrección de funciones',type:'search'},
+ {id:'correction_power',name:'Exponencial con corrección potencial',group:'Métodos de corrección de funciones',type:'search'},
+ {id:'correction_rational',name:'Exponencial con corrección racional',group:'Métodos de corrección de funciones',type:'search'},
+ {id:'correction_sigmoid',name:'Corrección sigmoidal',group:'Métodos de corrección de funciones',type:'search'},
+ {id:'linear_interp',name:'Interpolación lineal',group:'Métodos de interpolación',type:'direct'},
+ {id:'lagrange',name:'Interpolación de Lagrange',group:'Métodos de interpolación',type:'direct'},
+ {id:'newton',name:'Interpolación de Newton',group:'Métodos de interpolación',type:'direct'},
+ {id:'hermite',name:'Interpolación cúbica de Hermite',group:'Métodos de interpolación',type:'direct'},
+ {id:'pchip',name:'PCHIP monótona',group:'Métodos de interpolación',type:'direct'},
+ {id:'spline',name:'Spline cúbico natural',group:'Métodos de interpolación',type:'direct'},
+ {id:'chebyshev',name:'Polinomios de Chebyshev',group:'Métodos de aproximación avanzada',type:'direct'},
+ {id:'minimax',name:'Minimax aproximado (IRLS)',group:'Métodos basados en restricciones y cotas',type:'direct'},
+ {id:'quantile',name:'Regresión cuantílica (IRLS)',group:'Métodos basados en restricciones y cotas',type:'direct'},
+ {id:'fourier',name:'Serie de Fourier',group:'Métodos de aproximación avanzada',type:'direct'},
+ {id:'rbf',name:'Funciones radiales gaussianas (RBF)',group:'Métodos de aproximación avanzada',type:'direct'},
+ {id:'symbolic',name:'Regresión simbólica evolutiva',group:'Métodos de búsqueda y optimización',type:'search'},
+ {id:'differential',name:'Evolución diferencial',group:'Métodos de búsqueda y optimización',type:'search'},
+ {id:'genetic',name:'Algoritmo genético',group:'Métodos de búsqueda y optimización',type:'search'},
+ {id:'annealing',name:'Recocido simulado',group:'Métodos de búsqueda y optimización',type:'search'},
+ {id:'levenberg',name:'Levenberg–Marquardt',group:'Métodos de búsqueda y optimización',type:'search'},
+ {id:'envelope',name:'Acotación exponencial',group:'Métodos basados en restricciones y cotas',type:'search'}
 ];
 export const methodById=id=>METHODS.find(m=>m.id===id);
 const cap=(n,a,b)=>Math.min(b,Math.max(a,n));
@@ -181,7 +188,7 @@ function customBasis(id,points,opt,seed=0){
  const norm=normalized(points),basis=[],labels=[],push=(fn,latex)=>{basis.push(fn);labels.push(latex)};
  const z=x=>norm.z(x);
  if(id==='linear'){push(()=>1,'');push(v=>v,'z')}
- if(id==='polynomial'||id==='minimax'||id==='quantile'){for(let k=0;k<=opt.degree;k++)push(v=>v**k,k?'z^{'+k+'}':'')}
+ if(['polynomial','minimax','quantile','least_absolute','remez'].includes(id)){for(let k=0;k<=opt.degree;k++)push(v=>v**k,k?'z^{'+k+'}':'')}
  if(id==='chebyshev'){push(()=>1,'');if(opt.degree>=1)push(v=>v,'z');let prev=(v)=>1,current=v=>v;for(let k=2;k<=opt.degree;k++){const oldPrev=prev,oldCurrent=current;const next=v=>2*v*oldCurrent(v)-oldPrev(v);push(next,'T_{'+k+'}(z)');prev=current;current=next}}
  if(id==='logarithmic'){push(()=>1,'');push((v,x)=>x>0?Math.log(x):NaN,'\\ln(x)')}
  if(id==='sqrt'){push(()=>1,'');push((v,x)=>x>=0?Math.sqrt(x):NaN,'\\sqrt{x}')}
@@ -216,21 +223,22 @@ function linearMethod(id,points,opt,seed){
  if(id==='rational')return rational(points,opt,opt.degree,Math.max(1,opt.denominator));
  if(id==='pade')return rational(points,opt,opt.degree,opt.denominator);
  if(['linear_interp','lagrange','newton','hermite','pchip','spline'].includes(id))return interpolation(points,opt,id);
- if(id==='quantile'||id==='minimax'){
-  const {basis,labels,norm}=customBasis(id,points,opt),feature=x=>basis.map(fn=>fn(norm.z(x),x));
+ if(id==='least_squares'||id==='taylor')return polynomial(points,opt,opt.degree);
+ if(id==='quantile'||id==='minimax'||id==='least_absolute'||id==='remez'){
+  const {basis,labels,norm}=customBasis(['least_absolute','remez'].includes(id)?'minimax':id,points,opt),feature=x=>basis.map(fn=>fn(norm.z(x),x));
   let weights=Array(points.length).fill(1),model=null;
   for(let k=0;k<Math.min(25,Math.max(6,opt.degree*4));k++){
    model=basisModel(points,basis,labels,opt,null,(_,p)=>weights[points.indexOf(p)]||1);if(!model)return null;
    const e=points.map(p=>p[1]-model.predict(p[0]));
    const scale=Math.max(1e-8,e.reduce((s,v)=>s+Math.abs(v),0)/e.length*.01);
-   weights=e.map(v=>id==='minimax'?Math.min(1e6,(Math.abs(v)+scale)**Math.min(3,1+k/5)):Math.min(1e6,(v>=0?opt.quantile:1-opt.quantile)/Math.max(scale,Math.abs(v))));
+   weights=e.map(v=>['minimax','remez'].includes(id)?Math.min(1e6,(Math.abs(v)+scale)**Math.min(3,1+k/5)):Math.min(1e6,(v>=0?opt.quantile:1-opt.quantile)/Math.max(scale,Math.abs(v))));
   }return model;
  }
  const {basis,labels}=customBasis(id,points,opt,seed);
  return basis.length?basisModel(points,basis,labels,opt):null;
 }
 function predictorModel(id,points,opt,rng,step,session){
- if(id==='symbolic'){
+ if(id==='symbolic'||id==='constrained'){
   const config={maxTerms:opt.maxTerms,maxX:opt.maxX,constant:opt.constant,composition:opt.composition,families:opt.families,trendRate:inferTrend(points).rate};
   const shape=makeCandidate(config,Math.max(1,...points.map(p=>Math.abs(p[0]))),rng,session?.elite?.model||null);
   const model=fitCandidate(shape,points,Math.min(3,opt.decimals),Math.min(9999,opt.magnitude));if(!model)return null;
@@ -244,6 +252,38 @@ function predictorModel(id,points,opt,rng,step,session){
   if(!evaluated)return null;
   const latex=expressionFor(evaluated,'center');
   return {latex:'f(x)='+latex,complexity:7,predict:x=>{const [lo,hi]=envelopeValues(evaluated,x);return centerValue(lo,hi,evaluated.method)}};
+ }
+
+ if(id==='bayesian'){
+  // One-dimensional Bayesian optimization of an exponential correction rate.
+  const s=session||{},history=s.bayes||(s.bayes=[]),trial=t=>linearMethod('correction_exp',points,opt,t);
+  const score=t=>{const m=trial(t);return m?objective(statistics(points,points.map(p=>m.predict(p[0]))),opt.objective):Infinity};
+  let choice=(rng()*10-5);
+  if(history.length>=4){
+   const recent=history.slice(-24),min=Math.min(...recent.map(v=>v.score)),scale=1.15;
+   let acquisition=-Infinity;
+   for(let j=0;j<48;j++){
+    const t=-5+10*(j+rng())/48,mat=recent.map((a,i)=>recent.map((b,k)=>Math.exp(-((a.x-b.x)/scale)**2)+(i===k?0.015:0)));
+    const ks=recent.map(a=>Math.exp(-((t-a.x)/scale)**2)),mean=recent.reduce((a,v)=>a+v.score,0)/recent.length;
+    const y=recent.map(v=>v.score-mean),alpha=solver(mat,y),v=solver(mat,ks);
+    if(!alpha||!v)continue;
+    const mu=mean+ks.reduce((a,k,i)=>a+k*alpha[i],0),variance=Math.max(.000001,1-ks.reduce((a,k,i)=>a+k*v[i],0));
+    const sigma=Math.sqrt(variance)*Math.max(.05,Math.abs(min)*.1),z=(min-mu)/sigma;
+    const phi=Math.exp(-.5*z*z)/Math.sqrt(2*Math.PI),cdf=1/(1+Math.exp(-1.702*z));
+    const expected=(min-mu)*cdf+sigma*phi;
+    if(expected>acquisition){acquisition=expected;choice=t}
+   }
+  }
+  const loss=score(choice);if(Number.isFinite(loss)){history.push({x:choice,score:loss});if(history.length>60)history.shift()}
+  return trial(choice);
+ }
+ if(id==='gaussian'){
+  const norm=normalized(points),k=Math.min(points.length,opt.knots),indices=Array.from({length:k},(_,i)=>Math.round(i*(points.length-1)/(k-1))),
+   centers=indices.map(i=>norm.z(points[i][0])),width=opt.width,ker=(a,b)=>Math.exp(-((a-b)/width)**2);
+  const A=centers.map((u,i)=>centers.map((v,j)=>ker(u,v)+(i===j?.001:0)));
+  const y=indices.map(i=>points[i][1]),alpha=solver(A,y);if(!alpha)return null;
+  return {latex:'f(x)=\\sum_{i=1}^{'+k+'}\\alpha_i\\exp\\left(-\\frac{(z-c_i)^2}{'+fmt(width*width)+'}\\right)',
+   ztex:norm.tex,complexity:k*4,predict:x=>clean(alpha.reduce((sum,v,i)=>sum+v*ker(norm.z(x),centers[i]),0))};
  }
  if(id==='levenberg'){
   const norm=normalized(points),z=x=>norm.z(x);
