@@ -348,7 +348,7 @@ class Paper{
  }
  async winnerCard(entry,index,total,state){
   const p=this.pdf,summary=entry.best;
-  this.ensure(113);
+  this.ensure(108);
   const top=this.y;
   // Pale section title with restrained navy rule; two cards can share one A4 page.
   p.setFillColor(...PALE);p.roundedRect(L,top-5,INNER,11,1.7,1.7,'F');
