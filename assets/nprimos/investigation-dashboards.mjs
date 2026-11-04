@@ -50,7 +50,7 @@ async function plot(entries,force=false){
  element.setAttribute('aria-busy','true');
  try{
   const spec=plotSpecifications(state.source,selected,mode,entries);
-  const png=await screenshotFromDesmos(spec,{width:860,height:445,ratio:1.15});
+  const png=await screenshotFromDesmos(spec,{width:860,height:445,ratio:1.15,previewKey:'dashboard'});
   if(version!==plotIndex||!element.isConnected)return;
   const img=document.createElement('img');img.src=png;img.alt='Dashboard graficado y capturado directamente en Desmos: '+spec.title;
   img.style.cssText='display:block;width:100%;height:auto;';element.replaceChildren(img);
