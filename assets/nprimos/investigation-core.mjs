@@ -7,7 +7,7 @@ export const METHODS=[
  {id:'least_absolute',name:'Mínimos errores absolutos (IRLS)',group:'Métodos basados en restricciones y cotas',type:'direct'},
  {id:'constrained',name:'Optimización restringida de expresiones',group:'Métodos basados en restricciones y cotas',type:'search'},
  {id:'remez',name:'Aproximación minimax tipo Remez (IRLS)',group:'Métodos de aproximación avanzada',type:'direct'},
- {id:'taylor',name:'Taylor local ajustada (polinomio)',group:'Métodos de aproximación avanzada',type:'direct'},
+ {id:'taylor',name:'Taylor local (derivadas estimadas)',group:'Métodos de aproximación avanzada',type:'direct'},
  {id:'gaussian',name:'Proceso gaussiano RBF (media predictiva)',group:'Métodos de aproximación avanzada',type:'direct'},
  {id:'bayesian',name:'Optimización bayesiana 1D (surrogado RBF)',group:'Métodos de búsqueda y optimización',type:'search'},
  {id:'linear',name:'Regresión lineal',group:'Métodos clásicos de ajuste',type:'direct'},
@@ -186,10 +186,11 @@ function interpolation(points,opt,id){
 }
 function customBasis(id,points,opt,seed=0){
  const norm=normalized(points),basis=[],labels=[],push=(fn,latex)=>{basis.push(fn);labels.push(latex)};
+ const cheb=['1','z','(2z^2-1)','(4z^3-3z)','(8z^4-8z^2+1)','(16z^5-20z^3+5z)'];
  const z=x=>norm.z(x);
  if(id==='linear'){push(()=>1,'');push(v=>v,'z')}
  if(['polynomial','minimax','quantile','least_absolute','remez'].includes(id)){for(let k=0;k<=opt.degree;k++)push(v=>v**k,k?'z^{'+k+'}':'')}
- if(id==='chebyshev'){push(()=>1,'');if(opt.degree>=1)push(v=>v,'z');let prev=(v)=>1,current=v=>v;for(let k=2;k<=opt.degree;k++){const oldPrev=prev,oldCurrent=current;const next=v=>2*v*oldCurrent(v)-oldPrev(v);push(next,'T_{'+k+'}(z)');prev=current;current=next}}
+ if(id==='chebyshev'){push(()=>1,'');if(opt.degree>=1)push(v=>v,'z');let prev=(v)=>1,current=v=>v;for(let k=2;k<=opt.degree;k++){const oldPrev=prev,oldCurrent=current;const next=v=>2*v*oldCurrent(v)-oldPrev(v);push(next,cheb[k]||('T_{'+k+'}(z)'));prev=current;current=next}}
  if(id==='logarithmic'){push(()=>1,'');push((v,x)=>x>0?Math.log(x):NaN,'\\ln(x)')}
  if(id==='sqrt'){push(()=>1,'');push((v,x)=>x>=0?Math.sqrt(x):NaN,'\\sqrt{x}')}
  if(id==='reciprocal'){push(()=>1,'');push(v=>1/(v+2),'\\frac{1}{z+2}')}
@@ -197,7 +198,7 @@ function customBasis(id,points,opt,seed=0){
  if(id==='correction_poly'){push(()=>1,'');push(v=>v,'z');push(v=>Math.exp(v),'e^z');push(v=>v*v,'z^2')}
  if(id==='rbf'){push(()=>1,'');for(let k=0;k<opt.knots;k++){const center=-1+2*k/Math.max(1,opt.knots-1),width=opt.width;push(v=>Math.exp(-(((v-center)/width)**2)),'e^{-((z-('+fmt(center)+'))/'+fmt(width)+')^2}')}}
  if(id.startsWith('correction_')&&id!=='correction_poly'){
-  const t=seed,rate=Math.max(.05,Math.abs(t));
+  const t=fix(seed,opt.decimals,opt.magnitude),rate=fix(Math.max(.05,Math.abs(t)),opt.decimals,opt.magnitude);
   push(()=>1,'');push(v=>Math.exp(cap(t*v,-60,60)),'e^{('+fmt(t)+')z}');
   if(id==='correction_exp')push(v=>Math.exp(cap(-rate*v,-60,60)),'e^{(-'+fmt(rate)+')z}');
   if(id==='correction_power')push(v=>(v+1.1)**(1+rate),'(z+1.1)^{'+fmt(1+rate)+'}');
@@ -223,7 +224,17 @@ function linearMethod(id,points,opt,seed){
  if(id==='rational')return rational(points,opt,opt.degree,Math.max(1,opt.denominator));
  if(id==='pade')return rational(points,opt,opt.degree,opt.denominator);
  if(['linear_interp','lagrange','newton','hermite','pchip','spline'].includes(id))return interpolation(points,opt,id);
- if(id==='least_squares'||id==='taylor')return polynomial(points,opt,opt.degree);
+ if(id==='least_squares')return polynomial(points,opt,opt.degree);
+ if(id==='taylor'){
+  // Taylor coefficients estimated from a local degree-n interpolation at x0.
+  const norm=normalized(points),center=norm.center,nearest=[...points].sort((a,b)=>Math.abs(a[0]-center)-Math.abs(b[0]-center)).slice(0,Math.min(points.length,opt.degree+1));
+  const n=nearest.length-1;if(n<1)return null;
+  const X=nearest.map(p=>Array.from({length:n+1},(_,k)=>norm.z(p[0])**k));
+  const c=solver(X,nearest.map(p=>p[1]));if(!c)return null;
+  const coef=c.map(v=>fix(v,opt.decimals,opt.magnitude));
+  return {latex:'f(x)='+coef.map((v,k)=>'('+fmt(v)+')'+(k?'z^{'+k+'}':'')).join('+'),
+    ztex:norm.tex,complexity:coef.length+opt.degree,predict:x=>clean(coef.reduce((sum,v,k)=>sum+v*norm.z(x)**k,0))};
+ }
  if(id==='quantile'||id==='minimax'||id==='least_absolute'||id==='remez'){
   const {basis,labels,norm}=customBasis(['least_absolute','remez'].includes(id)?'minimax':id,points,opt);
   let weights=Array(points.length).fill(1),model=null,best=null,bestLoss=Infinity;
@@ -260,7 +271,7 @@ function predictorModel(id,points,opt,rng,step,session){
 
  if(id==='bayesian'){
   const sessionState=session||{},history=sessionState.bayes||(sessionState.bayes=[]);
-  const trial=t=>linearMethod('correction_exp',points,opt,t);
+  const trial=t=>linearMethod('correction_exp',points,opt,fix(t,opt.decimals,opt.magnitude));
   const score=t=>{const m=trial(t);return m?objective(statistics(points,points.map(p=>m.predict(p[0]))),opt.objective):Infinity};
   let choice=rng()*10-5;
   if(history.length>=4){
@@ -296,7 +307,13 @@ function predictorModel(id,points,opt,rng,step,session){
  }
  if(id==='levenberg'){
   const norm=normalized(points),z=x=>norm.z(x);
-  let v=session?.params?.slice()||[1,1,0],damp=1e-2;
+  let v=session?.params?.slice(),damp=1e-2;
+  if(!v){
+   const allPositive=points.every(p=>p[1]>0);
+   if(allPositive){const estimate=ridgeFit(points,x=>[1,z(x)],{decimals:Math.min(5,opt.decimals),magnitude:opt.magnitude},p=>Math.log(p[1]));
+    v=estimate?[fix(Math.exp(estimate[0]),opt.decimals,opt.magnitude),estimate[1],0]:null}
+   if(!v)v=[fix(points.reduce((sum,p)=>sum+p[1],0)/points.length,opt.decimals,opt.magnitude),0,0];
+  }
   const calc=(c,x)=>c[0]*Math.exp(cap(c[1]*z(x),-50,50))+c[2];
   for(let it=0;it<6;it++){
    const residual=points.map(p=>p[1]-calc(v,p[0]));
@@ -316,7 +333,8 @@ function predictorModel(id,points,opt,rng,step,session){
   const get=coeff=>({latex:'f(x)=('+fmt(coeff[0])+')+('+fmt(coeff[1])+')z+('+fmt(coeff[2])+')z^2+('+fmt(coeff[3])+')e^z',ztex:norm.tex,complexity:8,predict:x=>clean(coeff[0]+coeff[1]*z(x)+coeff[2]*z(x)**2+coeff[3]*Math.exp(z(x)))});
   const score=c=>objective(statistics(points,points.map(p=>get(c).predict(p[0]))),opt.objective);
   const fresh=()=>Array.from({length:n},()=>fix((rng()*2-1)*opt.magnitude*.15,opt.decimals,opt.magnitude));
-  const s=session||{},pop=s.pop||(s.pop=Array.from({length:16},fresh)),scores=s.scores||(s.scores=pop.map(score));
+  const s=session||{},base=ridgeFit(points,x=>[1,z(x),z(x)**2,Math.exp(z(x))],opt);
+  const pop=s.pop||(s.pop=Array.from({length:16},(_,i)=>i===0&&base?base:fresh())),scores=s.scores||(s.scores=pop.map(score));
   const bestIndex=()=>scores.indexOf(Math.min(...scores));
   const best=bestIndex(),selectIndex=()=>Math.floor(rng()*pop.length);
   let trial;
