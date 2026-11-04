@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const downloads=[],images=[],desmosCalls=[];
+const downloads=[],images=[],desmosCalls=[],printedText=[];
 class FakePDF{
  constructor(){this.pages=1}
- setProperties(){}setFillColor(){}rect(){}setTextColor(){}setFontSize(){}setFont(){}text(){}
+ setProperties(){}setFillColor(){}rect(){}setTextColor(){}setFontSize(){}setFont(){}text(s){printedText.push(String(s))} 
  setDrawColor(){}line(){}roundedRect(){}
  splitTextToSize(value){return String(value).match(/.{1,95}/g)||['']}
  addPage(){this.pages++}
@@ -53,6 +53,12 @@ test('Los reportes individuales y generales descargan archivos .pdf directamente
  assert.equal(desmosCalls[0][0].type,'table');
  assert.equal(desmosCalls[0][0].columns[1].points,true);
  assert.equal(desmosCalls[0][1].columns[1].lines,true);
+ assert.ok(printedText.some(x=>x.includes('Resumen')),'El PDF incluye un resumen académico');
+ assert.ok(printedText.some(x=>x.includes('Metodología')),'El PDF documenta la metodología');
+ assert.ok(printedText.some(x=>x.includes('Resultados comparativos')),'Incluye resultados comparativos');
+ assert.ok(printedText.some(x=>x.includes('Catálogo de ecuaciones')),'Incluye el catálogo de ganadoras');
+ assert.ok(printedText.some(x=>x.includes('Anexo de iteraciones')),'El método conserva el historial');
+ assert.ok(!printedText.some(x=>x.includes('about:blank')),'No muestra encabezados de impresión web');
 });
 
 test('Dashboards para errores y complejidad usan series de datos para Desmos',()=>{
