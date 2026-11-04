@@ -7,7 +7,7 @@ export function plotSpecifications(source,best,kind='fit',entries=[]){
  const points=(source?.points||[]).filter(finite).map(p=>[+p[0],+p[1]]);
  if(kind==='fit'){
   const curve=(best?.curvePoints?.length?best.curvePoints:points.map((p,i)=>[p[0],best?.estimates?.[i]])).filter(finite).map(p=>[+p[0],+p[1]]);
-  return {title:'Datos observados y ecuación ganadora',useX:true,xName:source?.xName||'X',yName:source?.yName||'Y',series:[{points,color:'#2578c5',mode:'points'},{points:curve,color:'#e0782f',mode:'lines'}]};
+  return {title:'Datos observados y ecuación ganadora',useX:true,curveRepresentation:'sampled-function',xName:source?.xName||'X',yName:source?.yName||'Y',series:[{points,color:'#2578c5',mode:'points'},{points:curve,color:'#e0782f',mode:'lines'}]};
  }
  if(kind==='residual'){
   const residual=points.map((p,i)=>[p[0],Number.isFinite(best?.estimates?.[i])?best.estimates[i]-p[1]:NaN]).filter(finite);
@@ -23,13 +23,13 @@ export function plotSpecifications(source,best,kind='fit',entries=[]){
  }
  if(kind==='complexity'){
   const valid=entries.filter(e=>Number.isFinite(e.best?.metrics?.mape)&&e.best.metrics.mape>=0&&Number.isFinite(e.best.complexity));
-  return {title:'Complejidad frente a log10(1+MAPE)',xName:'Complejidad',yName:'log10(1+MAPE %)',series:[
+  return {title:'Complejidad frente a log10(1+MAPE)',nonnegativeY:true,xName:'Complejidad',yName:'log10(1+MAPE %)',series:[
     {points:valid.map(e=>[e.best.complexity,Math.log10(1+e.best.metrics.mape)]),color:'#18669d',mode:'points'}]};
  }
  if(kind==='comparison'){
   const values=entries.map((e,i)=>({index:i+1,mape:e.best?.metrics?.mape,maxape:e.best?.metrics?.maxape}));
   const log=key=>values.filter(v=>Number.isFinite(v[key])&&v[key]>=0).map(v=>[v.index,Math.log10(1+v[key])]);
-  return {title:'Comparación logarítmica de errores por configuración',xName:'Número de configuración (según tabla)',yName:'log10(1+Error %)',series:[
+  return {title:'Comparación logarítmica de errores por configuración',nonnegativeY:true,entryOrder:entries.map(e=>e.id),xName:'Posición en la tabla (orden MAPE)',yName:'log10(1+Error %)',series:[
     {points:log('mape'),color:'#2578c5',mode:'lines+points'},
     {points:log('maxape'),color:'#df762f',mode:'lines+points'}]};
  }
@@ -40,7 +40,7 @@ export function plotSpecifications(source,best,kind='fit',entries=[]){
   const sorted=[...finiteErrors].sort((a,b)=>a-b),low=sorted[Math.floor((sorted.length-1)*.025)],high=sorted[Math.ceil((sorted.length-1)*.975)];
   const range=Math.max(1e-9,high-low),bins=14,hist=Array(bins).fill(0);
   for(const v of finiteErrors){if(v<low||v>high)continue;hist[Math.min(bins-1,Math.floor((v-low)/range*bins))]++}
-  return {title:'Distribución central de los errores relativos',xName:'Error relativo firmado (%)',yName:'Frecuencia',series:[
+  return {title:'Distribución central de los errores relativos',nonnegativeY:true,xName:'Error relativo firmado (%)',yName:'Frecuencia',series:[
    {points:hist.map((count,i)=>[low+(i+.5)*range/bins,count]),color:'#377bb1',mode:'lines+points'}],
    trimInfo:{omitted:finiteErrors.filter(v=>v<low||v>high).length,total:finiteErrors.length}};
  }
@@ -59,7 +59,7 @@ function effectiveBounds(spec){
  const data=spec.series.flatMap(s=>s.points).filter(finite);if(!data.length)return {left:-1,right:1,bottom:-1,top:1};
  const xs=data.map(p=>p[0]),ys=data.map(p=>p[1]),a=Math.min(...xs),b=Math.max(...xs),c=Math.min(...ys),d=Math.max(...ys);
  const hx=Math.max(1e-7,(b-a)*.08),hy=Math.max(1e-7,(d-c)*.13);
- return {left:a-hx,right:b+hx,bottom:c-hy,top:d+hy};
+ return {left:a-hx,right:b+hx,bottom:spec.nonnegativeY?0:c-hy,top:Math.max(spec.nonnegativeY?0:-(1e9),d+hy)};
 }
 function columns(points,id,color,mode){
  const safe=points.filter(finite).slice(0,3500);

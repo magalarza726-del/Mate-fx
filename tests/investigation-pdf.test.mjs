@@ -28,6 +28,7 @@ globalThis.document={
 };
 
 const {methodReport,generalReport,reportLatex}=await import('../assets/nprimos/investigation-report.mjs');
+const {wrapEquationLatex}=await import('../assets/nprimos/investigation-paper.mjs');
 const {plotSpecifications}=await import('../assets/nprimos/investigation-desmos.mjs');
 const points=Array.from({length:11},(_,i)=>[i+1,i*2+4]);
 const metrics={mape:0,maxape:0,maxAbs:0,mae:0,rmse:0,p95:0,valid:11,invalid:0};
@@ -50,6 +51,8 @@ test('Los reportes individuales y generales descargan archivos .pdf directamente
  assert.ok(downloads.every(p=>p.name.endsWith('.pdf')));
  assert.ok(downloads[0].pages>=2);
  assert.ok(images.length>=3,'El PDF incluye dos gráficos Desmos de método y uno general');
+ assert.ok(images.every(args=>Number.isFinite(args[3])&&Number.isFinite(args[5])&&args[3]+args[5]<=280),
+  'Ninguna gráfica se coloca fuera del cuerpo de una página A4');
  assert.ok(desmosCalls.length>=3);
  assert.equal(desmosCalls[0][0].type,'table');
  assert.equal(desmosCalls[0][0].columns[1].points,true);
@@ -87,4 +90,22 @@ test('El modo automático solamente inicia la descarga del reporte general',asyn
  assert.match(src,/if\(mode==='automatic'\)reportGeneral\(\)/);
  assert.doesNotMatch(src,/reportAll\(\)/);
  assert.match(src,/data-pdf/,'Los informes individuales siguen disponibles mediante descarga manual');
+});
+
+
+test('La ecuación larga conserva sus términos y se divide para legibilidad',()=>{
+ const latex='f(x)=(1.203)\\cdot x\\cdot e^{(1.36\\cdot x/93)}+(-0.841)\\cdot x\\cdot\\sin((0.843\\cdot x/93))+(-57.294)\\cdot e^{(1.819\\cdot x/93)}+(57.862)';
+ const wrapped=wrapEquationLatex(latex,55);
+ assert.ok(wrapped.startsWith('\\begin{aligned}'));
+ for(const term of ['1.203','-0.841','-57.294','57.862'])assert.ok(wrapped.includes(term));
+ assert.ok(wrapped.includes('f(x)&='),'No debe sustituir x por z');
+});
+
+test('Una presión predicha negativa aparece señalada como AVISO físico en el paper',async()=>{
+ const bad={...best,estimates:[-4,...best.estimates.slice(1)],
+  curvePoints:[[1,-4],...points.slice(1).map((p,i)=>[p[0],best.estimates[i+1]])]};
+ const altered={...state,source:{...state.source,yName:'Psat (kPa)'},
+  results:new Map([['C1',{best:bad,elapsedMs:100}]])};
+ await generalReport(altered,()=> 'Regresion lineal');
+ assert.ok(printedText.some(x=>x.includes('AVISO')),'La tabla debe señalar la invalidez física');
 });

@@ -5,6 +5,7 @@
  */
 import {plotSpecifications,screenshotFromDesmos} from './investigation-desmos.mjs';
 import {methodById} from './investigation-core.mjs';
+import {diagnosePhysicalModel,equivalentModelGroups} from './investigation-quality.mjs';
 
 const W=210, H=297, L=18, R=18, RIGHT=W-R, BOTTOM=277, INNER=W-L-R;
 const NAVY=[28,50,69], BLUE=[34,83,118], GRAY=[86,101,112], PALE=[237,244,248], LIGHT=[218,226,231];
@@ -21,6 +22,27 @@ export function reportLatex(latex='',ztex=''){
 }
 const namedX=(name='')=>String(name||'Variable')+' [x]';
 const sampleIndices=(n,count=4)=>[...new Set(Array.from({length:Math.min(n,count)},(_,i)=>Math.round(i*(n-1)/Math.max(1,Math.min(n,count)-1))))];
+
+/** Preserva los términos y rompe solo entre sumandos externos, sin afectar sus coeficientes. */
+export function wrapEquationLatex(raw='',limit=66){
+ const source=String(raw),i=source.indexOf('=');
+ if(i<0||source.includes('\\begin{cases}'))return source;
+ let parts=[],term='',brace=0,round=0;
+ for(const c of source.slice(i+1)){
+  if(c==='+'&&term&&brace===0&&round===0){parts.push(term);term='+';continue}
+  term+=c;
+  if(c==='{')brace++;if(c==='}')brace=Math.max(0,brace-1);
+  if(c==='(')round++;if(c===')')round=Math.max(0,round-1);
+ }
+ if(term)parts.push(term);
+ let lines=[],line='';
+ for(const p of parts){if(line&&line.length+p.length>limit){lines.push(line);line=p}else line+=p}
+ if(line)lines.push(line);
+ if(lines.length<2||lines.length>8)return source;
+ return '\\begin{aligned}'+source.slice(0,i)+'&='+lines[0]+
+  lines.slice(1).map(s=>'\\\\&\\quad '+s).join('')+'\\end{aligned}';
+}
+
 
 
 let loadingPDF,loadingMath;
@@ -265,42 +287,45 @@ class Paper{
   this.y+=4;
  }
  async displayEquation(entry,{compact=false}={}){
-  const best=entry.best||entry,display=reportLatex(best?.latex,best?.ztex),raw=display.latex,z=best?.ztex||'',long=raw.length>105||raw.includes('\\begin{cases}');
+  const best=entry.best||entry,formula=reportLatex(best?.latex,best?.ztex),raw=formula.latex,z=best?.ztex||'';
   if(!raw){this.writeLines('No se encontró una expresión válida.',9);return}
-  const title='Ecuación '+(entry.id||'')+(long?' (expresión extensa)':'');
-  this.ensure(long?28:24);
-  this.setFont('times','italic',9,GRAY);this.pdf.text(txt(title),L+2,this.y);this.y+=6;
-  if(long){
-   const no=raw.match(/\\\\/g)?.length||0;
-   const note=raw.includes('\\begin{cases}')?
-    'Función definida por tramos ('+(no+1)+' expresiones). Se reproduce completa en el anexo de fórmulas.':
-    'Expresión extensa. El código LaTeX íntegro se conserva en el anexo de fórmulas.';
-   this.writeLines(note,8.8,4,GRAY,INNER-10,L+5);
-   if(!compact)this.writeLines(raw.slice(0,110)+(raw.length>110?' ...':''),7.5,3.4,BLUE,INNER-10,L+5);
-  }else{
-   const img=await equationPNG(raw);
-   if(img){
-    const displayWidth=Math.min(INNER-14,(compact?16:21)*img.ratio);
-    const h=displayWidth/img.ratio;
-    this.ensure(h+7);
-    this.pdf.setFillColor(247,250,251);this.pdf.roundedRect(L+2,this.y-3,INNER-4,h+6,1.5,1.5,'F');
-    this.pdf.addImage(img.data,'PNG',L+6,this.y,displayWidth,h);
-    this.y+=h+6;
-   }else{
-    this.writeLines(raw,8.7,4.4,NAVY,INNER-8,L+4);
+  this.ensure(compact?25:32);
+  this.setFont('times','italic',9,GRAY);this.pdf.text('Ecuación '+(entry.id||''),L+2,this.y);this.y+=6;
+  const multiline=raw.length>105?wrapEquationLatex(raw,compact?49:68):raw;
+  const math=raw.length<680?await equationPNG(multiline):null;
+  let shown=false;
+  if(math){
+   const width=Math.min(INNER-14,(compact?24:38)*math.ratio),height=width/math.ratio;
+   if(height>=7){
+    this.ensure(height+8);
+    this.pdf.setFillColor(247,250,251);this.pdf.roundedRect(L+2,this.y-3,INNER-4,height+7,1.5,1.5,'F');
+    this.pdf.addImage(math.data,'PNG',L+6,this.y,width,height);this.y+=height+8;shown=true;
    }
   }
-  if(z){this.writeLines('Variable normalizada: '+reportLatex('',z).definition,compact?7.2:8.2,compact?3.3:3.9,GRAY)}
+  if(!shown){
+   this.writeLines('Expresión extensa o por tramos. La fórmula íntegra aparece en el anexo.',8.6,4,GRAY,INNER-10,L+5);
+   if(!compact)this.writeLines(raw.slice(0,125)+(raw.length>125?' ...':''),8,4,BLUE,INNER-10,L+5);
+  }
+  if(z){
+   const normalized=await equationPNG('z='+z);
+   if(normalized){
+    const width=Math.min(INNER-68,(compact?9:12)*normalized.ratio),height=width/normalized.ratio;
+    this.ensure(height+7);this.setFont('times','italic',8.5,GRAY);
+    this.pdf.text('Normalización:',L+3,this.y+4);
+    this.pdf.addImage(normalized.data,'PNG',L+38,this.y,width,height);
+    this.y+=height+6;
+   }else this.writeLines('Normalización: z='+z,8.2,4,GRAY);
+  }
  }
  async figure(spec,description,{width=INNER,height=76}={}){
-  this.ensure(height+19);
   const captureHeight=Math.max(270,Math.round(920*height/width));
+  const renderedHeight=width*captureHeight/920;
+  const caption='Figura '+(this.figureNumber+1)+'. '+description+' (captura de Desmos a partir de estimaciones calculadas por Mate-fx).';
+  const lines=this.pdf.splitTextToSize(txt(caption),INNER-5).length;
+  this.ensure(renderedHeight+9+4.5*lines); // figura y pie siempre juntos
   const png=await screenshotFromDesmos(spec,{width:920,height:captureHeight,ratio:1.22});
-  const displayedHeight=width*captureHeight/920;
-  this.pdf.addImage(png,'PNG',L,this.y,width,displayedHeight);
-  this.y+=displayedHeight+4;
-  this.figureNumber++;
-  this.caption('Figura '+this.figureNumber+'. '+description+' (gráfica capturada directamente de Desmos).');
+  this.pdf.addImage(png,'PNG',L,this.y,width,renderedHeight);
+  this.y+=renderedHeight+4;this.figureNumber++;this.caption(caption);
  }
  metricGrid(best,{six=false}={}){
   if(!best)return;
@@ -343,7 +368,9 @@ class Paper{
  }
  async winnerCard(entry,index,total,state){
   const p=this.pdf,summary=entry.best;
-  this.ensure(108);
+  // La ficha completa cabe antes de comenzar a dibujarla.
+  const quality=diagnosePhysicalModel(state.source,summary);
+  this.ensure(Math.min(BOTTOM-29,summary?.ztex?174:155));
   const top=this.y;
   // Pale section title with restrained navy rule; two cards can share one A4 page.
   p.setFillColor(...PALE);p.roundedRect(L,top-5,INNER,11,1.7,1.7,'F');
@@ -353,17 +380,19 @@ class Paper{
   this.y=top+13;
   await this.displayEquation(entry,{compact:true});
   this.metricGrid(summary);
-  const graphY=this.y+1,chartW=105,chartH=49;
+  const chartW=105,chartH=49;
   const png=await screenshotFromDesmos(plotSpecifications(state.source,summary,'fit'),{
    width:790,height:370,ratio:1.25
   });
-  this.ensure(chartH+11);
+  this.ensure(chartH+18);
+  const graphY=this.y+1; // posición calculada después de asegurar la página
   p.setDrawColor(...LIGHT);p.roundedRect(L,graphY-1,chartW+1,chartH+2,1.3,1.3,'S');
   p.addImage(png,'PNG',L+1,graphY,chartW-1,chartH);
   this.miniObservations(state.source,summary,L+chartW+6,graphY+1,INNER-chartW-6);
   this.y=graphY+chartH+4;
   this.figureNumber++;
   this.caption('Figura '+this.figureNumber+'. Datos de '+txt(state.source.xName)+' y curva calculada para '+entry.id+' (Desmos).');
+  if(quality.warnings.length)this.writeLines('ALERTA FÍSICA: '+quality.warnings.join(' '),8.2,4,BLUE);
   this.y+=1;
  }
  async methodSummary(entry,state,progress){
@@ -382,7 +411,7 @@ class Paper{
   await this.displayEquation(entry,{compact:true});
   this.heading('Indicadores de ajuste',2);
   this.metricGrid(best,{six:true});
-  this.heading('Observaciones y distribución de errores',2);
+  this.ensure(74);this.heading('Observaciones y distribución de errores',2);
   const a=plotSpecifications(src,best,'fit'),b=plotSpecifications(src,best,'histogram');
   this.ensure(53);
   const top=this.y;
@@ -405,18 +434,32 @@ class Paper{
   });
   this.table(['x','Y observada','Y estimada','Error rel. firmado'],selected,[31,49,49,45],{font:8.4});
   const m=best.metrics||{};
-  this.highlightNote('Lectura técnica','MAPE '+percent(m.mape)+'; MaxAPE '+percent(m.maxape)+
-   '; complejidad '+norm(best.complexity)+'. El modelo requiere validación física dentro del intervalo de datos.');
+  const phys=diagnosePhysicalModel(src,best);
+  this.highlightNote(phys.warnings.length?'Alerta física':'Lectura técnica','MAPE '+percent(m.mape)+
+   '; MaxAPE '+percent(m.maxape)+'; complejidad '+norm(best.complexity)+'. '+(phys.warnings.join(' ')||'Sin anomalías físicas detectadas por las comprobaciones aplicables.'));
  }
- annexLatex(entry){
-  const formula=reportLatex(entry.best?.latex,entry.best?.ztex),raw=formula.latex;
+ async annexLatex(entry){
+  const equation=reportLatex(entry.best?.latex,entry.best?.ztex),raw=equation.latex;
   if(!raw)return;
   this.ensure(20);this.heading(entry.id+' - '+entry.label,2);
-  if(formula.definition)this.writeLines(formula.definition,8.2,4,GRAY);
-  // Code lines remain exact, but are wrapped on page so no symbols are clipped.
-  this.setFont('courier','normal',7.2,NAVY);
+  if(equation.definition){
+   const zi=await equationPNG(equation.definition);
+   if(zi){
+    const width=Math.min(INNER-10,zi.ratio*12),height=width/zi.ratio;
+    this.ensure(height+7);this.pdf.addImage(zi.data,'PNG',L+4,this.y,width,height);this.y+=height+6;
+   }else this.writeLines(equation.definition,8.5,4,GRAY);
+  }
+  if(raw.length<=680){
+   const image=await equationPNG(wrapEquationLatex(raw,74));
+   if(image){
+    const width=Math.min(INNER-10,image.ratio*38),height=width/image.ratio;
+    if(height>=7){this.ensure(height+8);this.pdf.addImage(image.data,'PNG',L+4,this.y,width,height);this.y+=height+6}
+   }
+  }
+  this.writeLines('Código LaTeX completo (reproducible):',8.5,4,GRAY);
   const lines=this.pdf.splitTextToSize(raw,INNER-8);
-  for(const str of lines){this.ensure(4.6);this.setFont('courier','normal',7.2,NAVY);this.pdf.text(txt(str),L+4,this.y);this.y+=3.9}
+  for(const line of lines){this.ensure(4.6);this.setFont('courier','normal',7.3,NAVY);
+   this.pdf.text(txt(line),L+4,this.y);this.y+=4}
   this.y+=5;
  }
  async iterationTable(items,id,progress){
@@ -500,10 +543,20 @@ async function comparison(paper,state,entries){
    best.id+' ('+best.label+'): '+percent(best.best.metrics?.mape)+
    '. La expresión menos compleja en este conjunto es '+easy.id+' ('+easy.label+'), con complejidad '+norm(easy.best.complexity)+'. Estas comparaciones describen los resultados de la ejecución, no la superioridad universal de los algoritmos.',9.4,4.5);
  }
- const rows=sorted.map(e=>[e.id,e.label,percent(e.best?.metrics?.mape),percent(e.best?.metrics?.maxape),
-  norm(e.best?.metrics?.mae),norm(e.best?.complexity)]);
- paper.table(['ID','Método','MAPE','MaxAPE','MAE','C'],rows,[15,67,24,26,24,18],{font:8});
+ const rows=sorted.map(e=>{
+  const quality=diagnosePhysicalModel(state.source,e.best);
+  return [e.id,e.label,percent(e.best?.metrics?.mape),percent(e.best?.metrics?.maxape),
+   norm(e.best?.metrics?.mae),norm(e.best?.complexity),
+   quality.status==='advertencia'?'AVISO':quality.status==='sin_alertas'?'OK':'N/A'];
+ });
+ paper.table(['ID','Método','MAPE','MaxAPE','MAE','C','Física'],rows,[14,59,24,25,20,13,19],{font:7.8});
  paper.caption('Tabla 1. Mejores ecuaciones por configuración, ordenadas por MAPE. Los valores de error son los de la evaluación realizada por el motor.');
+ const duplicateGroups=equivalentModelGroups(sorted);
+ if(duplicateGroups.length)paper.writeLines('Resultados numéricamente coincidentes en los puntos observados: '+
+  duplicateGroups.map(g=>g.join(' y ')).join('; ')+'. No implica identidad algebraica general.',8.7,4.2,GRAY);
+ if(sorted.some(e=>diagnosePhysicalModel(state.source,e.best).warnings.length))
+  paper.writeLines('AVISO físico: presión no positiva, disminución de la presión estimada o valor no finito. No altera los errores calculados.',8.7,4.1,GRAY);
+
  if(sorted.length){
   const best=[...sorted].find(e=>Number.isFinite(e.best?.metrics?.mape));
   const simple=[...sorted].sort((a,b)=>scalar(a.best?.complexity)-scalar(b.best?.complexity))[0];
@@ -519,14 +572,15 @@ async function comparison(paper,state,entries){
 }
 async function comparisonFigures(paper,state,entries,progress){
  if(!entries.length)return;
- const chartEntries=entries.map(e=>({id:e.id,best:e.best}));
+ const sorted=[...entries].sort(byMape);
+ const chartEntries=sorted.map(e=>({id:e.id,best:e.best}));
  paper.heading('3. Análisis visual');
  progress?.('Capturando el dashboard de comparación directamente desde Desmos');
- await paper.figure(plotSpecifications(state.source,entries[0].best,'complexity',chartEntries),
+ await paper.figure(plotSpecifications(state.source,sorted[0].best,'complexity',chartEntries),
   'Relación entre complejidad y log10(1 + MAPE %), para visualizar errores de órdenes de magnitud diferentes.',{height:65});
  progress?.('Capturando la comparación de errores desde Desmos');
- await paper.figure(plotSpecifications(state.source,entries[0].best,'comparison',chartEntries),
-  'log10(MAPE %) y log10(1 + MaxAPE %) por configuración. Ambas series son porcentuales y no se mezclan con MAE.',{height:65});
+ await paper.figure(plotSpecifications(state.source,sorted[0].best,'comparison',chartEntries),
+  'log10(1 + MAPE %) y log10(1 + MaxAPE %) siguiendo el mismo orden ascendente de MAPE de la Tabla 1.',{height:65});
  paper.writeLines('Las figuras comparativas deben interpretarse junto con la Tabla 1: una curva visualmente cercana a los puntos no garantiza un MAPE bajo ni un comportamiento físicamente válido.',9.4,4.5);
 }
 async function winners(paper,state,entries,progress){
@@ -541,7 +595,7 @@ async function winners(paper,state,entries,progress){
  if(extended.length){
   paper.next();paper.heading('Anexo A. Expresiones LaTeX extensas');
   paper.writeLines('Las ecuaciones extensas y por tramos se reproducen aquí de forma íntegra para evitar que queden microscópicas sobre las gráficas.',9);
-  extended.forEach(e=>paper.annexLatex(e));
+  for(const e of extended)await paper.annexLatex(e);
  }
 }
 function finalize(pdf,file,onProgress){

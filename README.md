@@ -1,3 +1,13 @@
+## Correcciones de auditoría (Mate-fx, noviembre 2026)
+
+- **Gráficas comparativas coherentes:** todas las series por configuración del PDF siguen exactamente el orden ascendente de MAPE de la Tabla 1; los gráficos de error se transforman con \`log10(1+error)\` y, al ser no negativos, su eje Y no desciende de cero. Los valores porcentuales de la tabla permanecen sin transformar.
+- **Maquetación segura:** las figuras se reservan con sus leyendas antes del salto de página, y la gráfica de cada ficha obtiene su posición después de comprobar el espacio disponible. Los reportes se siguen descargando en PDF, sin impresión ni conversión a HTML.
+- **Ecuaciones:** el generador intenta representar fórmulas largas en MathJax por varias líneas, e imprime la definición de \`z\` cuando se usa normalización, manteniendo \`x\` como variable independiente. El LaTeX completo siempre está disponible en anexos.
+- **Validez física informativa:** si la variable es presión de saturación o presión absoluta, se señalan valores no positivos, descensos de la presión calculada y predicciones inválidas. Las alertas **no cambian** las ecuaciones ni su clasificación matemática; para otras propiedades no se presuponen restricciones físicas.
+- **Comparación fiel:** los modelos coincidentes se identifican como **coincidencia numérica en los datos**, sin afirmar equivalencia algebraica fuera del dominio estudiado.
+- **GitHub Pages:** el workflow propio ejecuta solo pruebas y comprobación de archivos; la publicación queda a cargo del publicador de Pages configurado en el repositorio. Esto evita la doble solicitud concurrente de despliegue que bloqueó versiones anteriores. Un despliegue antiguo que permanezca bloqueado en GitHub podría requerir cancelación manual.
+- **Pruebas:** se añadieron verificaciones para errores iguales a cero, el orden de las series, la seguridad de los saltos de página y las alertas físicas.
+
 ## Actualización de reportes (4 noviembre 2026) · descarga única y diseño paper
 
 - El modo **Reporte automático** ejecuta los métodos seleccionados y, al terminar, **descarga solamente el PDF general**. No inicia descargas individuales ni descargas múltiples. Los PDF independientes por método siguen disponibles mediante sus botones manuales.

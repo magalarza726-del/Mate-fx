@@ -1,48 +1,36 @@
-name: Publicar Mate-fx en GitHub Pages
+name: Validar Mate-fx (sin desplegar)
+
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
+# Pages se publica desde la rama mediante GitHub. Este flujo solo comprueba.
 concurrency:
-  group: pages
+  group: matefx-checks-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  tests:
     runs-on: ubuntu-latest
     steps:
       - name: Obtener fuentes
         uses: actions/checkout@v4
-      - name: Configurar GitHub Pages
-        uses: actions/configure-pages@v5
-      - name: Verificar motor de investigación
-        run: node --test tests/investigation-core.test.mjs tests/investigation-pdf.test.mjs
-      - name: Preparar sitio web
-        run: |
-          mkdir -p public
-          cp -R assets public/assets
-          cp index.html public/index.html
-          touch public/.nojekyll
-          test -f public/assets/matefx/index.html
-          test -f public/assets/nprimos/index.html
-          test -f public/assets/desktop/datasets.js
-      - name: Subir archivos estáticos
-        uses: actions/upload-pages-artifact@v4
+      - name: Preparar Node
+        uses: actions/setup-node@v4
         with:
-          path: public
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Publicar GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          node-version: '22'
+      - name: Pruebas de regresión, reportes y validez física
+        run: node --test tests/investigation-core.test.mjs tests/investigation-pdf.test.mjs tests/investigation-quality.test.mjs
+      - name: Verificar archivos publicados desde raíz
+        run: |
+          test -f index.html
+          test -f assets/nprimos/index.html
+          test -f assets/matefx/index.html
+          test -f assets/nprimos/investigation-paper.mjs
+          test -f assets/nprimos/investigation-desmos.mjs
+          test -f assets/nprimos/investigation-quality.mjs
