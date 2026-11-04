@@ -295,7 +295,7 @@ class Paper{
     this.writeLines(raw,8.7,4.4,NAVY,INNER-8,L+4);
    }
   }
-  if(z&&!compact){this.writeLines('Variable auxiliar normalizada: '+reportLatex('',z).definition,8.2,3.9,GRAY)}
+  if(z){this.writeLines('Normalización: '+reportLatex('',z).definition,compact?7.2:8.2,compact?3.3:3.9,GRAY)}
  }
  async figure(spec,description,{width=INNER,height=76}={}){
   this.ensure(height+19);
@@ -307,31 +307,69 @@ class Paper{
   this.figureNumber++;
   this.caption('Figura '+this.figureNumber+'. '+description+' (gráfica capturada directamente de Desmos).');
  }
- metricGrid(best){
+ metricGrid(best,{six=false}={}){
   if(!best)return;
-  const vals=[
+  const vals=six?[
+   ['MAPE',percent(best.metrics?.mape)],['MaxAPE',percent(best.metrics?.maxape)],
+   ['MAE',norm(best.metrics?.mae)],['RMSE',norm(best.metrics?.rmse)],
+   ['Validación',percent(best.validationMetrics?.mape)],['Complejidad',norm(best.complexity)]
+  ]:[
    ['MAPE',percent(best.metrics?.mape)],['Error máximo',percent(best.metrics?.maxape)],
    ['MAE',norm(best.metrics?.mae)],['Complejidad',norm(best.complexity)]
   ];
-  this.ensure(20);const cell=INNER/4,p=this.pdf;
+  this.ensure(23);
+  const p=this.pdf,cell=INNER/vals.length,start=this.y;
   vals.forEach(([label,value],i)=>{
-   const x=L+i*cell;p.setDrawColor(...LIGHT);p.rect(x,this.y-5,cell-1,17,'S');
-   this.setFont('helvetica','normal',7.5,GRAY);p.text(label,x+3,this.y);
-   this.setFont('times','bold',11,NAVY);p.text(value,x+3,this.y+7);
+   const x=L+i*cell;
+   p.setFillColor(249,251,252);p.setDrawColor(...LIGHT);
+   p.roundedRect(x+.4,start-4,cell-1.2,19.5,1.4,1.4,'FD');
+   p.setFillColor(...BLUE);p.rect(x+.4,start-4,cell-1.2,5.3,'F');
+   this.setFont('helvetica','bold',six?6.6:7.3,[255,255,255]);
+   p.text(txt(label),x+2,start-.3);
+   const size=value.length>15?7.4:value.length>11?8.3:10.4;
+   this.setFont('times','bold',size,NAVY);p.text(value,x+2,start+9);
   });
   this.y+=23;
  }
+ miniObservations(source,best,x,y,w){
+  const points=source?.points||[],p=this.pdf;
+  p.setFillColor(...BLUE);p.rect(x,y,w,7,'F');
+  this.setFont('helvetica','bold',7,[255,255,255]);p.text('Muestra de observaciones',x+2,y+4.8);
+  const cols=[x+1,x+16,x+37];
+  this.setFont('helvetica','bold',6.7,BLUE);
+  ['z','Observado','Estimado'].forEach((lab,i)=>p.text(lab,cols[i],y+12));
+  sampleIndices(points.length,4).forEach((index,j)=>{
+   const [z,observed]=points[index],estimated=best.estimates?.[index],yy=y+18+j*7.1;
+   if(j%2===0){p.setFillColor(244,248,251);p.rect(x,yy-4.7,w,6.8,'F')}
+   this.setFont('times','normal',7.3,NAVY);
+   [norm(z),norm(observed),norm(estimated)].forEach((v,i)=>p.text(v.slice(0,i===0?9:11),cols[i],yy));
+  });
+  p.setDrawColor(...LIGHT);p.rect(x,y,w,49,'S');
+ }
  async winnerCard(entry,index,total,state){
-  const topLine=entry.label+' · '+entry.id;
-  const best=entry.best;
-  // Each card occupies its natural height; no mandatory page break.
-  this.ensure(118);
-  this.heading(String(index+1)+'. '+topLine,2);
+  const p=this.pdf,summary=entry.best;
+  this.ensure(113);
+  const top=this.y;
+  // Pale section title with restrained navy rule; two cards can share one A4 page.
+  p.setFillColor(...PALE);p.roundedRect(L,top-5,INNER,11,1.7,1.7,'F');
+  p.setFillColor(...BLUE);p.rect(L+2,top-3,2.5,7,'F');
+  this.setFont('times','bold',12,NAVY);
+  p.text(String(index+1)+'. '+txt(entry.label)+' - '+txt(entry.id),L+9,top+2.1);
+  this.y=top+13;
   await this.displayEquation(entry,{compact:true});
-  this.metricGrid(best);
-  await this.figure(plotSpecifications(state.source,best,'fit'),
-   'Valores de referencia (puntos azules) y valores calculados (trazo naranja). '+txt(state.source.xName)+' frente a '+txt(state.source.yName)+'.',
-   {width:INNER,height:55});
+  this.metricGrid(summary);
+  const graphY=this.y+1,chartW=105,chartH=49;
+  const png=await screenshotFromDesmos(plotSpecifications(state.source,summary,'fit'),{
+   width:790,height:370,ratio:1.25
+  });
+  this.ensure(chartH+11);
+  p.setDrawColor(...LIGHT);p.roundedRect(L,graphY-1,chartW+1,chartH+2,1.3,1.3,'S');
+  p.addImage(png,'PNG',L+1,graphY,chartW-1,chartH);
+  this.miniObservations(state.source,summary,L+chartW+6,graphY+1,INNER-chartW-6);
+  this.y=graphY+chartH+4;
+  this.figureNumber++;
+  this.caption('Figura '+this.figureNumber+'. Datos de '+txt(state.source.xName)+' y curva calculada para '+entry.id+' (Desmos).');
+  this.y+=1;
  }
  annexLatex(entry){
   const formula=reportLatex(entry.best?.latex,entry.best?.ztex),raw=formula.latex;
