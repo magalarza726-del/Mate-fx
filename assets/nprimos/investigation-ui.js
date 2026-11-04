@@ -7,7 +7,7 @@ import {setupDashboards,refreshDashboards} from './investigation-dashboards.mjs'
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number.isFinite(n)?Number(n).toLocaleString('es-EC',{maximumFractionDigits:4}):'—';
 const pct=n=>Number.isFinite(n)?fmt(n)+' %':'—';
-const SYMBOLIC_KINDS=[['x','z'],['power','Potencias'],['ln','ln(z)'],['log1p','ln(1+z)'],['sqrt','Raíz'],['exp','Exponencial'],['sin','Seno'],['cos','Coseno'],['reciprocal','Recíproco'],['xln','z·ln(z)'],['xx','z^z'],['xexp','z·exp'],['xover','Cociente z/(z+p)'],['xsin','z·sin']];
+const SYMBOLIC_KINDS=[['x','x'],['power','Potencias'],['ln','ln(x)'],['log1p','ln(1+x)'],['sqrt','Raíz'],['exp','Exponencial'],['sin','Seno'],['cos','Coseno'],['reciprocal','Recíproco'],['xln','x·ln(x)'],['xx','x^x'],['xexp','x·exp'],['xover','Cociente x/(x+p)'],['xsin','x·sin']];
 const GROUP_ORDER=['Métodos clásicos de ajuste','Métodos de corrección de funciones','Métodos basados en restricciones y cotas','Métodos de interpolación','Métodos de aproximación avanzada','Métodos de búsqueda y optimización'];
 const DEFAULT={n:10000,allowedKinds:SYMBOLIC_KINDS.map(k=>k[0]),decimals:3,magnitude:9999,degree:2,denominator:2,knots:8,harmonics:2,width:.6,quantile:.5,maxTerms:3,maxX:2,constant:true,generational:true,composition:'sum',families:['logarithmic','exponential','polynomial','trigonometric'],bounds:'shared',center:'auto',objective:'mape'};
 const state={project:null,projectName:'',source:null,entries:[],history:new Map(),results:new Map(),worker:null,running:false,paused:false,mode:'manual',active:'',done:0,total:0,seq:0,lastDraw:0,lastGraph:0,graphSerial:0,exporting:false};
@@ -41,7 +41,7 @@ function getCard(e){
  if(m.id==='fourier')f+=field('harmonics','Armónicos',c.harmonics,1,5);
  if(m.id==='quantile')f+=field('quantile','Cuantil',c.quantile,.01,.99,.05);
  if(m.id==='symbolic'||m.id==='constrained'){
-  f+=field('maxTerms','Máx. términos',c.maxTerms,1,3)+field('maxX','Máx. apariciones de z',c.maxX,1,2)+
+  f+=field('maxTerms','Máx. términos',c.maxTerms,1,3)+field('maxX','Máx. apariciones de x',c.maxX,1,2)+
    select('composition','Operaciones de combinación',c.composition,[['sum','Suma'],['product','Producto'],['pair_plus','Producto + suma']])+
    select('generational','Aprendizaje generacional',c.generational,[['true','Activado'],['false','Desactivado']])+
    select('constant','Constante aditiva',c.constant,[['true','Permitida'],['false','Prohibida']])+
@@ -176,7 +176,7 @@ function run(mode){
  w.postMessage({type:'start',points:pts,entries,validation});
 }
 function exportJSON(){
- const document={version:1,date:new Date().toISOString(),variableDisplay:'z',project:state.projectName,source:state.source,entries:state.entries.map(e=>({...e,best:state.results.get(e.id)?.best||null,history:state.history.get(e.id)||[]}))};
+ const document={version:1,date:new Date().toISOString(),variableDisplay:'x',project:state.projectName,source:state.source,entries:state.entries.map(e=>({...e,best:state.results.get(e.id)?.best||null,history:state.history.get(e.id)||[]}))};
  const url=URL.createObjectURL(new Blob([JSON.stringify(document)],{type:'application/json'}));
  const a=document.createElement('a');a.href=url;a.download='Matefx_investigacion_'+Date.now()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
 }
@@ -187,7 +187,7 @@ function setup(){
  const overlay=document.createElement('div');overlay.id='np-investigation-panel';overlay.className='gmr-research-overlay';overlay.hidden=true;
  overlay.innerHTML='<div class="gmr-research-window inv-window" role="dialog" aria-modal="true" aria-label="Investigación"><div class="gmr-research-heading"><div><h2>Investigación · Métodos de aproximación</h2><small id="inv-source"></small></div><button id="inv-close" type="button" aria-label="Cerrar">×</button></div><div class="gmr-research-body inv-layout">'+
  '<aside class="inv-sidebar"><h3>Métodos clasificados</h3><p class="gmr-research-note">● Directos · ↻ Iterativos</p><div id="inv-methods"></div><div class="inv-links"><b>Módulos existentes</b><button id="inv-original-generator">Generador original</button><button id="inv-original-envelope">Acotación original</button><button id="inv-original-dashboard">Dashboards</button></div></aside>'+
- '<main class="inv-content"><section class="gmr-research-group"><h3>Configuraciones por método · <small id="inv-config-count"></small></h3><p class="gmr-research-note">Cada configuración genera una fórmula ganadora. Duplica un método para comparar distintos decimales, límites y parámetros. En métodos simbólicos y acotación el motor admite hasta 3 decimales y 9 999 de magnitud; las constantes de normalización derivadas de z se declaran aparte.</p><div id="inv-cards"></div></section>'+
+ '<main class="inv-content"><section class="gmr-research-group"><h3>Configuraciones por método · <small id="inv-config-count"></small></h3><p class="gmr-research-note">Cada configuración genera una fórmula ganadora. Duplica un método para comparar distintos decimales, límites y parámetros. En métodos simbólicos y acotación el motor admite hasta 3 decimales y 9 999 de magnitud; las constantes de normalización derivadas de x se declaran aparte.</p><div id="inv-cards"></div></section>'+
  '<section class="gmr-research-group"><div class="inv-actions"><label>Validación (%) <input id="inv-validation" type="number" min="0" max="40" step="5" value="20"></label><button id="inv-start">▶ Investigar en tiempo real</button><button id="inv-auto">▤ Reporte automático</button><button id="inv-pause">Pausar</button><button id="inv-resume">Reanudar</button><button id="inv-stop">Detener</button></div><div class="inv-status"><progress id="inv-progress" value="0" max="1"></progress><span id="inv-counter">0 / 0</span></div><p id="inv-status">Selecciona métodos para iniciar la investigación.</p></section>'+
  '<section class="gmr-research-group"><h3>Mejor curva en tiempo real</h3><div id="inv-preview"></div><small id="inv-preview-caption"></small></section>'+
  '<section class="gmr-research-group" id="inv-dashboards"></section>'+ 
