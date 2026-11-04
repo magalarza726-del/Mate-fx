@@ -263,8 +263,8 @@ function predictorModel(id,points,opt,rng,step,session){
    const recent=history.slice(-24),min=Math.min(...recent.map(v=>v.score)),scale=1.15;
    let acquisition=-Infinity;
    for(let j=0;j<48;j++){
-    const t=-5+10*(j+rng())/48,mat=recent.map((a,i)=>recent.map((b,k)=>Math.exp(-((a.x-b.x)/scale)**2)+(i===k?0.015:0)));
-    const ks=recent.map(a=>Math.exp(-((t-a.x)/scale)**2)),mean=recent.reduce((a,v)=>a+v.score,0)/recent.length;
+    const t=-5+10*(j+rng())/48,mat=recent.map((a,i)=>recent.map((b,k)=>Math.exp(-(((a.x-b.x)/scale)**2))+(i===k?0.015:0)));
+    const ks=recent.map(a=>Math.exp(-(((t-a.x)/scale)**2))),mean=recent.reduce((a,v)=>a+v.score,0)/recent.length;
     const y=recent.map(v=>v.score-mean),alpha=solver(mat,y),v=solver(mat,ks);
     if(!alpha||!v)continue;
     const mu=mean+ks.reduce((a,k,i)=>a+k*alpha[i],0),variance=Math.max(.000001,1-ks.reduce((a,k,i)=>a+k*v[i],0));
