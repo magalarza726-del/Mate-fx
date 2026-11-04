@@ -4,15 +4,17 @@ import {methodReport,generalReport,graphSVG} from './investigation-report.mjs';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number.isFinite(n)?Number(n).toLocaleString('es-EC',{maximumFractionDigits:4}):'—';
 const pct=n=>Number.isFinite(n)?fmt(n)+' %':'—';
-const DEFAULT={n:10000,decimals:3,magnitude:9999,degree:2,denominator:2,knots:8,harmonics:2,width:.6,quantile:.5,maxTerms:3,maxX:2,constant:true,generational:true,composition:'sum',families:['logarithmic','exponential','polynomial','trigonometric'],bounds:'shared',center:'auto',objective:'mape'};
+const SYMBOLIC_KINDS=[['x','x'],['power','Potencias'],['ln','ln(x)'],['log1p','ln(1+x)'],['sqrt','Raíz'],['exp','Exponencial'],['sin','Seno'],['cos','Coseno'],['reciprocal','Recíproco'],['xln','x·ln(x)'],['xx','x^x'],['xexp','x·exp'],['xover','Cociente x/(x+p)'],['xsin','x·sin']];
+const GROUP_ORDER=['Métodos clásicos de ajuste','Métodos de corrección de funciones','Métodos basados en restricciones y cotas','Métodos de interpolación','Métodos de aproximación avanzada','Métodos de búsqueda y optimización'];
+const DEFAULT={n:10000,allowedKinds:SYMBOLIC_KINDS.map(k=>k[0]),decimals:3,magnitude:9999,degree:2,denominator:2,knots:8,harmonics:2,width:.6,quantile:.5,maxTerms:3,maxX:2,constant:true,generational:true,composition:'sum',families:['logarithmic','exponential','polynomial','trigonometric'],bounds:'shared',center:'auto',objective:'mape'};
 const state={project:null,projectName:'',source:null,entries:[],history:new Map(),results:new Map(),worker:null,running:false,paused:false,mode:'manual',active:'',done:0,total:0,seq:0,lastDraw:0};
 const select=(key,title,current,values)=>'<label>'+title+'<select data-setting="'+key+'">'+values.map(a=>'<option value="'+esc(a[0])+'"'+(String(a[0])===String(current)?' selected':'')+'>'+esc(a[1])+'</option>').join('')+'</select></label>';
 const field=(key,title,current,min,max,step='1')=>'<label>'+title+'<input type="number" data-setting="'+key+'" value="'+esc(current)+'" min="'+min+'" max="'+max+'" step="'+step+'"></label>';
-const methodsSelect=()=>[...new Set(METHODS.map(x=>x.group))].map(group=>
+const methodsSelect=()=>GROUP_ORDER.map(group=>
  '<div class="inv-category"><h4>'+esc(group)+'</h4>'+METHODS.filter(m=>m.group===group).map(m=>
  '<label><input type="checkbox" data-method="'+m.id+'"'+(state.entries.some(e=>e.method===m.id)?' checked':'')+'> '+esc(m.name)+' <small title="'+(m.type==='direct'?'Cálculo directo':'Iterativo')+'">'+(m.type==='direct'?'●':'↻')+'</small></label>').join('')+'</div>').join('');
 function entry(method){
- return {id:'C'+(++state.seq),method,config:{...DEFAULT,families:[...DEFAULT.families]},seed:10103+state.seq};
+ return {id:'C'+(++state.seq),method,config:{...DEFAULT,families:[...DEFAULT.families],allowedKinds:[...DEFAULT.allowedKinds]},seed:10103+state.seq};
 }
 function setMethodList(){
  $('inv-methods').innerHTML=methodsSelect();
@@ -39,7 +41,7 @@ function getCard(e){
    select('composition','Operaciones de combinación',c.composition,[['sum','Suma'],['product','Producto'],['pair_plus','Producto + suma']])+
    select('generational','Aprendizaje generacional',c.generational,[['true','Activado'],['false','Desactivado']])+
    select('constant','Constante aditiva',c.constant,[['true','Permitida'],['false','Prohibida']])+
-   '<div class="inv-family">'+['logarithmic','exponential','polynomial','trigonometric'].map(k=>'<label><input type="checkbox" data-family="'+k+'"'+(c.families.includes(k)?' checked':'')+'> '+({logarithmic:'Log',exponential:'Exp',polynomial:'Pol',trigonometric:'Trig'}[k])+'</label>').join('')+'</div>';
+   '<div class="inv-family">'+['logarithmic','exponential','polynomial','trigonometric'].map(k=>'<label><input type="checkbox" data-family="'+k+'"'+(c.families.includes(k)?' checked':'')+'> '+({logarithmic:'Log',exponential:'Exp',polynomial:'Pol',trigonometric:'Trig'}[k])+'</label>').join('')+'</div>'+ '<div class="inv-family inv-kind"><strong>Operaciones / bases permitidas:</strong>'+SYMBOLIC_KINDS.map(([k,label])=>'<label><input type="checkbox" data-kind="'+k+'"'+(c.allowedKinds?.includes(k)?' checked':'')+'> '+esc(label)+'</label>').join('')+'</div>';
  }
  if(m.id==='envelope')f+=select('bounds','Exponentes',c.bounds,[['shared','Compartidos'],['independent','Independientes']])+select('center','Promedio',c.center,[['auto','Automático'],['arithmetic','Aritmético'],['geometric','Geométrico'],['harmonic','Armónico']]);
  return '<article class="inv-card" data-id="'+e.id+'"><header><div><b>'+esc(m.name)+'</b><small>'+e.id+' · '+(m.type==='direct'?'Cálculo directo':'Iterativo')+'</small></div><span><button type="button" data-duplicate="'+e.id+'">⧉</button><button type="button" data-remove="'+e.id+'">×</button></span></header><div class="inv-settings">'+f+'</div><label class="inv-seed">Semilla<input type="number" data-seed="'+e.id+'" value="'+e.seed+'"></label></article>';
@@ -56,12 +58,16 @@ function cards(){
   const e=state.entries.find(x=>x.id===ctrl.closest('[data-id]').dataset.id);
   if(e)e.config.families=[...ctrl.closest('.inv-family').querySelectorAll('input:checked')].map(x=>x.dataset.family);
  });
+ $('inv-cards').querySelectorAll('[data-kind]').forEach(ctrl=>ctrl.onchange=()=>{
+  const e=state.entries.find(x=>x.id===ctrl.closest('[data-id]').dataset.id);
+  if(e)e.config.allowedKinds=[...ctrl.closest('.inv-kind').querySelectorAll('input:checked')].map(x=>x.dataset.kind);
+ });
  $('inv-cards').querySelectorAll('[data-seed]').forEach(ctrl=>ctrl.onchange=()=>{
   const e=state.entries.find(x=>x.id===ctrl.dataset.seed);if(e)e.seed=Math.trunc(Number(ctrl.value)||12345);
  });
  $('inv-cards').querySelectorAll('[data-duplicate]').forEach(btn=>btn.onclick=()=>{
   if(state.running)return;const orig=state.entries.find(x=>x.id===btn.dataset.duplicate);
-  const clone={id:'C'+(++state.seq),method:orig.method,config:{...orig.config,families:[...orig.config.families]},seed:orig.seed+1};
+  const clone={id:'C'+(++state.seq),method:orig.method,config:{...orig.config,families:[...orig.config.families],allowedKinds:[...(orig.config.allowedKinds||DEFAULT.allowedKinds)]},seed:orig.seed+1};
   state.entries.splice(state.entries.indexOf(orig)+1,0,clone);cards();table();
  });
  $('inv-cards').querySelectorAll('[data-remove]').forEach(btn=>btn.onclick=()=>{
@@ -108,7 +114,7 @@ function run(mode){
  const s=window.__gmrResearchSnapshot?.('y'),pts=cleanData(s?.source?.points);
  if(pts.length<5)return note('Importa datos con al menos 5 puntos distintos.');
  if(!state.entries.length)return note('Selecciona al menos un método.');
- if(state.entries.some(e=>['symbolic','constrained'].includes(e.method)&&!e.config.families.length))return note('Selecciona al menos una familia en la configuración simbólica.');
+ if(state.entries.some(e=>['symbolic','constrained'].includes(e.method)&&(!e.config.families.length||!e.config.allowedKinds?.length)))return note('Selecciona al menos una familia y una operación de base en la configuración simbólica.');
  const validation=Number($('inv-validation').value),entries=state.entries.map(e=>({...e,config:methodConfig(e.config)}));
  const budget=entries.reduce((sum,e)=>sum+(methodById(e.method).type==='direct'?1:e.config.n),0);
  if(budget>300000&&!confirm('Vas a evaluar '+budget.toLocaleString('es-EC')+' intentos; los reportes de iteraciones pueden ser muy grandes. ¿Continuar?'))return;
