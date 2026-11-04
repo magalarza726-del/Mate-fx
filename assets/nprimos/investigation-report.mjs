@@ -38,8 +38,12 @@ function segmentErrors(points,predictions,n=5){
   return '<tr><td>'+f(a.lo)+' — '+f(a.hi)+'</td><td>'+a.values.length+'</td><td>'+p(mean)+'</td><td>'+p(valid.length?Math.max(...valid):null)+'</td></tr>'}).join('')+'</tbody></table>';
 }
 function summary(state,e,title){
- const m=state.results.get(e.id)?.best,h=state.history.get(e.id)||[];
- return '<section class="sheet">'+header(state,title)+'<h2>Resumen · '+esc(e.id)+'</h2><p><b>Configuración:</b> '+esc(JSON.stringify(e.config))+' · <b>Semilla:</b> '+esc(e.seed)+' · <b>Intentos:</b> '+h.length+'</p>'+latex(m)+metrics(m)+'<h2>Datos y mejor ecuación</h2>'+graphSVG(state.source.points,m?.estimates)+'<p class="muted">Azul: puntos observados. Naranja: ecuación ajustada. Los valores sin estimación finita se excluyen de las métricas. Se muestran los errores de validación por separado.</p></section>';
+ const item=state.results.get(e.id),m=item?.best,h=state.history.get(e.id)||[];
+ return '<section class="sheet">'+header(state,title)+'<h2>Resumen · '+esc(e.id)+'</h2>'+
+  '<p><b>Configuración:</b> '+esc(JSON.stringify(e.config))+' · <b>Semilla:</b> '+esc(e.seed)+' · <b>Intentos:</b> '+h.length+' · <b>Tiempo:</b> '+f((item?.elapsedMs||0)/1000)+' s</p>'+
+  latex(m)+metrics(m)+'<h2>Datos y mejor ecuación</h2>'+graphSVG(state.source.points,m?.estimates)+
+  segmentErrors(state.source.points,m?.estimates)+
+  '<p class="muted">Azul: datos observados. Naranja: ecuación estimada. Los errores porcentuales excluyen valores reales iguales a cero. Las constantes para normalizar X derivan del dominio de los datos y se declaran por separado; las cotas elegidas se aplican a los coeficientes ajustados.</p></section>';
 }
 function detailed(state,e){
  const h=state.history.get(e.id)||[];
