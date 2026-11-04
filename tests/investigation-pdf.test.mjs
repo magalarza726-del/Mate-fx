@@ -73,13 +73,13 @@ test('Dashboards para errores y complejidad usan series de datos para Desmos',()
  assert.equal(complexity.series[0].points[0][0],3);
 });
 
-test('Las ecuaciones del informe usan z y renombramos la normalización como u',()=>{
+test('Las ecuaciones del informe usan x y mantienen z para normalización',()=>{
  const plain=reportLatex('f(x)=(1.5)x^{2}+3');
- assert.equal(plain.latex,'f(z)=(1.5)z^{2}+3');
+ assert.equal(plain.latex,'f(x)=(1.5)x^{2}+3');
  assert.equal(plain.definition,'');
  const normalized=reportLatex('f(x)=(4336.801)+(8776.749)\\cdot z','\\frac{x-(186.98)}{186.97}');
- assert.equal(normalized.latex,'f(z)=(4336.801)+(8776.749)\\cdot u');
- assert.equal(normalized.definition,'u=\\frac{z-(186.98)}{186.97}');
+ assert.equal(normalized.latex,'f(x)=(4336.801)+(8776.749)\\cdot z');
+ assert.equal(normalized.definition,'z=\\frac{x-(186.98)}{186.97}');
 });
 
 test('El modo automático solamente inicia la descarga del reporte general',async()=>{
