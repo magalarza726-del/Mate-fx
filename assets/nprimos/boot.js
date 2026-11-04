@@ -17,5 +17,6 @@ else{
    await import('../shared/lab.js');
    await import('./research-ui.js');
    await import('./envelopes-ui.js');
+   await import('./investigation-ui.js');
  }catch(error){await offline(error)}
 }
