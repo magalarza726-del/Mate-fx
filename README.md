@@ -1,3 +1,9 @@
+## Edición académica de los informes PDF (noviembre 2026)
+
+Se ha rediseñado el generador de informes en `assets/nprimos/investigation-paper.mjs`, accesible a través de los mismos botones de Investigación. El contenido usa A4 con márgenes y tipografía académicos, numeración y cabeceras discretas, resumen, contexto de datos, metodología, explicación de métricas, tabla comparativa de resultados y análisis de complejidad frente a error. El catálogo conserva **una ecuación por método/configuración** y procura mostrar dos fichas compactas por página cuando hay espacio. Las ecuaciones largas y definidas por tramos se reproducen íntegramente en un anexo LaTeX, no encogidas sobre la gráfica.
+
+Las figuras siguen procediendo exclusivamente de la API **Desmos asyncScreenshot**; se insertan en el PDF con su proporción correcta, explicación de los ejes y pie numerado. Los reportes individuales incorporan información de cada configuración, indicadores de error, datos observados y estimados y el historial íntegro de las iteraciones en un anexo **sin gráficos**. Se mantienen la descarga directa en PDF y el motor existente de cálculos. No se atribuyen autores, referencias bibliográficas ni conclusiones científicas no respaldadas por el conjunto de datos. El documento se identifica como informe técnico automatizado, no revisado por pares.
+
 ## Reportes PDF y Dashboards Desmos · Actualización noviembre 2026
 
 - **Descarga directa en PDF**, sin imprimir ni HTML intermedio. «Reporte automático» descarga los PDF individuales de todos los métodos seleccionados y el PDF general al finalizar; cada método conserva su botón de descarga independiente y también existe «Descargar todos los PDF».
