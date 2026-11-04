@@ -73,13 +73,13 @@ async function equationPNG(latex){
  }catch(error){console.warn('Fórmula LaTeX representada como código legible:',error);return null}
  finally{if(holder)holder.remove();if(url)URL.revokeObjectURL(url)}
 }
-function dataOf(state){
+function dataOf(state,validOnly=true){
  const entries=(state.entries||[]).map(entry=>{
   const result=state.results.get(entry.id);
   return {...entry,best:result?.best||null,elapsedMs:result?.elapsedMs||0,iterations:state.history.get(entry.id)?.length||0,
    label:methodById(entry.method)?.name||entry.method,group:methodById(entry.method)?.group||'Método'};
  });
- return entries.filter(e=>e.best);
+ return validOnly?entries.filter(e=>e.best):entries;
 }
 function metricRows(result){
  const m=result?.metrics||{},t=result?.trainMetrics||{},v=result?.validationMetrics||{};
@@ -405,7 +405,7 @@ export async function generalReport(state,nameOf,onProgress=()=>{}){
  return finalize(pdf,file,onProgress);
 }
 export async function methodReport(state,id,name,onProgress=()=>{}){
- const entries=dataOf(state).filter(e=>e.method===id);
+ const entries=dataOf(state,false).filter(e=>e.method===id&&state.history.has(e.id));
  if(!entries.length)throw Error('No hay resultados válidos registrados para el método seleccionado.');
  const ctor=await PDFConstructor(),pdf=new ctor({orientation:'portrait',unit:'mm',format:'a4',compress:true});
  pdf.setProperties({title:'Mate-fx - '+name,creator:'Mate-fx',subject:'Informe de método e historial de iteraciones'});
@@ -415,7 +415,7 @@ export async function methodReport(state,id,name,onProgress=()=>{}){
  await methodology(paper,scoped);
  paper.heading('2. Configuraciones analizadas');
  paper.table(['ID','Semilla','Iteraciones','MAPE','MaxAPE','Complejidad'],
-  entries.map(e=>[e.id,e.seed,e.iterations,percent(e.best.metrics?.mape),percent(e.best.metrics?.maxape),norm(e.best.complexity)]),
+  entries.map(e=>[e.id,e.seed,e.iterations,percent(e.best?.metrics?.mape),percent(e.best?.metrics?.maxape),norm(e.best?.complexity)]),
   [20,27,35,34,35,23],{font:8.8});
  for(const e of entries){
   paper.next();paper.heading('3. Resultados de '+e.label+' - '+e.id);
@@ -424,6 +424,7 @@ export async function methodReport(state,id,name,onProgress=()=>{}){
   paper.field('Intentos registrados',e.iterations);
   paper.field('Tiempo de cálculo',norm(e.elapsedMs/1000)+' s');
   await paper.displayEquation(e);
+  if(!e.best){paper.writeLines('Ninguna iteración produjo una ecuación evaluable bajo estas restricciones. Se conserva el historial de intentos para auditoría.',9);await paper.iterationTable(state.history.get(e.id)||[],e.id,onProgress);continue}
   paper.heading('3.1 Indicadores de ajuste',2);
   paper.table(['Indicador','Valor'],metricRows(e.best),[114,60],{font:9});
   paper.heading('3.2 Observaciones y curva',2);
