@@ -1,3 +1,21 @@
+
+## Investigación comparativa · 38 entradas en 6 categorías (noviembre de 2026)
+
+El laboratorio **nPrimos → Investigación** añade un motor de experimentación sin modificar el generador anterior ni la acotación exponencial original:
+
+1. **Métodos clásicos de ajuste**: lineal, polinómico, exponencial, logarítmico, potencial, racional, recíproco, raíz, y Padé desde una serie local ajustada (Padé figura entre métodos avanzados en la interfaz).
+2. **Correcciones de funciones**: corrección polinómica, exponencial, racional, potencial y sigmoidal.
+3. **Restricciones y cotas**: mínimos cuadrados, mínimos errores absolutos (IRLS), minimax aproximado, regresión cuantílica, expresiones restringidas y acotación exponencial.
+4. **Interpolación**: lineal, Lagrange, Newton, Hermite, PCHIP y spline cúbico natural.
+5. **Aproximación avanzada**: Chebyshev, aproximación minimax tipo Remez (IRLS), Padé, Taylor local con derivadas estimadas, Fourier, regresión simbólica y media predictiva de un proceso gaussiano con núcleo RBF.
+6. **Búsqueda y optimización**: Levenberg–Marquardt, evolución diferencial, algoritmo genético, recocido simulado y optimización bayesiana 1D.
+
+**Una ecuación por método y configuración.** Cada configuración puede duplicarse y controlar n, decimales y magnitud, además de sus parámetros específicos (grados, nodos, armónicos, ancho, cuantil, operadores y bases simbólicas, etc.). Los métodos deterministas resuelven una vez por configuración, los estocásticos ejecutan n intentos. Semillas configurables; control de pausa, reanudación, detención y seguimiento en tiempo real mediante Web Worker. Separación de observaciones para validación (por defecto, 20 % de las X distintas). MAPE, error relativo máximo, MAE, RMSE, P95, complejidad y tabla por tramos. Los puntos con Y=0 no participan en errores porcentuales, pero sí en errores absolutos.
+
+**Reporte automático** investiga todas las configuraciones seleccionadas; al terminar habilita reportes independientes por método y uno general. Los individuales muestran primero fórmula en LaTeX, fuente, configuración, puntos, gráfica y métricas, seguidos de **todas** las iteraciones con sus fórmulas LaTeX y errores **sin gráficas adicionales**. El general contiene únicamente las fórmulas ganadoras y sus gráficas. Los reportes son páginas imprimibles: elegir **Imprimir → Guardar como PDF**. MathJax requiere conexión para componer visualmente las ecuaciones; el código LaTeX siempre figura en el documento. El historial completo también se puede exportar como JSON.
+
+**Limitaciones de implementación:** algunos algoritmos están identificados explícitamente como variantes aproximadas (Remez/minimax mediante IRLS, Taylor a partir de derivadas estimadas, media predictiva GP), no implementaciones formales completas con garantías matemáticas. Los límites de coeficientes de regresión no restringen el origen y la escala derivados de X para la normalización. El generador simbólico y las envolventes heredan un máximo de 3 decimales y magnitud 9 999; otros métodos ofrecen hasta 6 decimales y 999 999. Los resultados se validan numéricamente, no constituyen por sí solos leyes físicas ni sustituyen formulaciones termodinámicas de referencia. Para reportes de miles de iteraciones conviene utilizar un navegador de escritorio.
+
 ## Actualización 4.2 · Proyectos limpios, CSV y vista segura (GitHub Pages)
 
 - **Ejemplo · 10 000 números primos** incluido como plantilla de muestra en nPrimos. Sus puntos se representan en Desmos en bloques de 500, conservando las aproximaciones y el análisis de valores. Desde **Proyectos → CSV** se descargan sus 10 000 pares `(n, p_n)`.
