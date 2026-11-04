@@ -7,28 +7,42 @@ export function plotSpecifications(source,best,kind='fit',entries=[]){
  const points=(source?.points||[]).filter(finite).map(p=>[+p[0],+p[1]]);
  if(kind==='fit'){
   const curve=(best?.curvePoints?.length?best.curvePoints:points.map((p,i)=>[p[0],best?.estimates?.[i]])).filter(finite).map(p=>[+p[0],+p[1]]);
-  return {title:'Datos observados y ecuación ganadora',xName:source?.xName||'X',yName:source?.yName||'Y',series:[{points,color:'#2578c5',mode:'points'},{points:curve,color:'#e0782f',mode:'lines'}]};
+  return {title:'Datos observados y ecuación ganadora',xName:source?.xName||'z',yName:source?.yName||'Y',series:[{points,color:'#2578c5',mode:'points'},{points:curve,color:'#e0782f',mode:'lines'}]};
  }
  if(kind==='residual'){
   const residual=points.map((p,i)=>[p[0],Number.isFinite(best?.estimates?.[i])?best.estimates[i]-p[1]:NaN]).filter(finite);
-  return {title:'Residuos (estimado menos observado)',xName:source?.xName||'X',yName:'Error',series:[{points:residual,color:'#c45061',mode:'points'}],zeroLine:true};
+  return {title:'Residuos según z (estimado menos observado)',xName:source?.xName||'X',yName:'Error',series:[{points:residual,color:'#c45061',mode:'points'}],zeroLine:true};
  }
  if(kind==='absolute'){
   const errors=points.map((p,i)=>[p[0],Number.isFinite(best?.estimates?.[i])?Math.abs(best.estimates[i]-p[1]):NaN]).filter(finite);
-  return {title:'Error absoluto por X',xName:source?.xName||'X',yName:'Error absoluto',series:[{points:errors,color:'#bd4b76',mode:'points'}]};
+  return {title:'Error absoluto por z',xName:source?.xName||'X',yName:'Error absoluto',series:[{points:errors,color:'#bd4b76',mode:'points'}]};
  }
  if(kind==='percentage'){
   const errors=points.map((p,i)=>[p[0],p[1]!==0&&Number.isFinite(best?.estimates?.[i])?100*Math.abs(best.estimates[i]-p[1])/Math.abs(p[1]):NaN]).filter(finite);
-  return {title:'Error porcentual absoluto por X',xName:source?.xName||'X',yName:'Error (%)',series:[{points:errors,color:'#a63f83',mode:'points'}]};
+  return {title:'Error porcentual absoluto por z',xName:source?.xName||'X',yName:'Error (%)',series:[{points:errors,color:'#a63f83',mode:'points'}]};
  }
  if(kind==='complexity'){
-  return {title:'Complejidad frente a error medio',xName:'Complejidad',yName:'MAPE (%)',series:[
-    {points:entries.filter(e=>Number.isFinite(e.best?.metrics?.mape)).map(e=>[e.best.complexity,e.best.metrics.mape]),color:'#18669d',mode:'points'}]};
+  const valid=entries.filter(e=>Number.isFinite(e.best?.metrics?.mape)&&e.best.metrics.mape>0&&Number.isFinite(e.best.complexity));
+  return {title:'Complejidad frente a log10(MAPE)',xName:'Complejidad',yName:'log10(MAPE %)',series:[
+    {points:valid.map(e=>[e.best.complexity,Math.log10(e.best.metrics.mape)]),color:'#18669d',mode:'points'}]};
  }
  if(kind==='comparison'){
-  return {title:'Error medio y máximo por configuración',xName:'Configuración',yName:'Error (%)',series:[
-    {points:entries.map((e,i)=>[i+1,e.best?.metrics?.mape]).filter(finite),color:'#2578c5',mode:'lines+points'},
-    {points:entries.map((e,i)=>[i+1,e.best?.metrics?.maxape]).filter(finite),color:'#df762f',mode:'lines+points'}]};
+  const values=entries.map((e,i)=>({index:i+1,mape:e.best?.metrics?.mape,maxape:e.best?.metrics?.maxape}));
+  const log=key=>values.filter(v=>Number.isFinite(v[key])&&v[key]>0).map(v=>[v.index,Math.log10(v[key])]);
+  return {title:'Comparación logarítmica de errores por configuración',xName:'Número de configuración (según tabla)',yName:'log10(Error %)',series:[
+    {points:log('mape'),color:'#2578c5',mode:'lines+points'},
+    {points:log('maxape'),color:'#df762f',mode:'lines+points'}]};
+ }
+ if(kind==='histogram'){
+  const finiteErrors=points.map((p,i)=>p[1]!==0&&Number.isFinite(best?.estimates?.[i])?
+   100*(best.estimates[i]-p[1])/Math.abs(p[1]):NaN).filter(Number.isFinite);
+  if(!finiteErrors.length)return {title:'Distribución de errores relativos',series:[]};
+  const sorted=[...finiteErrors].sort((a,b)=>a-b),low=sorted[Math.floor((sorted.length-1)*.025)],high=sorted[Math.ceil((sorted.length-1)*.975)];
+  const range=Math.max(1e-9,high-low),bins=14,hist=Array(bins).fill(0);
+  for(const v of finiteErrors){if(v<low||v>high)continue;hist[Math.min(bins-1,Math.floor((v-low)/range*bins))]++}
+  return {title:'Distribución central de los errores relativos',xName:'Error relativo firmado (%)',yName:'Frecuencia',series:[
+   {points:hist.map((count,i)=>[low+(i+.5)*range/bins,count]),color:'#377bb1',mode:'lines+points'}],
+   trimInfo:{omitted:finiteErrors.filter(v=>v<low||v>high).length,total:finiteErrors.length}};
  }
  return {title:'Sin datos',series:[]};
 }
