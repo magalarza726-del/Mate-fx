@@ -77,7 +77,7 @@ test('Los botones laterales son persistentes y el botón superior está en la ba
  const research=await readFile(new URL('../assets/nprimos/investigation-ui-v2.js',import.meta.url),'utf8');
  assert.match(ui,/id='lmm-mode-rail'/);
  assert.match(ui,/id='lmm-quick-rail'/);
- for(const mode of ['classic','triangles','ellipses'])assert.match(ui,new RegExp(''+mode));
+ assert.match(ui,/LMM_MODES\.map\(/,'Los tres modos provienen del catálogo único');
  assert.match(research,/document\.querySelector\('\.gmr-toolbar'\)/);
  const css=await readFile(new URL('../assets/lmm/lmm.css',import.meta.url),'utf8');
  assert.match(css,/#lmm-mode-rail/);
