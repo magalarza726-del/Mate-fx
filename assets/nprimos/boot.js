@@ -15,6 +15,7 @@ else{
    await import('./analysis-table.js');
    await import('./app.js');
    await import('../shared/lab.js');
+   await import('../lmm/geometry-ui.mjs');
    // Las herramientas antiguas permanecen en el repositorio, pero sus botones se integran en Investigación y Análisis.
    await import('./investigation-ui-v2.js');
  }catch(error){await offline(error)}

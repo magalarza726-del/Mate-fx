@@ -25,11 +25,15 @@ jobs:
         with:
           node-version: '22'
       - name: Pruebas de regresión, reportes y validez física
-        run: node --test tests/investigation-core.test.mjs tests/investigation-pdf.test.mjs tests/investigation-quality.test.mjs tests/investigation-v2.test.mjs
+        run: node --test tests/investigation-core.test.mjs tests/investigation-pdf.test.mjs tests/investigation-quality.test.mjs tests/investigation-v2.test.mjs tests/lmm-unification.test.mjs
       - name: Verificar archivos publicados desde raíz
         run: |
           test -f index.html
           test -f assets/nprimos/index.html
+          test -f assets/lmm/index.html
+          test -f assets/lmm/geometry-core.mjs
+          test -f assets/lmm/geometry-ui.mjs
+          test -f assets/lmm/lmm.css
           test -f assets/matefx/index.html
           test -f assets/nprimos/investigation-paper.mjs
           test -f assets/nprimos/investigation-desmos.mjs

@@ -1,4 +1,4 @@
-/* Mate-fx: Investigación + Análisis, una configuración global y una semilla compartida. */
+/* LMM: Investigación + Análisis, una configuración global y una semilla compartida. */
 import {METHODS,methodById,methodConfig,cleanData} from './investigation-core.mjs';
 import {methodReport,generalReport,reportLatex} from './investigation-report.mjs';
 import {plotSpecifications,screenshotFromDesmos} from './investigation-desmos.mjs';
@@ -245,11 +245,11 @@ function open(view){
 function setup(){
  if(!window.__gmrResearchSnapshot||!window.__nPrimosCalculator){setTimeout(setup,120);return}
  if($('np-investigation-panel'))return;
- const nav=document.createElement('nav');nav.id='mf-feature-navigation';nav.setAttribute('aria-label','Herramientas de Mate-fx');
+ const nav=document.createElement('nav');nav.id='mf-feature-navigation';nav.setAttribute('aria-label','Investigación y análisis del LMM');
  nav.innerHTML='<button type="button" id="np-investigation-btn">Investigación</button>'+
   '<button type="button" id="np-analysis-btn">Análisis</button>'+
   '<button type="button" id="np-data-main">Importar/Exportar Datos</button>';
- const header=document.querySelector('.top-actions')||document.querySelector('.topbar')||document.body;
+ const header=document.querySelector('.gmr-toolbar')||document.querySelector('.top-actions')||document.querySelector('.topbar')||document.body;
  header.prepend(nav);
  const panel=document.createElement('div');panel.id='np-investigation-panel';panel.className='gmr-research-overlay inv-v2-overlay';
  panel.hidden=true;panel.dataset.view='research';panel.dataset.tab='methods';

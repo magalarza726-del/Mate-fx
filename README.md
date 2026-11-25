@@ -1,3 +1,17 @@
+# Laboratorio Matemático de Miguel (LMM)
+
+**Acceso unificado:** [Abrir LMM](https://magalarza726-del.github.io/Mate-fx/assets/lmm/). Un único plano cartesiano de Desmos con tres modos de visualización: **Clásico**, **Triángulos** y **Elipses**. Las rutas anteriores redirigen a LMM.
+
+- **Clásico:** funciones y datos en el graficador oficial Desmos.
+- **Triángulos:** construcción rectilínea original de Mate-fx para f(x) evaluada sobre valores naturales y ángulo θ; se representa dentro de la misma instancia de Desmos.
+- **Elipses:** reutiliza los cuartos de elipse y círculos del modo Curvas original. Entre ángulos canónicos se trata de una interpolación visual, no de elipses exactas.
+- **Controles laterales:** tres botones a la izquierda y accesos permanentes a Investigación, Análisis, Datos, geometría, ajuste y ejemplos a la derecha. El panel geométrico permite cambiar f(x), rango, θ, parámetro n y estudiar métricas originales.
+- **Primos:** son únicamente un proyecto de ejemplo de 10.000 datos accesible en Proyectos. Una instalación nueva se inicia con un proyecto genérico vacío. Los proyectos existentes se conservan.
+- **Investigación:** continúan disponibles los 47 métodos, su semilla global, dashboards, análisis de errores por intervalos, PDF individual/manual y PDF general/automático.
+- **Índice estructural de complejidad C en el PDF general:** C = Nnum + Nsuma + 2 Nprod + 2 Ndiv + 2 Npot + 3 Ntrans + 4 Ntramos. Se muestran la tabla de pesos, los conteos por operación, los subtotales y la suma ponderada para una ecuación de la investigación. Los pesos son heurísticos: no se equiparan a tiempos de cálculo ni a invariantes algebraicos.
+- **Compatibilidad:** los motores anteriores permanecen en el código y los accesos históricos redirigen al laboratorio unificado. La vista sin conexión sigue como alternativa limitada, mientras que la visualización unificada requiere Desmos.
+
+---
 ## Mate-fx · Investigación y Análisis v2 (noviembre 2026)
 
 La vista nPrimos / Mate-fx presenta tres accesos: **Investigación**, **Análisis** e **Importar/Exportar Datos**. La navegación anterior con botones independientes de generación, acotación y dashboards deja de montarse, pero los motores originales siguen en el proyecto.

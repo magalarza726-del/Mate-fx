@@ -27,7 +27,7 @@ let mateGraphMode='geometry';
 const header = el('header','gmr-toolbar',`
   <button type="button" class="gmr-home" data-gmr-action="home" title="Inicio" aria-label="Volver al inicio">⌂</button>
   <button type="button" class="gmr-menu" data-gmr-action="projects" title="Proyectos" aria-label="Abrir proyectos">☰</button>
-  <button type="button" class="gmr-title" data-gmr-action="projects"><span id="gmr-project-title">${isMate?'Mate-fx · Investigación 1':'nPrimos · Investigación 1'}</span></button>
+  <button type="button" class="gmr-title" data-gmr-action="projects"><span id="gmr-project-title">${isMate?'Mate-fx · Investigación 1':'LMM · Nueva investigación'}</span></button>
   <button type="button" class="gmr-save" data-gmr-action="save">Guardar</button>
   <button type="button" class="gmr-options" data-gmr-action="settings" aria-label="Opciones">⋮</button>
 `);
@@ -38,7 +38,7 @@ graphFrame.setAttribute('aria-label','Plano de representación gráfica');
 workspace.insertBefore(graphFrame,workspace.firstChild);
 const actionBar = el('nav','gmr-actionbar',`
   <button type="button" data-gmr-action="add" title="${isMate?'Editar función':'Añadir función'}">＋</button>
-  <button type="button" data-gmr-action="controls" class="active">${isMate?'θ Geometría':'◉ Primos'}</button>
+  <button type="button" data-gmr-action="controls" class="active">${isMate?'θ Geometría':'△ Geometría'}</button>
   <button type="button" data-gmr-action="analysis">${isMate?'▦ Inspector':'▤ Análisis'}</button>
   <button type="button" data-gmr-action="fit" title="Ajustar vista">⌖</button>
   <button type="button" data-gmr-action="engine" id="gmr-engine" title="Alternar entre Desmos real y motor local">Desmos</button>
@@ -81,7 +81,7 @@ function showSaveLabel(label){
   saveBtn._tid=setTimeout(()=>saveBtn.textContent='Guardar',1400);
 }
 function renderTitle(){
-  titleLabel.textContent= isMate ? 'Mate-fx · '+mateName : 'nPrimos · '+($('currentProjectName')?.textContent||'Investigación 1');
+  titleLabel.textContent= isMate ? 'Mate-fx · '+mateName : 'LMM · '+($('currentProjectName')?.textContent||'Nueva investigación');
 }
 function showPanel(which){
   panelName=which;
@@ -90,7 +90,7 @@ function showPanel(which){
   controlsHost.hidden=which!=='controls';
   inspectorHost.hidden=which!=='analysis';
   projectHost.hidden=which!=='projects'&&which!=='settings';
-  drawerTitle.textContent = which==='controls'?(isMate?'Geometría · Mate-fx':'Números primos'):which==='analysis'?(isMate?'Inspector geométrico':'Tabla y análisis'):which==='projects'?'Proyectos':'Opciones';
+  drawerTitle.textContent = which==='controls'?(isMate?'Geometría · Mate-fx':'Geometría · LMM'):which==='analysis'?(isMate?'Inspector geométrico':'Tabla y análisis'):which==='projects'?'Proyectos':'Opciones';
   if(which==='analysis'&&!isMate){
     closePanel();
     $('tableBtn')?.click();
@@ -179,7 +179,7 @@ function showSettings(){
   showPanel('settings');
   projectHost.replaceChildren();
   const p=el('div','',
-    '<p><strong>Galarza Math Research</strong> · interfaz matemática 2.0.</p>'+
+    '<p><strong>Laboratorio Matemático de Miguel (LMM)</strong> · interfaz matemática unificada.</p>'+
     '<p>La gráfica, las expresiones y las herramientas funcionan sin red. Los proyectos se guardan en el dispositivo.</p>'+
     '<p>Arrastra para mover la gráfica y utiliza la rueda del ratón o el gesto de zoom para acercar o alejar.</p>'
   );
@@ -410,18 +410,18 @@ function toggleKeyboard(){
 function onAction(action){
   if(action==='close-panel'){closePanel();return}
   if(action==='engine'){toggleGraphEngine();return}
-  if(action==='home'){window.location.href='../index.html';return}
+  if(action==='home'){window.location.href= isMate?'../nprimos/index.html':'../../index.html';return}
   if(action==='algebra-size'){setSize();return}
   if(action==='toggle-keyboard'){toggleKeyboard();return}
-  if(action==='controls'){showPanel('controls');return}
-  if(action==='analysis'){showPanel('analysis');return}
+  if(action==='controls'){if(!isMate&&window.__lmmGeometry){window.__lmmGeometry.showPanel();return}showPanel('controls');return}
+  if(action==='analysis'){if(!isMate&&$('np-analysis-btn')){$('np-analysis-btn').click();return}showPanel('analysis');return}
   if(action==='settings'){showSettings();return}
   if(action==='projects'){
     if(isMate)showPanel('projects');
     else $('projectsBtn')?.click();
     return;
   }
-  if(action==='fit'){if(isMate)$('fitBtn2').click();else $('fitPrimesBtn').click();return}
+  if(action==='fit'){if(isMate)$('fitBtn2').click();else if(window.__lmmGeometry)window.__lmmGeometry.fit();else $('fitPrimesBtn').click();return}
   if(action==='save'){if(isMate)saveMate();else{window.__gmrSaveNPrimos?.();showSaveLabel('Guardado ✓')}return}
   if(action==='add'){
     if(isMate){const editor=$('mathFunctionInput')||$('functionInput');editor.focus({preventScroll:true});if($('mathBuilder').hidden)$('mathKeyboardToggle').click()}
@@ -446,6 +446,7 @@ root.addEventListener('click',event=>{
   if(key)primeKey(key.dataset.gmrKey);
 });
 shade.addEventListener('click',closePanel);
+window.addEventListener('lmm:open-example-controls',()=>{if(!isMate)showPanel('controls')});
 window.addEventListener('keydown',event=>{
   if(event.key==='Escape'&&panelName){closePanel();event.preventDefault()}
 });

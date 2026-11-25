@@ -1,5 +1,5 @@
 /*
- * Mate-fx | Informes científicos A4.
+ * LMM | Informes científicos A4.
  * Diseño editorial, figuras capturadas con la API real de Desmos y descarga PDF directa.
  * Los informes no se presentan como artículos revisados por pares.
  */
@@ -172,7 +172,7 @@ class Paper{
  createChrome(){
   const p=this.pdf;
   p.setDrawColor(...LIGHT);p.line(L,17,RIGHT,17);
-  this.setFont('helvetica','bold',8,BLUE);p.text('MATE-FX   /   INVESTIGACIÓN COMPUTACIONAL',L,13);
+  this.setFont('helvetica','bold',8,BLUE);p.text('LMM   /   INVESTIGACIÓN COMPUTACIONAL',L,13);
   this.setFont('helvetica','normal',8,GRAY);p.text('INFORME TÉCNICO',RIGHT,13,{align:'right'});
   p.setDrawColor(...LIGHT);p.line(L,284,RIGHT,284);
   this.setFont('helvetica','normal',8,GRAY);
@@ -335,7 +335,7 @@ class Paper{
  async figure(spec,description,{width=INNER,height=76}={}){
   const captureHeight=Math.max(270,Math.round(920*height/width));
   const renderedHeight=width*captureHeight/920;
-  const caption='Figura '+(this.figureNumber+1)+'. '+description+' (captura de Desmos a partir de estimaciones calculadas por Mate-fx).';
+  const caption='Figura '+(this.figureNumber+1)+'. '+description+' (captura de Desmos a partir de estimaciones calculadas por LMM).';
   const lines=this.pdf.splitTextToSize(txt(caption),INNER-5).length;
   this.ensure(renderedHeight+9+4.5*lines); // figura y pie siempre juntos
   const png=await screenshotFromDesmos(spec,{width:920,height:captureHeight,ratio:1.22});
@@ -523,7 +523,7 @@ async function cover(paper,state,entries,kind){
 
 async function methodology(paper,state){
  paper.next();paper.heading('1. Metodología');
- paper.writeLines('Se evaluaron los métodos y configuraciones seleccionados en Mate-fx. Los métodos deterministas obtienen una solución por configuración; los procedimientos estocásticos exploran los candidatos autorizados durante las iteraciones disponibles. Se registra la mejor ecuación encontrada para cada configuración, no necesariamente el óptimo global.',10.2,4.7);
+ paper.writeLines('Se evaluaron los métodos y configuraciones seleccionados en LMM. Los métodos deterministas obtienen una solución por configuración; los procedimientos estocásticos exploran los candidatos autorizados durante las iteraciones disponibles. Se registra la mejor ecuación encontrada para cada configuración, no necesariamente el óptimo global.',10.2,4.7);
  const entries=state.entries||[];
  const sets=new Set(entries.map(e=>e.method));
  paper.field('Familias / métodos distintos',sets.size);
@@ -538,17 +538,30 @@ async function methodology(paper,state){
   ['Complejidad','Índice interno de estructura de la función.'],
   ['Validación','Error en puntos retenidos cuando la ejecución dispuso de partición de validación.']
  ],[39,135],{font:9});
- paper.heading('1.2 Índice de complejidad estructural · versión 2',2);
+ paper.heading('1.2 Cálculo reproducible del índice de complejidad C',2);
  paper.writeLines('El índice utiliza una misma regla para todos los modelos y se calcula exclusivamente sobre la expresión LaTeX ganadora. No mide tiempo de CPU, cantidad de iteraciones, tamaño de datos ni equivalencia algebraica.',9.4,4.5);
  paper.writeLines('C = Nnum + Nsuma + 2·Nprod + 2·Ndiv + 2·Npot + 3·Ntrans + 4·Ntramos.',9.7,4.6,BLUE);
+ paper.writeLines('Los pesos son convenciones elegidas para comparar estructuras, no constantes universales ni una medida del tiempo de ejecución. El algoritmo identifica los símbolos impresos y suma cantidad × peso.',9.1,4.4,GRAY);
  paper.table(['Elemento identificado','Peso','Regla de conteo'],complexityExplanation().map(([a,b,c])=>[a,String(b),c]),[64,16,94],{font:8});
  const sample=state.entries?.map(e=>state.results?.get(e.id)?.best).find(x=>x?.latex);
  if(sample){
   const detail=sample.complexityDetail||equationComplexity(sample.latex);
-  paper.writeLines('Ejemplo de la ejecución: Nnum='+detail.terms.numeric+', Nsuma='+detail.terms.additive+
-   ', Nprod='+detail.terms.product+', Ndiv='+detail.terms.division+', Npot='+detail.terms.power+
-   ', Ntrans='+detail.terms.transcendental+', Ntramos='+detail.terms.piecewise+
-   '. Resultado C='+detail.value+'.',8.7,4.3);
+  paper.heading('Ejemplo numérico de la complejidad',2);
+  paper.writeLines('Expresión analizada: '+sample.latex.slice(0,160)+(sample.latex.length>160?' ... (ecuación completa en el anexo)':'' )+'.',8.8,4.3);
+  const categories=[
+   ['Constantes',detail.terms.numeric,1],
+   ['Sumas / restas',detail.terms.additive,1],
+   ['Productos explícitos',detail.terms.product,2],
+   ['Divisiones',detail.terms.division,2],
+   ['Potencias',detail.terms.power,2],
+   ['Funciones especiales',detail.terms.transcendental,3],
+   ['Bloques por tramos',detail.terms.piecewise,4]
+  ];
+  paper.table(['Elemento','Cantidad','Peso','Subtotal'],categories.map(([name,count,weight])=>[
+   name,String(count),String(weight),String(count*weight)
+  ]),[95,24,23,32],{font:8.5});
+  paper.writeLines('C = '+categories.map(([,count,weight])=>String(count)+'×'+String(weight)).join(' + ')+
+   ' = '+detail.value+'. El resultado de esta suma es el valor mostrado en la columna C del catálogo.',8.9,4.4,BLUE);
  }
  paper.writeLines('Limitaciones: la multiplicación implícita no se contabiliza como producto explícito; la normalización auxiliar z=(x-centro)/escala no se añade a la complejidad y dos formas equivalentes pueden obtener índices distintos. La métrica no mide velocidad de ejecución.',8.5,4.1,GRAY);
  paper.heading('1.3 Reproducibilidad',2);
@@ -606,7 +619,7 @@ async function comparisonFigures(paper,state,entries,progress){
 }
 async function winners(paper,state,entries,progress){
  paper.next();paper.heading('4. Catálogo de ecuaciones ganadoras');
- paper.writeLines('Se conserva una ecuación por método y configuración. Las gráficas son capturas auténticas de Desmos, mientras que las métricas proceden de la evaluación numérica de Mate-fx.',9.3);
+ paper.writeLines('Se conserva una ecuación por método y configuración. Las gráficas son capturas auténticas de Desmos, mientras que las métricas proceden de la evaluación numérica de LMM.',9.3);
  for(let i=0;i<entries.length;i++){
   if(i>0)paper.next();
   progress?.('Diagramando ecuaciones '+(i+1)+' / '+entries.length);
@@ -631,7 +644,7 @@ export async function generalReport(state,nameOf,onProgress=()=>{}){
  // Respect public callback name; the method registry supplies the category.
  if(typeof nameOf==='function')entries.forEach(e=>e.label=nameOf(e.method)||e.label);
  const ctor=await PDFConstructor(),pdf=new ctor({orientation:'portrait',unit:'mm',format:'a4',compress:true});
- pdf.setProperties({title:'Mate-fx - Estudio comparativo de aproximaciones',creator:'Mate-fx',subject:'Catálogo de ecuaciones con métricas'});
+ pdf.setProperties({title:'LMM - Estudio comparativo de aproximaciones',creator:'LMM',subject:'Catálogo de ecuaciones con métricas'});
  const paper=new Paper(pdf,'Catálogo general');
  await cover(paper,state,entries,'Estudio comparativo');
  await methodology(paper,state);
@@ -639,14 +652,14 @@ export async function generalReport(state,nameOf,onProgress=()=>{}){
  await comparison(paper,state,entries);
  await comparisonFigures(paper,state,entries,onProgress);
  await winners(paper,state,entries,onProgress);
- const file='Matefx_Paper_Catalogo_General_'+slug(state.projectName)+'_'+new Date().toISOString().slice(0,10)+'.pdf';
+ const file='LMM_Paper_Catalogo_General_'+slug(state.projectName)+'_'+new Date().toISOString().slice(0,10)+'.pdf';
  return finalize(pdf,file,onProgress);
 }
 export async function methodReport(state,id,name,onProgress=()=>{}){
  const entries=dataOf(state,false).filter(e=>e.method===id&&state.history.has(e.id));
  if(!entries.length)throw Error('No hay resultados válidos registrados para el método seleccionado.');
  const ctor=await PDFConstructor(),pdf=new ctor({orientation:'portrait',unit:'mm',format:'a4',compress:true});
- pdf.setProperties({title:'Mate-fx - '+name,creator:'Mate-fx',subject:'Informe de método e historial de iteraciones'});
+ pdf.setProperties({title:'LMM - '+name,creator:'LMM',subject:'Informe de método e historial de iteraciones'});
  const paper=new Paper(pdf,name);
  const scoped={...state,entries:state.entries.filter(e=>e.method===id)};
  await cover(paper,scoped,entries,'Estudio del método '+name);
@@ -677,6 +690,6 @@ export async function methodReport(state,id,name,onProgress=()=>{}){
   }
   await paper.iterationTable(state.history.get(e.id)||[],e.id,onProgress);
  }
- const filename='Matefx_Paper_'+slug(name)+'_'+slug(state.projectName)+'_'+new Date().toISOString().slice(0,10)+'.pdf';
+ const filename='LMM_Paper_'+slug(name)+'_'+slug(state.projectName)+'_'+new Date().toISOString().slice(0,10)+'.pdf';
  return finalize(pdf,filename,onProgress);
 }

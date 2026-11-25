@@ -76,17 +76,22 @@
   let renamingProjectId = null;
   window.__gmrPrimeValues = count => allPrimes.slice(0, Math.min(MAX_PRIMES, Math.max(0, Number(count) || 0))); 
 
-  window.__gmrActiveProject=()=>({id:currentProject?.id||'sin-proyecto',name:currentProject?.name||'Investigación'});
+  window.__gmrActiveProject=()=>({id:currentProject?.id||'sin-proyecto',name:currentProject?.name||'Investigación',hasPrimes:Boolean(currentProject?.hasPrimes)});
   init();
 
   function init() {
     // La plantilla debe existir también para personas que ya tenían proyectos.
     // No se modifica ni se borra ninguna investigación anterior.
-    if (!store.projects.some(p => p.id === EXAMPLE_ID)) {
-      const example={...makeProject('Ejemplo · 10 000 números primos', 10000, true), id: EXAMPLE_ID};
-      const wasEmpty=!store.projects.length;
-      store.projects.unshift(example);
-      if (wasEmpty) store.currentId=example.id;
+    if (!store.projects.length) {
+      // Un proyecto general es el inicio del LMM: los números primos son SOLO un ejemplo.
+      const general=makeProject('Nueva investigación',0,false);
+      const example={...makeProject('Ejemplo · 10 000 números primos',10000,true),id:EXAMPLE_ID};
+      store.projects=[general,example];
+      store.currentId=general.id;
+      persistStore();
+    } else if (!store.projects.some(p => p.id === EXAMPLE_ID)) {
+      // Migración no destructiva: conservar el proyecto seleccionado anteriormente.
+      store.projects.push({...makeProject('Ejemplo · 10 000 números primos',10000,true),id:EXAMPLE_ID});
       persistStore();
     }
 
@@ -203,7 +208,7 @@
     // Se regeneran al entrar, sin depender de enormes expresiones serializadas.
     if (result.expressions?.list) {
       result.expressions.list = result.expressions.list.filter(e =>
-        !String(e.id || '').startsWith('__np_') && !String(e.id || '').startsWith('__np_table_') && String(e.id || '') !== 'gmr_dataset_desktop' && !String(e.id || '').startsWith('__gmr_data_plot_'));
+        !String(e.id || '').startsWith('__np_') && !String(e.id || '').startsWith('__np_table_') && !String(e.id || '').startsWith('__lmm_') && String(e.id || '') !== 'gmr_dataset_desktop' && !String(e.id || '').startsWith('__gmr_data_plot_'));
     }
     return result;
   }
@@ -570,17 +575,17 @@
   function exportProjects() {
     saveCurrentProject();
     const payload = {
-      app: 'nPrimos',
-      version: 1,
+      app: 'LMM',
+      version: 2,
       exportedAt: new Date().toISOString(),
       data: store
     };
-    if (window.AndroidBridge && typeof window.AndroidBridge.exportJson === 'function') { window.AndroidBridge.exportJson('nprimos-proyectos-'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify(payload)); return; }
+    if (window.AndroidBridge && typeof window.AndroidBridge.exportJson === 'function') { window.AndroidBridge.exportJson('LMM_proyectos_'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify(payload)); return; }
     const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `nprimos-proyectos-${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `LMM_proyectos_${new Date().toISOString().slice(0,10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -592,7 +597,7 @@
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
-      const incoming = parsed?.app === 'nPrimos' ? parsed.data : parsed;
+      const incoming = ['LMM','nPrimos'].includes(parsed?.app) ? parsed.data : parsed;
       if (!incoming || !Array.isArray(incoming.projects) || !incoming.projects.length) throw new Error('Formato inválido');
       if (!confirm('Esto reemplazará los proyectos guardados en este navegador. ¿Continuar?')) return;
       store = normalizeStore(incoming);
@@ -604,7 +609,7 @@
       renderProjects();
     } catch (error) {
       console.error(error);
-      alert('No pude importar ese archivo. Verifica que sea una exportación válida de nPrimos.');
+      alert('No pude importar ese archivo. Verifica que sea una exportación válida de LMM o nPrimos.');
     }
   }
 
