@@ -41,7 +41,8 @@ function removeGenerated(){
  rows=[];
 }
 function ensureUnique(id,samples,color){
- const x='u_{'+id+'}',y='v_{'+id+'}';
+ const subscript=String(id).replace(/[^0-9]/g,'');
+ const x='u_{'+subscript+'}',y='v_{'+subscript+'}';
  return {id:'__lmm_geometry_'+id,type:'table',secret:true,
   columns:[
    {latex:x,values:samples.map(p=>String(Number(p[0].toPrecision(12))))},
