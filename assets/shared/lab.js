@@ -414,7 +414,7 @@ function onAction(action){
   if(action==='algebra-size'){setSize();return}
   if(action==='toggle-keyboard'){toggleKeyboard();return}
   if(action==='controls'){if(!isMate&&window.__lmmGeometry){window.__lmmGeometry.showPanel();return}showPanel('controls');return}
-  if(action==='analysis'){if(!isMate&&$('np-analysis-btn')){$('np-analysis-btn').click();return}showPanel('analysis');return}
+  if(action==='analysis'){if(!isMate&&window.__lmmTools?.openAnalysis){window.__lmmTools.openAnalysis();return}showPanel('analysis');return}
   if(action==='settings'){showSettings();return}
   if(action==='projects'){
     if(isMate)showPanel('projects');

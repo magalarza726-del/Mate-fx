@@ -75,9 +75,11 @@ test('Desmos muestra de forma uniforme TODO el rango y conserva el último dato'
 test('Navegación: solo Investigación, Análisis e Importar/Exportar Datos',async()=>{
  const src=await readFile(new URL('../assets/nprimos/investigation-ui-v2.js',import.meta.url),'utf8');
  const boot=await readFile(new URL('../assets/nprimos/boot.js',import.meta.url),'utf8');
- assert.ok(src.includes("np-analysis-btn"));
- assert.ok(src.includes("np-investigation-btn"));
- assert.ok(src.includes("np-data-main"));
+ assert.ok(src.includes("window.__lmmTools="));
+ assert.ok(src.includes("openResearch:()=>open('research')"));
+ assert.ok(src.includes("openAnalysis:()=>open('analysis')"));
+ assert.ok(src.includes("openData"));
+ assert.ok(!src.includes('mf-feature-navigation'),'No duplicar la barra superior');
  assert.ok(src.includes('data-tab-target="methods"'));
  assert.ok(src.includes('data-tab-target="table"'));
  assert.ok(src.includes('data-tab-target="dashboards"'));

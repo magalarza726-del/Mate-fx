@@ -1,3 +1,25 @@
+## LMM · Vista y muestreo decimal (25 de noviembre de 2026)
+
+La visualización se controla **solo desde el botón lateral Vista**, con cinco alternativas:
+**Clásica**, **Triangular a 0°**, **Triangular a 90°**, **Circular a 0°** y **Circular a 90°**.
+Los dos modos circulares dibujan **arcos de circunferencia verdaderos** (semicírculos
+calculados a partir de sus cuerdas); no se presentan como elipses. Los ángulos
+intermedios y la animación de ángulo desaparecen.
+
+En las vistas geométricas, el usuario define **x mínimo, x máximo, incremento Δx,
+función y parámetro n**. Las líneas se calculan en `x_min + k·Δx`, admitiendo
+valores decimales y negativos de x. Por ejemplo, para x de 1,1 a 2,1 y
+Δx = 0,25, se generan cinco figuras en 1,1; 1,35; 1,6; 1,85 y 2,1.
+Hay un máximo explícito de 150 valores de x por renderizado; superar el límite
+muestra una advertencia y no recorta datos silenciosamente.
+
+Los **cuatro botones laterales visibles** son Investigación, Análisis, Datos y
+Vista. Se retiran los accesos rápidos Ejemplos, Geometría, Ajustar, la lista lateral
+independiente de modos y la navegación superior redundante. Los números primos
+permanecen disponibles desde el proyecto de ejemplo en Proyectos.
+Las expresiones y los resultados de Investigación no se eliminan al cambiar Vista.
+
+---
 # Laboratorio Matemático de Miguel (LMM)
 
 **Acceso unificado:** [Abrir LMM](https://magalarza726-del.github.io/Mate-fx/assets/lmm/). Un único plano cartesiano de Desmos con tres modos de visualización: **Clásico**, **Triángulos** y **Elipses**. Las rutas anteriores redirigen a LMM.

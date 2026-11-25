@@ -1,64 +1,51 @@
-/* Laboratorio Matemático de Miguel (LMM) · un solo Desmos */
+/* LMM · Un solo menú Vista y cuatro accesos laterales. */
 :root{--lmm-ink:#193956;--lmm-accent:#226d9c;--lmm-teal:#218e76}
-body[data-gmr-lab=prime] .gmr-toolbar{background:#172c42}
-body[data-gmr-lab=prime] #gmr-project-title{font-size:13px}
-body[data-gmr-lab=prime] .gmr-actionbar [data-gmr-action=controls]{color:#176e6d}
-body[data-gmr-lab=prime] .gmr-graph-frame{isolation:isolate}
-#lmm-mode-rail,#lmm-quick-rail{position:absolute;display:flex;flex-direction:column;gap:7px;z-index:8;top:20px;pointer-events:auto}
-#lmm-mode-rail{left:10px}
-#lmm-quick-rail{right:10px;top:98px}
-#lmm-mode-rail button,#lmm-quick-rail button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
- min-width:72px;min-height:52px;background:rgba(255,255,255,.96);color:#285171;
- border:1px solid #d2dce5;border-radius:11px;box-shadow:0 2px 12px #15283c22;cursor:pointer;font:600 12px system-ui,sans-serif}
-#lmm-mode-rail button:hover,#lmm-quick-rail button:hover{border-color:#549ac6;background:#edf8fe}
-#lmm-mode-rail button.active{background:#1e5c8c;color:white;border-color:#1e5c8c}
-#lmm-mode-rail button span{font:23px/1.2 Georgia,serif}
-#lmm-mode-rail small,#lmm-quick-rail small{font:600 10px/1.2 system-ui,sans-serif}
-#lmm-quick-rail button{min-width:70px;min-height:47px;font-size:21px}
-#lmm-geometry-panel{position:absolute;left:90px;top:12px;width:min(354px,calc(100% - 188px));max-height:calc(100% - 24px);
- overflow:auto;z-index:9;background:#fff;border:1px solid #c6d8e7;border-radius:14px;box-shadow:0 8px 36px #17334a45;
- padding:15px;color:#294356;font:12px/1.5 system-ui,sans-serif}
-#lmm-geometry-panel[hidden]{display:none!important}
+body[data-gmr-lab="prime"] .gmr-toolbar{background:#172c42}
+body[data-gmr-lab="prime"] #gmr-project-title{font-size:13px}
+body[data-gmr-lab="prime"] .gmr-graph-frame{isolation:isolate}
+body[data-gmr-lab="prime"] #mf-feature-navigation{display:none!important}
+body[data-gmr-lab="prime"] .gmr-actionbar :is([data-gmr-action="controls"],[data-gmr-action="analysis"],[data-gmr-action="fit"]){display:none!important}
+body[data-gmr-lab="prime"] .gmr-floating{display:none!important}
+#lmm-quick-rail{position:absolute;right:10px;top:26px;display:flex;flex-direction:column;gap:8px;z-index:9;pointer-events:auto}
+#lmm-quick-rail button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+ width:78px;min-height:55px;background:rgba(255,255,255,.97);color:#285171;border:1px solid #d2dce5;
+ border-radius:12px;box-shadow:0 2px 12px #15283c22;cursor:pointer;font:21px/1.1 system-ui,sans-serif}
+#lmm-quick-rail button:hover,#lmm-quick-rail button[aria-expanded="true"]{border-color:#549ac6;background:#eaf5fd}
+#lmm-quick-rail small{font:600 11px/1.2 system-ui,sans-serif}
+#lmm-view-panel{position:absolute;right:99px;top:16px;width:min(386px,calc(100% - 112px));max-height:calc(100% - 30px);
+ overflow:auto;overscroll-behavior:contain;z-index:10;background:#fff;border:1px solid #c6d8e7;border-radius:14px;
+ box-shadow:0 8px 36px #17334a45;padding:15px;color:#294356;font:12px/1.5 system-ui,sans-serif}
+#lmm-view-panel[hidden],#lmm-settings-body[hidden]{display:none!important}
 .lmm-panel-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e1eaf2;padding:0 0 10px;margin-bottom:10px}
 .lmm-panel-head strong{font-size:16px;color:var(--lmm-ink)}
-.lmm-panel-head button{border:0;background:#edf2f7;border-radius:7px;font-size:21px;color:#526878;width:32px;height:32px}
-#lmm-geometry-panel p{margin:6px 0 12px;color:#5e7080;font-size:11px}
-#lmm-geometry-panel label{display:flex;flex-direction:column;gap:3px;margin:9px 0;font-weight:600;font-size:12px}
-#lmm-geometry-panel input:not([type=range]),#lmm-geometry-panel select{width:100%;padding:8px;background:#fff;color:#253d56;
+.lmm-panel-head button{border:0;background:#edf2f7;border-radius:7px;font-size:21px;color:#526878;width:32px;height:32px;cursor:pointer}
+.lmm-view-options{display:grid;grid-template-columns:1fr;gap:6px}
+.lmm-view-options button{border:1px solid #d1deea;background:#f8fbfe;color:#315571;border-radius:8px;padding:9px 12px;text-align:left;cursor:pointer;font:600 12px system-ui}
+.lmm-view-options button:hover{border-color:#64a4cb}
+.lmm-view-options button.active{background:#205f92;color:#fff;border-color:#205f92}
+#lmm-view-panel p{margin:10px 0;color:#5e7080;font-size:11px}
+#lmm-view-panel label{display:flex;flex-direction:column;gap:3px;margin:9px 0;font-weight:600;font-size:12px}
+#lmm-view-panel input:not([type="range"]),#lmm-view-panel select{width:100%;padding:8px;background:#fff;color:#253d56;
  border:1px solid #c7d7e5;border-radius:7px;font-size:12px;min-width:0}
-#lmm-geometry-panel input[type=range]{width:100%;accent-color:var(--lmm-accent)}
-#lmm-geometry-panel .lmm-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
-#lmm-geometry-panel .lmm-angle-row{display:grid;grid-template-columns:70px 1fr 1.2fr;gap:7px;align-items:center}
-#lmm-geometry-panel .lmm-angle-row button{border:0;border-radius:7px;background:#236b9c;color:white;font:600 11px system-ui;padding:9px 4px;cursor:pointer}
-#lmm-geometry-panel .lmm-angle-row #lmm-animate{background:#20836d}
-#lmm-geometry-panel #lmm-error{color:#a34237}
-#lmm-geometry-panel .lmm-metrics{display:grid;grid-template-columns:1fr;gap:5px;margin-top:11px;padding:10px;
+#lmm-view-panel .lmm-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+#lmm-view-panel .lmm-panel-divider{font-weight:700;color:#26597e;margin-top:16px;border-top:1px solid #e3edf4;padding-top:11px}
+#lmm-view-panel .lmm-note{line-height:1.55}
+#lmm-view-panel #lmm-error{color:#a34237;font-weight:600}
+#lmm-view-panel .lmm-metrics{display:grid;grid-template-columns:1fr;gap:5px;margin-top:11px;padding:10px;
  border:1px solid #dbe6ee;background:#f5f9fc;border-radius:9px;font-size:11px}
-#lmm-geometry-panel .lmm-metrics span{display:block}
-#lmm-status{position:absolute;left:92px;bottom:12px;z-index:4;font:11px system-ui;color:#45607c;pointer-events:none}
-body[data-lmm-mode=classic] #lmm-quick-rail [data-lmm-quick=settings]{opacity:.9}
-body[data-prime-project=blank] .gmr-v2 .prime-toolbar{display:none!important}
-body[data-gmr-lab=prime][data-prime-project=blank] .prime-toolbar{display:none!important}
-body[data-gmr-lab=prime][data-prime-project=example] .prime-toolbar{display:flex!important}
-body[data-gmr-lab=prime] #mf-feature-navigation{display:flex;align-items:center;gap:5px}
-body[data-gmr-lab=prime] #mf-feature-navigation button{padding:7px 10px;font-size:11px;min-width:0}
-.gmr-toolbar #mf-feature-navigation{margin-right:5px}
-@media(max-width:1000px){
- #lmm-mode-rail button,#lmm-quick-rail button{min-width:56px;min-height:46px}
- #lmm-mode-rail small,#lmm-quick-rail small{font-size:9px}
- #lmm-mode-rail button span{font-size:18px}
- #lmm-quick-rail button{min-width:54px;min-height:43px;font-size:18px}
- #lmm-geometry-panel{left:70px;width:min(340px,calc(100% - 135px))}
- #mf-feature-navigation button{font-size:10px!important;padding:6px 7px!important}
+#lmm-view-panel .lmm-metrics span{display:block}
+body[data-gmr-lab="prime"][data-prime-project="blank"] .prime-toolbar{display:none!important}
+body[data-gmr-lab="prime"][data-prime-project="example"] .prime-toolbar{display:flex!important}
+@media(max-width:900px){
+ #lmm-quick-rail{right:7px;top:9px;gap:5px}
+ #lmm-quick-rail button{width:65px;min-height:48px;font-size:19px}
+ #lmm-quick-rail small{font-size:9px}
+ #lmm-view-panel{right:79px;top:7px;width:min(365px,calc(100% - 90px));max-height:calc(100% - 14px)}
 }
-@media(max-width:650px){
- #lmm-mode-rail{left:5px;top:8px;gap:4px}
- #lmm-quick-rail{right:5px;top:8px;gap:4px}
- #lmm-mode-rail button,#lmm-quick-rail button{min-width:46px;min-height:44px;border-radius:8px}
- #lmm-mode-rail small,#lmm-quick-rail small{font-size:8px}
- #lmm-quick-rail button{min-height:37px;font-size:17px}
- #lmm-geometry-panel{left:56px;top:6px;width:calc(100% - 115px);max-height:calc(100% - 12px);padding:10px}
- .gmr-toolbar #mf-feature-navigation{display:none}
- #lmm-status{left:53px}
+@media(max-width:570px){
+ #lmm-quick-rail{right:4px;gap:4px}
+ #lmm-quick-rail button{width:53px;min-height:43px;font-size:17px;border-radius:8px}
+ #lmm-quick-rail small{font-size:8px}
+ #lmm-view-panel{right:65px;top:4px;width:calc(100% - 72px);max-height:calc(100% - 8px);padding:11px}
 }
-@media(max-height:460px){#lmm-quick-rail{gap:3px}#lmm-quick-rail button{min-height:32px}#lmm-mode-rail button{min-height:37px}}
+@media(max-height:440px){#lmm-quick-rail button{min-height:34px}}

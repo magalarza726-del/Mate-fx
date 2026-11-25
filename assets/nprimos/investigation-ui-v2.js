@@ -245,12 +245,7 @@ function open(view){
 function setup(){
  if(!window.__gmrResearchSnapshot||!window.__nPrimosCalculator){setTimeout(setup,120);return}
  if($('np-investigation-panel'))return;
- const nav=document.createElement('nav');nav.id='mf-feature-navigation';nav.setAttribute('aria-label','Investigación y análisis del LMM');
- nav.innerHTML='<button type="button" id="np-investigation-btn">Investigación</button>'+
-  '<button type="button" id="np-analysis-btn">Análisis</button>'+
-  '<button type="button" id="np-data-main">Importar/Exportar Datos</button>';
- const header=document.querySelector('.gmr-toolbar')||document.querySelector('.top-actions')||document.querySelector('.topbar')||document.body;
- header.prepend(nav);
+ // LMM muestra un único grupo de accesos en la barra lateral derecha.
  const panel=document.createElement('div');panel.id='np-investigation-panel';panel.className='gmr-research-overlay inv-v2-overlay';
  panel.hidden=true;panel.dataset.view='research';panel.dataset.tab='methods';
  panel.innerHTML='<div class="gmr-research-window inv-v2-window" role="dialog" aria-modal="true" aria-label="Laboratorio de investigación">'+
@@ -274,9 +269,7 @@ function setup(){
  '<div class="inv-v2-controls"><button id="inv-v2-general">Descargar reporte general PDF</button><button id="inv-v2-json">Exportar investigación JSON</button></div></section>'+
  '</main></div></div>';
  document.body.append(panel);
- $('np-investigation-btn').onclick=()=>open('research');
- $('np-analysis-btn').onclick=()=>open('analysis');
- $('np-data-main').onclick=()=>{
+ const openData=()=>{
   const legacy=document.querySelector('.gmr-data-open');
   if(!legacy){alert('Importador no disponible. Recarga el laboratorio.');return}
   legacy.click();
@@ -291,6 +284,7 @@ function setup(){
    controls.appendChild(button);
   }
  };
+ window.__lmmTools={openResearch:()=>open('research'),openAnalysis:()=>open('analysis'),openData};
  $('inv-v2-close').onclick=()=>panel.hidden=true;
  panel.addEventListener('click',e=>{if(e.target===panel)panel.hidden=true});
  panel.querySelectorAll('[data-tab-target]').forEach(b=>b.onclick=()=>showTab(b.dataset.tabTarget));
