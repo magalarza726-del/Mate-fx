@@ -4,8 +4,8 @@ import {plotSpecifications,screenshotFromDesmos} from './investigation-desmos.mj
 const $=id=>document.getElementById(id);
 const fmt=n=>Number.isFinite(n)?Number(n).toLocaleString('es-EC',{maximumFractionDigits:4}):'—';
 const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-const GROUPS=['Todos','Métodos clásicos de ajuste','Métodos de corrección de funciones','Métodos basados en restricciones y cotas','Métodos de interpolación','Métodos de aproximación avanzada','Métodos de búsqueda y optimización'];
-const MODES=[['comparison','Errores por configuración'],['complexity','Complejidad y precisión'],['percentage','Error porcentual por X'],['residual','Residuos por X'],['fit','Datos y función Desmos']];
+const GROUPS=['Todos','Métodos clásicos de ajuste','Métodos de corrección de funciones','Métodos basados en restricciones y cotas','Métodos de acotación','Métodos personalizados','Métodos de interpolación','Métodos de aproximación avanzada','Métodos de búsqueda y optimización'];
+const MODES=[['comparison','Errores por configuración'],['complexity','Complejidad y precisión'],['percentage','Error porcentual por X'],['residual','Residuos por X'],['intervals','MAPE y MaxAPE por intervalos'],['fit','Datos y función Desmos']];
 let stateProvider=null,plotIndex=0,plotBusy=false,lastRun=0,renderCount=0;
 const byScore=(a,b)=>Number.isFinite(a.best?.metrics?.mape)?a.best.metrics.mape:Infinity;
 const all=()=>{
@@ -46,7 +46,7 @@ async function plot(entries,force=false){
  lastRun=performance.now();
  const mode=$('inv-dash-chart-mode').value;
  const chosen=entries.find(e=>e.id===state.active)||entries[0],selected=chosen.best,version=++plotIndex;
- $('inv-dash-caption').textContent=mode==='comparison'?'Azul: MAPE · naranja: error máximo. Orden según tabla.':mode==='complexity'?'Cada punto representa una configuración y su ganadora.':'Ecuación '+chosen.id+' · '+methodById(chosen.method).name;
+ $('inv-dash-caption').textContent=mode==='comparison'?'Azul: MAPE · naranja: error máximo. Orden según tabla.':mode==='complexity'?'Cada punto representa un método y su ganadora.':mode==='intervals'?'Errores medios y máximos calculados en ocho tramos iguales de X.':'Ecuación '+chosen.id+' · '+methodById(chosen.method).name;
  element.setAttribute('aria-busy','true');
  try{
   const spec=plotSpecifications(state.source,selected,mode,entries);

@@ -86,10 +86,10 @@ test('Las ecuaciones del informe usan x y mantienen z para normalización',()=>{
 });
 
 test('El modo automático solamente inicia la descarga del reporte general',async()=>{
- const src=await readFile(new URL('../assets/nprimos/investigation-ui.js',import.meta.url),'utf8');
- assert.match(src,/if\(mode==='automatic'\)reportGeneral\(\)/);
+ const src=await readFile(new URL('../assets/nprimos/investigation-ui-v2.js',import.meta.url),'utf8');
+ assert.match(src,/if\(mode==='automatic'\)general\(\)/);
  assert.doesNotMatch(src,/reportAll\(\)/);
- assert.match(src,/data-pdf/,'Los informes individuales siguen disponibles mediante descarga manual');
+ assert.match(src,/data-pdf/,'Los informes individuales siguen disponibles junto a cada fila');
 });
 
 

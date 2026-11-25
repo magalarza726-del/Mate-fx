@@ -3,7 +3,7 @@ import {METHODS,methodById,methodConfig,splitData,evaluateMethod,statistics,obje
 let run=null;
 function seeded(seed){let a=(seed>>>0)||1;return ()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296}}
 function summarize(r,validation){
- const out={iteration:r.iteration,latex:r.latex,ztex:r.ztex,complexity:r.complexity,metrics:r.metrics,trainMetrics:r.trainMetrics,score:r.score};
+ const out={iteration:r.iteration,latex:r.latex,ztex:r.ztex,complexity:r.complexity,complexityDetail:r.complexityDetail,bounds:r.bounds,metrics:r.metrics,trainMetrics:r.trainMetrics,score:r.score};
  if(validation.length){const map=new Map(r._all?.map((p,i)=>[p[0],r.estimates[i]])||[]);out.validationMetrics=statistics(validation,validation.map(p=>map.get(p[0])))}
  return out;
 }
@@ -23,7 +23,7 @@ function next(){
  const entry=s.entries[s.index],cfg=entry.config,method=methodById(entry.method);
  if(!method){s.index++;setTimeout(next,0);return}
  const effective=method.type==='direct'?1:cfg.n;
- if(s.iteration===0){s.best=null;s.entryStarted=Date.now();s.session={};s.rng=seeded((+entry.seed||28411)+s.index*10007);postMessage({type:'method-start',index:s.index,entryId:entry.id,method:entry.method,effective})}
+ if(s.iteration===0){s.best=null;s.entryStarted=Date.now();s.session={};s.rng=seeded((+entry.seed||28411));postMessage({type:'method-start',index:s.index,entryId:entry.id,method:entry.method,effective})}
  const rows=[];let passes=0;
  while(passes<12&&s.iteration<effective){
   passes++;s.iteration++;s.done++;
@@ -32,7 +32,7 @@ function next(){
   catch(e){if(!s.errorCount++)postMessage({type:'warning',entryId:entry.id,message:String(e?.message||e)})}
   if(result){
    const validationMetrics=s.split.validation.length?statistics(s.split.validation,s.split.validation.map(p=>result.estimates[s.indexMap.get(p[0])])):null;
-   const item={iteration:s.iteration,latex:result.latex,ztex:result.ztex,complexity:result.complexity,metrics:result.metrics,trainMetrics:result.trainMetrics,validationMetrics,score:result.score};
+   const item={iteration:s.iteration,latex:result.latex,ztex:result.ztex,complexity:result.complexity,complexityDetail:result.complexityDetail,bounds:result.bounds,metrics:result.metrics,trainMetrics:result.trainMetrics,validationMetrics,score:result.score};
    rows.push(item);
    if(!s.best||result.score<s.best.score){s.best={...item,estimates:result.estimates,curvePoints:curvePoints(s.split.all,result.predictor)};if(['symbolic','constrained'].includes(method.id)&&cfg.generational)s.session.elite=result}
   }else rows.push({iteration:s.iteration,latex:null,score:null,reason:'Sin ajuste válido bajo las restricciones'});

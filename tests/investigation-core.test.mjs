@@ -9,13 +9,15 @@ const groups=[
  'Métodos clásicos de ajuste',
  'Métodos de corrección de funciones',
  'Métodos basados en restricciones y cotas',
+ 'Métodos de acotación',
+ 'Métodos personalizados',
  'Métodos de interpolación',
  'Métodos de aproximación avanzada',
  'Métodos de búsqueda y optimización'
 ];
 
-test('Catálogo: 6 secciones, métodos únicos y completos',()=>{
- assert.equal(METHODS.length,38);
+test('Catálogo: 8 secciones, métodos únicos y completos',()=>{
+ assert.equal(METHODS.length,47);
  assert.deepEqual(new Set(METHODS.map(m=>m.group)),new Set(groups));
  assert.equal(new Set(METHODS.map(m=>m.id)).size,METHODS.length);
  for(const id of ['linear','polynomial','exponential','logarithmic','power','rational',
@@ -23,7 +25,9 @@ test('Catálogo: 6 secciones, métodos únicos y completos',()=>{
  'least_squares','least_absolute','minimax','quantile','envelope','constrained',
  'linear_interp','spline','pchip','newton','hermite','lagrange',
  'chebyshev','remez','pade','taylor','fourier','symbolic','gaussian',
- 'levenberg','differential','genetic','annealing','bayesian'])assert.ok(methodById(id),'Falta '+id);
+ 'levenberg','differential','genetic','annealing','bayesian',
+ 'bound_linear','bound_polynomial','bound_exponential','bound_logarithmic','bound_power','bound_rational',
+ 'custom_sum','custom_product','custom_pair_plus'])assert.ok(methodById(id),'Falta '+id);
  assert.equal(methodById('symbolic').group,'Métodos de aproximación avanzada');
  assert.equal(methodById('bayesian').group,'Métodos de búsqueda y optimización');
 });

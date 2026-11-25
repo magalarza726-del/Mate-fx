@@ -1,3 +1,16 @@
+## Mate-fx · Investigación y Análisis v2 (noviembre 2026)
+
+La vista nPrimos / Mate-fx presenta tres accesos: **Investigación**, **Análisis** e **Importar/Exportar Datos**. La navegación anterior con botones independientes de generación, acotación y dashboards deja de montarse, pero los motores originales siguen en el proyecto.
+
+- **Investigación**: ocho categorías, una única configuración global y una semilla compartida. Una ecuación ganadora por método, sin tarjetas individuales ni duplicación de configuraciones. Debajo del progreso aparecen la gráfica real de Desmos, dashboards y tabla.
+- **Análisis**: pestañas **Métodos**, **Tabla** y **Dashboards**, vinculadas a los mismos datos y resultados. La tabla contiene observaciones, estimaciones y errores, con paginación de 120 filas y exportación CSV completa.
+- **Descargas**: el PDF individual se descarga desde la fila del método. Al final hay solamente PDF general y JSON. Reporte automático descarga *solo el PDF general*.
+- **Métodos de acotación**: exponencial original más cotas paralelas lineales, polinómicas, exponenciales, logarítmicas, potenciales y racionales. Son cotas verificadas solo sobre puntos de entrenamiento; no garantizan el intervalo entre observaciones.
+- **Métodos personalizados**: generador original de funciones mediante suma, producto y producto + suma, con restricciones globales de bases, decimales, operaciones y magnitud.
+- **Complejidad estructural v2**: C = Nnum + Nsuma + 2Nprod + 2Ndiv + 2Npot + 3Ntrans + 4Ntramos. Se cuentan tokens sobre el LaTeX emitido; no se mide CPU ni equivalencia algebraica. La normalización auxiliar z=(x-centro)/escala se declara aparte. **No comparar directamente** con los índices de complejidad de reportes previos.
+- **PDF**: gráfica grande de Desmos, tabla de observaciones debajo, errores por seis intervalos de X (MAPE, MaxAPE, MAE, invalidaciones), semilla y parámetros de cada método. Los PDF individuales conservan todos los datos e iteraciones en anexos. Los puntos enviados a Desmos se muestrean sobre **todo** el dominio, conservando el primero y el último.
+- **Límites**: los métodos deterministas ejecutan un ajuste, los iterativos aceptan n intentos. MAPE excluye valores reales cero; las cotas pueden no existir con restricciones de magnitud exigentes. Las ecuaciones usan f(x) y, cuando procede, z normalizada.
+
 ## Correcciones de auditoría (Mate-fx, noviembre 2026)
 
 - **Gráficas comparativas coherentes:** todas las series por configuración del PDF siguen exactamente el orden ascendente de MAPE de la Tabla 1; los gráficos de error se transforman con \`log10(1+error)\` y, al ser no negativos, su eje Y no desciende de cero. Los valores porcentuales de la tabla permanecen sin transformar.
@@ -34,7 +47,7 @@ Las figuras siguen procediendo exclusivamente de la API **Desmos asyncScreenshot
 - Se requiere cargar la API real de Desmos para las capturas. Un PDF con miles de puntos e iteraciones puede exigir memoria considerable.
 
 
-## Investigación comparativa · 38 entradas en 6 categorías (noviembre de 2026)
+## Investigación comparativa · 47 entradas en 8 categorías (noviembre de 2026)
 
 El laboratorio **nPrimos → Investigación** añade un motor de experimentación sin modificar el generador anterior ni la acotación exponencial original:
 

@@ -6,6 +6,8 @@
 import {plotSpecifications,screenshotFromDesmos} from './investigation-desmos.mjs';
 import {methodById} from './investigation-core.mjs';
 import {diagnosePhysicalModel,equivalentModelGroups} from './investigation-quality.mjs';
+import {equationComplexity,complexityExplanation,COMPLEXITY_WEIGHTS} from './investigation-complexity.mjs';
+import {intervalDiagnostics,INTERVAL_NOTE} from './investigation-intervals.mjs';
 
 const W=210, H=297, L=18, R=18, RIGHT=W-R, BOTTOM=277, INNER=W-L-R;
 const NAVY=[28,50,69], BLUE=[34,83,118], GRAY=[86,101,112], PALE=[237,244,248], LIGHT=[218,226,231];
@@ -22,6 +24,19 @@ export function reportLatex(latex='',ztex=''){
 }
 const namedX=(name='')=>String(name||'Variable')+' [x]';
 const sampleIndices=(n,count=4)=>[...new Set(Array.from({length:Math.min(n,count)},(_,i)=>Math.round(i*(n-1)/Math.max(1,Math.min(n,count)-1))))];
+
+const shortConfig=e=>{
+ const c=e.config||{},fields=[
+  ['n',c.n],['dec',c.decimals],['máx.',c.magnitude],['grado',c.degree],
+  ['nodos',c.knots],['objetivo',c.objective],['validación %',c.validation]
+ ];
+ return fields.filter(([,v])=>v!==undefined).map(([k,v])=>k+'='+v).join(' · ');
+};
+const intervalRows=(points,predictions,count=6)=>intervalDiagnostics(points,predictions,count).map(v=>[
+ norm(v.from)+' – '+norm(v.to),String(v.observations),percent(v.mape),
+ percent(v.maxape),norm(v.mae),v.invalid?String(v.invalid):'0'
+]);
+
 
 /** Preserva los términos y rompe solo entre sumandos externos, sin afectar sus coeficientes. */
 export function wrapEquationLatex(raw='',limit=66){
@@ -367,76 +382,68 @@ class Paper{
   p.setDrawColor(...LIGHT);p.rect(x,y,w,49,'S');
  }
  async winnerCard(entry,index,total,state){
-  const p=this.pdf,summary=entry.best;
-  // La ficha completa cabe antes de comenzar a dibujarla.
-  const quality=diagnosePhysicalModel(state.source,summary);
-  this.ensure(Math.min(BOTTOM-29,summary?.ztex?174:155));
+  const p=this.pdf,model=entry.best,quality=diagnosePhysicalModel(state.source,model);
+  this.ensure(180);
   const top=this.y;
-  // Pale section title with restrained navy rule; two cards can share one A4 page.
   p.setFillColor(...PALE);p.roundedRect(L,top-5,INNER,11,1.7,1.7,'F');
   p.setFillColor(...BLUE);p.rect(L+2,top-3,2.5,7,'F');
   this.setFont('times','bold',12,NAVY);
-  p.text(String(index+1)+'. '+txt(entry.label)+' - '+txt(entry.id),L+9,top+2.1);
+  p.text(p.splitTextToSize(String(index+1)+'. '+txt(entry.label)+' · '+entry.id,INNER-17).slice(0,2),L+9,top+2);
   this.y=top+13;
+  this.writeLines('Semilla común: '+String(entry.seed)+' · '+shortConfig(entry),8.4,4.1,GRAY);
   await this.displayEquation(entry,{compact:true});
-  this.metricGrid(summary);
-  const chartW=105,chartH=49;
-  const png=await screenshotFromDesmos(plotSpecifications(state.source,summary,'fit'),{
-   width:790,height:370,ratio:1.25
-  });
-  this.ensure(chartH+18);
-  const graphY=this.y+1; // posición calculada después de asegurar la página
-  p.setDrawColor(...LIGHT);p.roundedRect(L,graphY-1,chartW+1,chartH+2,1.3,1.3,'S');
-  p.addImage(png,'PNG',L+1,graphY,chartW-1,chartH);
-  this.miniObservations(state.source,summary,L+chartW+6,graphY+1,INNER-chartW-6);
-  this.y=graphY+chartH+4;
-  this.figureNumber++;
-  this.caption('Figura '+this.figureNumber+'. Datos de '+txt(state.source.xName)+' y curva calculada para '+entry.id+' (Desmos).');
-  if(quality.warnings.length)this.writeLines('ALERTA FÍSICA: '+quality.warnings.join(' '),8.2,4,BLUE);
-  this.y+=1;
+  this.metricGrid(model);
+  await this.figure(plotSpecifications(state.source,model,'fit'),
+   'Observaciones completas del conjunto de datos (azul) y aproximación del método (naranja).',{height:83});
+  if(model.bounds){
+   this.heading('Acotación y cobertura',2);
+   this.writeLines('Cota inferior: '+model.bounds.lowerTex+'; cota superior: '+model.bounds.upperTex+
+    '. Cobertura verificada sobre entrenamiento: '+(model.bounds.coverage??'N/D')+' de '+(model.bounds.total??'N/D')+
+    '. No se garantiza el intervalo entre observaciones.',8.1,3.9,GRAY);
+  }
+  this.heading('Análisis de error por intervalos de x',2);
+  this.table(['Tramo de x','N','MAPE','MaxAPE','MAE','Inv.'],
+   intervalRows(state.source.points,model.estimates),[48,15,33,32,31,15],{font:7.7});
+  this.writeLines(INTERVAL_NOTE,7.5,3.5,GRAY);
+  this.heading('Muestra de observaciones (tabla bajo la gráfica)',2);
+  const points=state.source.points||[],sample=sampleIndices(points.length,4).map(i=>[
+   norm(points[i][0]),norm(points[i][1]),norm(model.estimates?.[i]),
+   points[i][1]&&Number.isFinite(model.estimates?.[i])?percent(100*Math.abs(points[i][1]-model.estimates[i])/Math.abs(points[i][1])):'N/D'
+  ]);
+  this.table(['x','Y observada','Y estimada','Error %'],sample,[34,47,47,46],{font:8.1});
+  if(quality.warnings.length)this.writeLines('ALERTA FÍSICA: '+quality.warnings.join(' '),8.1,4,BLUE);
  }
  async methodSummary(entry,state,progress){
-  const best=entry.best,p=this.pdf,src=state.source||{};
-  this.next();this.heading('3. Resultados: '+entry.label+' - '+entry.id);
+  const best=entry.best,src=state.source||{};
+  this.next();this.heading('Resultados del método: '+entry.label+' · '+entry.id);
   this.heading('Configuración del experimento',2);
   this.infoTiles([
-   ['Configuración',entry.id],['Semilla',String(entry.seed)],
-   ['Intentos',String(entry.iterations)],['Duración',norm(entry.elapsedMs/1000)+' s']
+   ['Configuración',entry.id],['Semilla compartida',String(entry.seed)],
+   ['Intentos registrados',String(entry.iterations)],['Tiempo de cálculo',norm(entry.elapsedMs/1000)+' s']
   ],4);
-  if(!best){
-   this.highlightNote('Sin ecuación','No hubo una función válida con las restricciones indicadas. El historial se conserva en los anexos.');
-   return;
-  }
-  this.heading('Ecuación del modelo ('+entry.id+')',2);
-  await this.displayEquation(entry,{compact:true});
-  this.heading('Indicadores de ajuste',2);
+  this.writeLines('Parámetros efectivos: '+shortConfig(entry),8.8,4.2,GRAY);
+  if(!best){this.highlightNote('Sin ecuación','No hubo una función válida; los intentos se registran en el anexo.');return}
+  this.heading('Ecuación encontrada',2);await this.displayEquation(entry,{compact:true});
   this.metricGrid(best,{six:true});
-  this.ensure(74);this.heading('Observaciones y distribución de errores',2);
-  const a=plotSpecifications(src,best,'fit'),b=plotSpecifications(src,best,'histogram');
-  this.ensure(53);
-  const top=this.y;
-  progress?.('Gráfica Desmos de '+entry.id);
-  const left=await screenshotFromDesmos(a,{width:740,height:320,ratio:1.2});
-  const right=await screenshotFromDesmos(b,{width:600,height:370,ratio:1.2});
-  p.setDrawColor(...LIGHT);
-  p.roundedRect(L,top-2,104,46,1.5,1.5,'S');
-  p.addImage(left,'PNG',L+1,top,102,42);
-  p.roundedRect(L+108,top-2,INNER-108,46,1.5,1.5,'S');
-  p.addImage(right,'PNG',L+109,top,INNER-110,42);
-  this.y=top+49;
-  this.figureNumber+=2;
-  this.writeLines('Izquierda: referencia y curva estimada de '+txt(src.yName||'Y')+'. Derecha: distribución central del error relativo firmado, con valores extremos excluidos de la visualización (sin excluirlos de las métricas). Figuras capturadas en Desmos.',7.9,3.7,GRAY);
-  this.heading('Valores observados y estimados (muestra)',2);
-  const selected=sampleIndices(src.points.length,4).map(i=>{
-   const pt=src.points[i],estimated=best.estimates?.[i];
-   return [norm(pt[0]),norm(pt[1]),norm(estimated),
-     pt[1]!==0&&Number.isFinite(estimated)?percent(100*(estimated-pt[1])/Math.abs(pt[1])):'N/D'];
-  });
-  this.table(['x','Y observada','Y estimada','Error rel. firmado'],selected,[31,49,49,45],{font:8.4});
-  const m=best.metrics||{};
-  const phys=diagnosePhysicalModel(src,best);
-  this.highlightNote(phys.warnings.length?'Alerta física':'Lectura técnica','MAPE '+percent(m.mape)+
-   '; MaxAPE '+percent(m.maxape)+'; complejidad '+norm(best.complexity)+'. '+(phys.warnings.join(' ')||'Sin anomalías físicas detectadas por las comprobaciones aplicables.'));
+  this.heading('Gráfica principal de datos y función',2);
+  progress?.('Capturando la gráfica completa de '+entry.id+' desde Desmos');
+  await this.figure(plotSpecifications(src,best,'fit'),
+   'Comparación de los datos observados y la función estimada para '+entry.id+'.',{height:88});
+  this.heading('Muestra de valores',2);
+  const points=src.points||[];
+  this.table(['x','Y observada','Y estimada','Error firmado %'],
+   sampleIndices(points.length,4).map(i=>[
+    norm(points[i][0]),norm(points[i][1]),norm(best.estimates?.[i]),
+    points[i][1]!==0&&Number.isFinite(best.estimates?.[i])?percent(100*(best.estimates[i]-points[i][1])/Math.abs(points[i][1])):'N/D'
+   ]),[33,46,48,47],{font:8.2});
+  const q=diagnosePhysicalModel(src,best);
+  if(q.warnings.length)this.highlightNote('Alerta física',q.warnings.join(' '));
+  if(best.bounds){
+   this.heading('Cotas del método',2);
+   this.writeLines('Cota inferior: '+best.bounds.lowerTex+'; cota superior: '+best.bounds.upperTex,8.3,4.1,GRAY);
+   this.writeLines('Cobertura: '+(best.bounds.coverage??'N/D')+'/'+(best.bounds.total??'N/D')+
+    ' muestras de entrenamiento. No se garantiza la cota entre puntos.',8.3,4,GRAY);
+  }
  }
  async annexLatex(entry){
   const equation=reportLatex(entry.best?.latex,entry.best?.ztex),raw=equation.latex;
@@ -531,8 +538,22 @@ async function methodology(paper,state){
   ['Complejidad','Índice interno de estructura de la función.'],
   ['Validación','Error en puntos retenidos cuando la ejecución dispuso de partición de validación.']
  ],[39,135],{font:9});
- paper.heading('1.2 Reproducibilidad',2);
- paper.writeLines('Para reproducir cada ecuación, el reporte individual incluye el método, identificador, parámetros, semilla y número de iteraciones. Las tablas comparativas conservan una fila por configuración, incluso cuando dos métodos producen fórmulas iguales o equivalentes.',9.5);
+ paper.heading('1.2 Índice de complejidad estructural · versión 2',2);
+ paper.writeLines('El índice utiliza una misma regla para todos los modelos y se calcula exclusivamente sobre la expresión LaTeX ganadora. No mide tiempo de CPU, cantidad de iteraciones, tamaño de datos ni equivalencia algebraica.',9.4,4.5);
+ paper.writeLines('C = Nnum + Nsuma + 2·Nprod + 2·Ndiv + 2·Npot + 3·Ntrans + 4·Ntramos.',9.7,4.6,BLUE);
+ paper.table(['Elemento identificado','Peso','Regla de conteo'],complexityExplanation().map(([a,b,c])=>[a,String(b),c]),[64,16,94],{font:8});
+ const sample=state.entries?.map(e=>state.results?.get(e.id)?.best).find(x=>x?.latex);
+ if(sample){
+  const detail=sample.complexityDetail||equationComplexity(sample.latex);
+  paper.writeLines('Ejemplo de la ejecución: Nnum='+detail.terms.numeric+', Nsuma='+detail.terms.additive+
+   ', Nprod='+detail.terms.product+', Ndiv='+detail.terms.division+', Npot='+detail.terms.power+
+   ', Ntrans='+detail.terms.transcendental+', Ntramos='+detail.terms.piecewise+
+   '. Resultado C='+detail.value+'.',8.7,4.3);
+ }
+ paper.writeLines('Limitaciones: la multiplicación implícita no se contabiliza como producto explícito; la normalización auxiliar z=(x-centro)/escala no se añade a la complejidad y dos formas equivalentes pueden obtener índices distintos. La métrica no mide velocidad de ejecución.',8.5,4.1,GRAY);
+ paper.heading('1.3 Reproducibilidad',2);
+ paper.writeLines('Para reproducir cada ecuación se conservan método, parámetros globales, semilla compartida y cantidad de intentos. Las ecuaciones se evalúan en el conjunto de datos importado; las cotas por desplazamiento se verifican solo sobre observaciones de entrenamiento y no garantizan valores intermedios.',9.4);
+ paper.writeLines(INTERVAL_NOTE,8.8,4.2,GRAY);
 }
 async function comparison(paper,state,entries){
  paper.heading('2. Resultados comparativos');
@@ -587,6 +608,7 @@ async function winners(paper,state,entries,progress){
  paper.next();paper.heading('4. Catálogo de ecuaciones ganadoras');
  paper.writeLines('Se conserva una ecuación por método y configuración. Las gráficas son capturas auténticas de Desmos, mientras que las métricas proceden de la evaluación numérica de Mate-fx.',9.3);
  for(let i=0;i<entries.length;i++){
+  if(i>0)paper.next();
   progress?.('Diagramando ecuaciones '+(i+1)+' / '+entries.length);
   await paper.winnerCard(entries[i],i,entries.length,state);
   if(i%4===0)await idle();
@@ -643,14 +665,15 @@ export async function methodReport(state,id,name,onProgress=()=>{}){
   paper.heading('Errores y validación',2);
   paper.table(['Indicador','Valor'],metricRows(e.best),[114,60],{font:9});
   if(e.best){
-   paper.heading('Errores por intervalos de x',2);
-   paper.table(['Intervalo de x','N.º puntos','MAPE','MaxAPE'],
-    perInterval(state.source.points,e.best.estimates),[61,27,43,43],{font:8.5});
+   paper.heading('Errores por intervalos iguales de x',2);
+   paper.table(['Intervalo de x','N','MAPE','MaxAPE','MAE','Inv.'],
+    intervalRows(state.source.points,e.best.estimates),[48,15,33,32,31,15],{font:7.8});
+   paper.writeLines(INTERVAL_NOTE,8,3.8,GRAY);
    paper.heading('Datos observados y calculados',2);
    paper.table(['x','Y real','Y calculada','Error abs.','Error (%)'],
     allValueErrors(state.source.points,e.best.estimates),[30,35,38,36,35],{font:8});
    paper.next();paper.heading('Anexo B. Ecuación completa en LaTeX');
-   paper.annexLatex(e);
+   await paper.annexLatex(e);
   }
   await paper.iterationTable(state.history.get(e.id)||[],e.id,onProgress);
  }

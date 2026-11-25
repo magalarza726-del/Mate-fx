@@ -1,3 +1,4 @@
+import {intervalDiagnostics} from './investigation-intervals.mjs';
 /* Capturas REALES del motor Desmos v1.12 para Investigación (sin dibujar SVG/canvas propios). */
 let calculator=null,container=null,tail=Promise.resolve();
 let ticket=0;const latest=new Map();
@@ -33,6 +34,14 @@ export function plotSpecifications(source,best,kind='fit',entries=[]){
     {points:log('mape'),color:'#2578c5',mode:'lines+points'},
     {points:log('maxape'),color:'#df762f',mode:'lines+points'}]};
  }
+ if(kind==='intervals'){
+  const segs=intervalDiagnostics(points,best?.estimates||[],8);
+  return {title:'MAPE y MaxAPE por intervalos de X',nonnegativeY:true,useX:true,
+   xName:source?.xName||'X',yName:'Error absoluto porcentual (%)',series:[
+    {points:segs.filter(s=>Number.isFinite(s.mape)).map(s=>[(s.from+s.to)/2,s.mape]),color:'#2578c5',mode:'lines+points'},
+    {points:segs.filter(s=>Number.isFinite(s.maxape)).map(s=>[(s.from+s.to)/2,s.maxape]),color:'#e0782f',mode:'lines+points'}
+   ]};
+ }
  if(kind==='histogram'){
   const finiteErrors=points.map((p,i)=>p[1]!==0&&Number.isFinite(best?.estimates?.[i])?
    100*(best.estimates[i]-p[1])/Math.abs(p[1]):NaN).filter(Number.isFinite);
@@ -61,8 +70,17 @@ function effectiveBounds(spec){
  const hx=Math.max(1e-7,(b-a)*.08),hy=Math.max(1e-7,(d-c)*.13);
  return {left:a-hx,right:b+hx,bottom:spec.nonnegativeY?0:c-hy,top:Math.max(spec.nonnegativeY?0:-(1e9),d+hy)};
 }
+export function sampleForDesmos(points,limit=3500){
+ const data=(points||[]).filter(finite);if(data.length<=limit)return data;
+ // Uniform sample over the FULL domain, including BOTH endpoints.
+ // Do not truncate the end (important for 10,000 primos).
+ const max=Math.max(2,limit);
+ const indices=new Set([0,data.length-1]);
+ for(let i=1;i<max-1;i++)indices.add(Math.round(i*(data.length-1)/(max-1)));
+ return [...indices].sort((a,b)=>a-b).map(i=>data[i]);
+}
 function columns(points,id,color,mode){
- const safe=points.filter(finite).slice(0,3500);
+ const safe=sampleForDesmos(points,3500);
  return {id:'inv_'+id,type:'table',columns:[
   {latex:'x_{'+id+'}',values:safe.map(p=>number(p[0]))},
   {latex:'y_{'+id+'}',values:safe.map(p=>number(p[1])),color,lines:mode.includes('lines'),points:mode.includes('points'),pointSize:'5',lineWidth:'3'}

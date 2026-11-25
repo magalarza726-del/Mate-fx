@@ -1,6 +1,7 @@
 /* Mate-fx · Investigación: motores numéricos locales, sin eval. */
 import {makeCandidate,fitCandidate,predict as predictSymbolic,modelToLatex,inferTrend} from './generator-core.mjs';
 import {makeEnvelope, evaluateEnvelope, envelopeValues, centerValue, expressionFor} from './envelope-core.mjs';
+import {equationComplexity} from './investigation-complexity.mjs';
 
 export const METHODS=[
  {id:'least_squares',name:'Mínimos cuadrados clásicos',group:'Métodos basados en restricciones y cotas',type:'direct'},
@@ -40,7 +41,16 @@ export const METHODS=[
  {id:'genetic',name:'Algoritmo genético',group:'Métodos de búsqueda y optimización',type:'search'},
  {id:'annealing',name:'Recocido simulado',group:'Métodos de búsqueda y optimización',type:'search'},
  {id:'levenberg',name:'Levenberg–Marquardt',group:'Métodos de búsqueda y optimización',type:'search'},
- {id:'envelope',name:'Acotación exponencial',group:'Métodos basados en restricciones y cotas',type:'search'}
+ {id:'envelope',name:'Acotación exponencial clásica',group:'Métodos de acotación',type:'search'},
+ {id:'bound_linear',name:'Acotación lineal · cotas paralelas',group:'Métodos de acotación',type:'direct'},
+ {id:'bound_polynomial',name:'Acotación polinómica · cotas paralelas',group:'Métodos de acotación',type:'direct'},
+ {id:'bound_exponential',name:'Acotación exponencial · cotas por desplazamiento',group:'Métodos de acotación',type:'search'},
+ {id:'bound_logarithmic',name:'Acotación logarítmica · cotas por desplazamiento',group:'Métodos de acotación',type:'direct'},
+ {id:'bound_power',name:'Acotación potencial · cotas por desplazamiento',group:'Métodos de acotación',type:'search'},
+ {id:'bound_rational',name:'Acotación racional · cotas por desplazamiento',group:'Métodos de acotación',type:'search'},
+ {id:'custom_sum',name:'Generador original · suma de términos',group:'Métodos personalizados',type:'search'},
+ {id:'custom_product',name:'Generador original · producto de términos',group:'Métodos personalizados',type:'search'},
+ {id:'custom_pair_plus',name:'Generador original · producto más suma',group:'Métodos personalizados',type:'search'}
 ];
 export const methodById=id=>METHODS.find(m=>m.id===id);
 const cap=(n,a,b)=>Math.min(b,Math.max(a,n));
@@ -269,21 +279,78 @@ function linearMethod(id,points,opt,seed){
  const {basis,labels}=customBasis(id,points,opt,seed);
  return basis.length?basisModel(points,basis,labels,opt):null;
 }
+
+/** Cotas paralelas válidas sobre observaciones de entrenamiento (no garantiza los intermedios). */
+function parallelBounds(id,points,opt,rng){
+ const norm=normalized(points),z=x=>norm.z(x);
+ let features,terms;
+ const kind=id.slice(6),rate=fix(.25+2.5*rng(),opt.decimals,opt.magnitude);
+ if(kind==='linear'){features=x=>[1,z(x)];terms=['','z']}
+ else if(kind==='polynomial'){features=x=>[1,z(x),z(x)**2];terms=['','z','z^{2}']}
+ else if(kind==='exponential'){features=x=>[1,Math.exp(cap(rate*z(x),-35,35))];terms=['','e^{('+fmt(rate)+')z}']}
+ else if(kind==='logarithmic'){if(points.some(p=>p[0]<=0))return null;features=x=>[1,Math.log(x)];terms=['','\\ln(x)']}
+ else if(kind==='power'){
+  if(points.some(p=>p[0]<=0))return null;
+  const scale=Math.max(1e-8,points[Math.floor(points.length/2)][0]);
+  features=x=>[1,(x/scale)**rate];terms=['','(x/'+fmt(scale)+')^{'+fmt(rate)+'}'];
+ }else if(kind==='rational'){
+  const k=fix(.2+.5*rng(),opt.decimals,opt.magnitude);
+  features=x=>[1,z(x)/(1+k*z(x))];terms=['','\\frac{z}{1+('+fmt(k)+')z}'];
+ }else return null;
+ const coeff=ridgeFit(points,features,opt);
+ if(!coeff||coeff.some(v=>!Number.isFinite(v)))return null;
+ const shape=x=>features(x).reduce((acc,v,i)=>acc+coeff[i]*v,0);
+ const residuals=points.map(p=>p[1]-shape(p[0]));
+ if(residuals.some(v=>!Number.isFinite(v)))return null;
+ const span=Math.max(1,...points.map(p=>Math.abs(p[1])));
+ const margin=Math.max(1e-8,span*1e-8);
+ const places=Math.pow(10,opt.decimals);
+ const lowerShift=Math.floor((Math.min(...residuals)-margin)*places)/places,
+       upperShift=Math.ceil((Math.max(...residuals)+margin)*places)/places;
+ if(Math.max(Math.abs(lowerShift),Math.abs(upperShift))>opt.magnitude)return null;
+ const low=x=>shape(x)+lowerShift,high=x=>shape(x)+upperShift;
+ const covers=points.every(([x,y])=>low(x)<=y+margin&&high(x)>=y-margin);
+ if(!covers)return null;
+ const choice=opt.center;
+ const validPositive=points.every(p=>low(p[0])>0&&high(p[0])>0);
+ const centerMethod=validPositive&&['geometric','harmonic'].includes(choice)?choice:'arithmetic';
+ const middle=fix((lowerShift+upperShift)/2,opt.decimals,opt.magnitude);
+ const fn=x=>{
+  const a=low(x),b=high(x);
+  return centerMethod==='geometric'&&a>0&&b>0?Math.sqrt(a*b):
+   centerMethod==='harmonic'&&a>0&&b>0?2*a*b/(a+b):
+   shape(x)+middle;
+ };
+ const base=coeff.map((v,i)=>'('+fmt(v)+')'+(terms[i]?(i?'\\cdot ':'')+terms[i]:'')).join('+');
+ const lowerTex='L(x)='+base+'+('+fmt(lowerShift)+')';
+ const upperTex='U(x)='+base+'+('+fmt(upperShift)+')';
+ const central= centerMethod==='arithmetic'?
+  'f(x)='+base+'+('+fmt(middle)+')':
+  centerMethod==='geometric'?'f(x)=\\sqrt{L(x)U(x)}':
+  'f(x)=\\frac{2L(x)U(x)}{L(x)+U(x)}';
+ const marginCoverage=points.filter(([x,y])=>low(x)<=y+margin&&high(x)>=y-margin).length;
+ return {latex:central,ztex: ['linear','polynomial','exponential','rational'].includes(kind)?norm.tex:null,
+  bounds:{class:kind,lowerTex,upperTex,centerMethod,coverage:marginCoverage,total:points.length,
+   verifiedOn:'entrenamiento',guaranteedBetweenSamples:false},
+  predict:x=>clean(fn(x))};
+}
 function predictorModel(id,points,opt,rng,step,session){
- if(id==='symbolic'||id==='constrained'){
-  const config={maxTerms:opt.maxTerms,maxX:opt.maxX,constant:opt.constant,composition:opt.composition,families:opt.families,allowedKinds:opt.allowedKinds,trendRate:inferTrend(points).rate};
+ if(id==='symbolic'||id==='constrained'||id.startsWith('custom_')){
+  const composition=id.startsWith('custom_')?id.slice(7):opt.composition;
+   const config={maxTerms:composition==='pair_plus'?3:opt.maxTerms,maxX:opt.maxX,constant:opt.constant,composition,families:opt.families,allowedKinds:opt.allowedKinds,trendRate:inferTrend(points).rate};
   const shape=makeCandidate(config,Math.max(1,...points.map(p=>Math.abs(p[0]))),rng,session?.elite?.model||null);
   const model=fitCandidate(shape,points,Math.min(3,opt.decimals),Math.min(9999,opt.magnitude));if(!model)return null;
   const formula=modelToLatex(model);if(!formula)return null;
   return {latex:'f(x)='+formula,complexity:shape.terms.length*4+(shape.constant?1:0),predict:x=>predictSymbolic(model,x),model};
  }
+ if(id.startsWith('bound_'))return parallelBounds(id,points,opt,rng);
  if(id==='envelope'){
   if(points.some(p=>p[1]<=0))return null;
   const envelope=makeEnvelope(points,{bounds:opt.bounds,center:opt.center,decimals:Math.min(3,opt.decimals),maxInteger:[9,99,999,9999].includes(+opt.magnitude)?+opt.magnitude:9999},rng);
   if(!envelope)return null;const evaluated=evaluateEnvelope(envelope,points,opt.center);
   if(!evaluated)return null;
   const latex=expressionFor(evaluated,'center');
-  return {latex:'f(x)='+latex,complexity:7,predict:x=>{const [lo,hi]=envelopeValues(evaluated,x);return centerValue(lo,hi,evaluated.method)}};
+  return {latex:'f(x)='+latex,complexity:7,bounds:{class:'exponential',lowerTex:'L(x)='+expressionFor(evaluated,'lower'),upperTex:'U(x)='+expressionFor(evaluated,'upper'),centerMethod:evaluated.method,verifiedOn:'entrenamiento',guaranteedBetweenSamples:false},predict:x=>{const [lo,hi]=envelopeValues(evaluated,x);return centerValue(lo,hi,evaluated.method)}};
  }
 
  if(id==='bayesian'){
@@ -383,5 +450,6 @@ export function evaluateMethod(methodId,train,all,opt={},rng=Math.random,iterati
  const estimates=all.map(p=>model.predict(p[0])),metrics=statistics(all,estimates);
  const trainMetrics=statistics(train,train.map(p=>model.predict(p[0])));
  if(!Number.isFinite(objective(trainMetrics,cfg.objective)))return null;
- return {iteration,method:methodId,latex:model.latex,ztex:model.ztex||null,complexity:model.complexity||1,metrics,trainMetrics,score:objective(trainMetrics,cfg.objective),estimates,params:cfg,model:model.model||null,predictor:model.predict};
+ const complexityDetail=equationComplexity(model.latex);
+ return {iteration,method:methodId,latex:model.latex,ztex:model.ztex||null,complexity:complexityDetail.value,complexityDetail,bounds:model.bounds||null,metrics,trainMetrics,score:objective(trainMetrics,cfg.objective),estimates,params:cfg,model:model.model||null,predictor:model.predict};
 }
