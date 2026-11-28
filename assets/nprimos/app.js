@@ -448,6 +448,64 @@
     renderProjects();
   }
 
+
+  // Catálogo de plantillas separado de las investigaciones personales.
+  let exampleCatalogPromise;
+  function exampleCatalog(){
+    if(!exampleCatalogPromise)exampleCatalogPromise=fetch(new URL('../examples/catalog/index.json',import.meta.url))
+      .then(r=>{if(!r.ok)throw Error('No se pudo cargar el catálogo');return r.json()})
+      .catch(e=>{exampleCatalogPromise=null;throw e});
+    return exampleCatalogPromise;
+  }
+  async function openExampleCatalog(){
+    let dialog=$('lmm-example-catalog');
+    if(!dialog){
+      dialog=document.createElement('dialog');dialog.id='lmm-example-catalog';
+      dialog.innerHTML='<div class="lmm-example-head"><div><h2>Proyectos de ejemplo</h2><p>Abre una tabla como investigación independiente.</p></div><button type="button" class="soft-btn" data-close aria-label="Cerrar">×</button></div><div id="lmm-example-list"></div><p id="lmm-example-status" role="status"></p>';
+      document.body.append(dialog);
+      dialog.querySelector('[data-close]').onclick=()=>dialog.close();
+    }
+    if(!dialog.open)dialog.showModal();
+    const list=$('lmm-example-list'),status=$('lmm-example-status');
+    list.textContent='Cargando biblioteca…';status.textContent='';
+    try{
+      const catalog=await exampleCatalog();
+      list.replaceChildren();
+      const groups=[['primes','Números primos',[{id:EXAMPLE_ID,title:'Primeros 10 000 números primos',rows:10000}]],
+       ['prob','Tablas de probabilidades',catalog.filter(e=>e.group==='prob')],
+       ['termo','Tablas termodinámicas · SI',catalog.filter(e=>e.group==='termo')]];
+      for(const [key,title,items] of groups){
+        const section=document.createElement('details');section.open=true;
+        const summary=document.createElement('summary');summary.textContent=title+' ('+items.length+')';section.append(summary);
+        for(const entry of items){
+          const button=document.createElement('button');button.type='button';button.className='lmm-example-item';
+          const label=document.createElement('strong');label.textContent=entry.title;
+          const meta=document.createElement('small');meta.textContent=entry.rows+' filas'+(entry.columns?' · '+entry.columns+' columnas · PDF pág. '+entry.pages.join(', '):'');
+          button.append(label,meta);section.append(button);
+          button.onclick=async()=>{
+            list.querySelectorAll('button').forEach(b=>b.disabled=true);status.textContent='Abriendo '+entry.title+'…';
+            try{
+              const id=key==='primes'?EXAMPLE_ID:'ejemplo-'+entry.id;
+              let project=store.projects.find(p=>p.id===id);
+              if(!project){
+                const response=await fetch(new URL('../examples/catalog/'+entry.id+'.json',import.meta.url));
+                if(!response.ok)throw Error('No se pudo cargar la tabla');
+                const dataset=await response.json();
+                if(!dataset.headers?.length||!dataset.rows?.length)throw Error('Tabla vacía');
+                project={...makeProject(entry.title),id,dataset};
+                store.projects.push(project);
+              }
+              switchProject(id);dialog.close();
+              if(key!=='primes')window.dispatchEvent(new Event('lmm:example-opened'));
+            }catch(e){status.textContent=e.message}
+            finally{list.querySelectorAll('button').forEach(b=>b.disabled=false)}
+          };
+        }
+        list.append(section);
+      }
+    }catch(e){list.textContent='No fue posible cargar los ejemplos.';status.textContent=e.message}
+  }
+
   function renderProjects() {
     if (!currentProject) return;
     els.projectList.innerHTML = store.projects
@@ -470,6 +528,11 @@
           </div>`;
       }).join('');
 
+    const exampleButton=document.createElement('button');
+    exampleButton.type='button';exampleButton.className='soft-btn lmm-example-launch';
+    exampleButton.textContent='▦ Proyectos de ejemplo';
+    exampleButton.onclick=openExampleCatalog;
+    els.projectList.prepend(exampleButton);
     els.projectList.querySelectorAll('.project-card').forEach(card => {
       card.addEventListener('click', (event) => {
         const action = event.target.closest('[data-action]')?.dataset.action;

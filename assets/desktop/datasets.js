@@ -2,6 +2,8 @@
 if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
   const lab=document.body.dataset.gmrLab,desktop=window.matefxDesktop;
   let dataset=null,points=[],lastCalculator=null;
+  const id='__gmr_data_plot_';
+  let renderedChunks=0;
   const trigger=document.createElement('button');trigger.className='gmr-data-open';trigger.textContent='▦ Datos CSV / Excel';trigger.type='button';document.body.append(trigger);
   const overlay=document.createElement('div');overlay.className='gmr-data-overlay';overlay.hidden=true;
   overlay.innerHTML=`<section class="gmr-data-dialog" role="dialog" aria-modal="true" aria-label="Datos de investigación">
@@ -74,6 +76,7 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     if(lab==='prime' && document.body.dataset.graphEngine==='desmos' && points.length) plot();
     if (options.notify !== false) window.dispatchEvent(new CustomEvent('gmr:dataset-imported',{detail:{lab,dataset:data}}));
   }
+  window.addEventListener('lmm:example-opened',()=>{if(dataset?.source){fit();status('Tabla de ejemplo: '+dataset.source+' · pág. '+dataset.pages.join(', ')+(dataset.note?' · '+dataset.note:''));}});
   function resetDataset() {
     removePlots();
     lastCalculator=null;dataset=null;points=[];
@@ -103,8 +106,6 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
   if(lab==='prime')window.dispatchEvent(new CustomEvent('gmr:dataset-request',{
     detail:{lab,respond:d=>{if(d)populate(d,{notify:false});else resetDataset();}}
   }));
-  const id='__gmr_data_plot_';
-  let renderedChunks=0;
   function removePlots(){
     const c=lastCalculator||calc();if(!c)return;
     for(let i=0;i<Math.max(40,renderedChunks);i++)try{c.removeExpression({id:id+i})}catch(_){}

@@ -49,3 +49,15 @@ body[data-gmr-lab="prime"][data-prime-project="example"] .prime-toolbar{display:
  #lmm-view-panel{right:65px;top:4px;width:calc(100% - 72px);max-height:calc(100% - 8px);padding:11px}
 }
 @media(max-height:440px){#lmm-quick-rail button{min-height:34px}}
+
+/* Biblioteca de proyectos de ejemplo */
+.lmm-example-launch{width:100%;margin:0 0 12px;text-align:left;font-weight:700}
+#lmm-example-catalog{width:min(690px,92vw);max-height:84vh;border:1px solid #c9d8e4;border-radius:15px;padding:20px;color:#193956;background:#fff;overflow:auto;box-shadow:0 16px 65px #10203055}
+#lmm-example-catalog::backdrop{background:#132c4866}
+.lmm-example-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.lmm-example-head h2{font-size:20px;margin:0 0 5px}.lmm-example-head p{font-size:13px;color:#5c7283;margin:0 0 16px}
+#lmm-example-catalog details{border-top:1px solid #e2eaf0;padding:10px 0}
+#lmm-example-catalog summary{cursor:pointer;font-weight:700;padding:7px 0}
+.lmm-example-item{display:grid;gap:4px;width:100%;text-align:left;padding:10px 13px;margin:6px 0;border:1px solid #d8e3ec;border-radius:8px;background:#f8fbfd;color:#193956;cursor:pointer;font:inherit}
+.lmm-example-item:hover{background:#eaf4fc}.lmm-example-item small{font-size:11px;color:#5d7184}
+#lmm-example-status{font-size:12px;color:#546f82}
