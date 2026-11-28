@@ -168,3 +168,23 @@ test('Las cinco vistas usan los valores evaluados por Desmos, no una fórmula de
  assert.equal(geometryFromSamples({angle:90},[1,2],[NaN,10]).geometries.length,1);
  assert.match(pathLatex([[0,1],[1,2]]),/\\left\[/);
 });
+
+
+test('Regresión: las funciones generadas desde Investigación también son fuentes de las cinco vistas',async()=>{
+ const {desmosSources,helperLatex}=await import('../assets/lmm/desmos-source.mjs');
+ const generated={id:'gmr_generated_1795830000000_1',type:'expression',latex:'f_{1}(x)=(-11.524)\\cdot x\\cdot e^{0.565\\cdot x/93}+(-58.2)',color:'#21895d'};
+ const sources=desmosSources([
+  generated,
+  {id:'gmr_generated_1795830000000_2',type:'expression',latex:'f_{2}(x)=f_{1}(x)+1'},
+  {id:'manual_1',latex:'g(x)=x^2'},
+  {id:'__lmm_geometry_0',latex:'[(0,0),(1,2)]',secret:true},
+  {id:'gmr_dataset_desktop',type:'table'},
+  {...generated,id:'gmr_generated_hidden',hidden:true},
+  {id:'__np_n',latex:'N_{primos}=[1,2]',secret:true}
+ ]);
+ assert.deepEqual(sources.map(s=>s.id),[generated.id,'gmr_generated_1795830000000_2','manual_1']);
+ assert.equal(sources[0].color,generated.color);
+ assert.equal(helperLatex(sources[0],[1,2,3]),'f_{1}\\left(\\left[1,2,3\\right]\\right)');
+ const model=geometryFromSamples({angle:90},[1,2,3],[0.7,0.8,0.9]);
+ for(const mode of ['triangle0','triangle90','circle0','circle90'])assert.ok(geometryPaths(model,mode).length);
+});

@@ -7,7 +7,9 @@ const independentX=/(^|[^A-Za-z0-9_\\])x([^A-Za-z0-9_]|$)/;
 export function desmosSources(expressions){
  return (expressions||[]).flatMap(e=>{
   const id=String(e?.id||''),latex=String(e?.latex||'').trim();
-  if(!id||id.startsWith('__')||id.startsWith('gmr_')||e.secret||e.hidden||
+  // Los IDs gmr_generated_* son funciones reales creadas desde Investigación.
+  // Solo se excluyen los auxiliares propios y las expresiones no visibles.
+  if(!id||id.startsWith('__lmm_')||e.secret||e.hidden||
     (e.type&&e.type!=='expression')||!latex)return [];
   const def=latex.match(named);
   if(def)return [{id,latex,name:def[1],color:e.color}];
