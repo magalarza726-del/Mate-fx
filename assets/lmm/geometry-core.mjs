@@ -48,19 +48,24 @@ export function sampleValues(settings={}){
  }
  return values;
 }
-export function geometryForExpression(settings={}){
- const cfg=normalizeGeometrySettings(settings),xs=sampleValues(cfg);
- const evaluate=compileExpression(cfg.expression);
- const geometries=[],invalidXs=[];
- for(const x of xs){
-  let fx=NaN;
-  try{fx=evaluate(x,cfg.n)}catch(_){}
+/** Construcción a partir de valores ya evaluados por el motor de origen. */
+export function geometryFromSamples(settings,xs,ys){
+ const cfg=normalizeGeometrySettings(settings),geometries=[],invalidXs=[];
+ for(let i=0;i<xs.length;i++){
+  const x=xs[i],fx=ys[i];
   if(!Number.isFinite(fx)||Math.abs(fx)>1e10){invalidXs.push(x);continue}
   geometries.push(evalGeometry(x,fx,cfg.angle));
  }
  const selected=geometries.reduce((best,g)=>
   !best||Math.abs(g.x-cfg.selectedX)<Math.abs(best.x-cfg.selectedX)?g:best,null);
  return {settings:cfg,geometries,invalidXs,selected,totalLines:xs.length};
+}
+export function geometryForExpression(settings={}){
+ const cfg=normalizeGeometrySettings(settings),xs=sampleValues(cfg);
+ const evaluate=compileExpression(cfg.expression);
+ return geometryFromSamples(cfg,xs,xs.map(x=>{
+  try{return evaluate(x,cfg.n)}catch(_){return NaN}
+ }));
 }
 /** Semicírculo exacto desde a hasta b, parametrizado por el ángulo central. */
 export function circularArc(a,b,side=1,samples=72){

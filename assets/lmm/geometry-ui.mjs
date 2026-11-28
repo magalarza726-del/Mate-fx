@@ -3,18 +3,18 @@
  * Una sola calculadora Desmos; las figuras son expresiones auxiliares,
  * nunca otra escena independiente ni parte de las funciones del proyecto.
  */
-import {LMM_MODES,normalizeGeometrySettings,sampleValues,geometryForExpression,
- geometryPaths,boundsForGeometry,geometryStatistics} from './geometry-core.mjs';
-import {compileExpression} from '../matefx/src/math.js';
+import {LMM_MODES,normalizeGeometrySettings,sampleValues,
+ geometryPaths,boundsForGeometry,geometryStatistics,geometryFromSamples} from './geometry-core.mjs';
+import {desmosSources,helperLatex,helperValues,pathLatex} from './desmos-source.mjs';
 
 const $=id=>document.getElementById(id);
-const DEFAULT={expression:'x^2',xMin:1,xMax:6,step:1,angle:90,n:3,selectedX:4};
+const DEFAULT={xMin:1,xMax:6,step:1,angle:90,selectedX:4};
 const sanitize=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const number=v=>Number.isFinite(v)?Number(v).toLocaleString('es-EC',{maximumFractionDigits:5}):'—';
 const calc=window.__nPrimosCalculator;
 const frame=document.querySelector('.gmr-graph-frame');
 if(!calc||!frame)throw Error('El módulo de vistas LMM requiere Desmos.');
-let settings={...DEFAULT},mode='classic',rows=[],isExisting=false;
+let settings={...DEFAULT},mode='classic',rows=[],helpers=[],sourceKey='',fitPending=false,refreshTimer=0;
 let projectId='',scheduled=0,panelOpen=false,renderSerial=0;
 const STORE_KEY='lmm:geometry:projects:v1';
 const getProject=()=>window.__gmrActiveProject?.().id||'sin-proyecto';
@@ -23,7 +23,7 @@ function readStore(){
 }
 function save(){
  const all=readStore();
- all[projectId]={mode,settings,isExisting};
+ all[projectId]={mode,settings};
  try{localStorage.setItem(STORE_KEY,JSON.stringify(all))}
  catch(error){console.warn('No se pudo conservar la vista:',error)}
 }
@@ -37,132 +37,139 @@ function restore(){
  projectId=getProject();
  const stored=readStore()[projectId];
  mode=modeForOldProject(stored);
- settings=normalizeGeometrySettings(stored?.settings||DEFAULT);
- isExisting=Boolean(stored?.isExisting);
+ settings=viewSettings(stored?.settings||DEFAULT);
  chooseMode(mode,{fit:false,persist:false});
 }
+function viewSettings(input){
+ const {xMin,xMax,step,angle,selectedX}=normalizeGeometrySettings(input);
+ return {xMin,xMax,step,angle,selectedX};
+}
+function expressionList(){
+ return calc.getExpressions?.()||calc.getState()?.expressions?.list||[];
+}
 function removeGenerated(){
- for(const id of rows){try{calc.removeExpression({id})}catch(_){}}
+ // Limpia también las tablas y la función de versiones anteriores.
+ const ids=new Set([...rows,'__lmm_source',...expressionList()
+  .map(e=>String(e.id||'')).filter(id=>id.startsWith('__lmm_'))]);
  rows=[];
+ for(const id of ids)try{calc.removeExpression({id})}catch(_){}
 }
-function prepareTable(index,points,color){
- // Un subíndice exclusivamente numérico evita colisiones al usar pasos decimales.
- const sub=910000+index;
- return {id:'__lmm_geometry_'+index,type:'table',secret:true,
-  columns:[
-   {latex:'u_{'+sub+'}',values:points.map(p=>String(Number(p[0].toPrecision(12))))},
-   {latex:'v_{'+sub+'}',values:points.map(p=>String(Number(p[1].toPrecision(12)))),
-    color,lines:true,points:false,lineWidth:'3'}
-  ]};
-}
-function sourceToAscii(latex){
- let s=String(latex||'').replace(/^\s*(?:[A-Za-z]\s*\(\s*x\s*\)|y)\s*=/,'').trim();
- for(let i=0;i<8;i++){
-  const before=s;s=s.replace(/\\(?:dfrac|frac)\{([^{}]*)\}\{([^{}]*)\}/g,'($1)/($2)');
-  if(before===s)break
+function releaseHelpers(){
+ for(const {helper} of helpers){
+  try{helper.unobserve('listValue');helper.unobserve('numericValue')}catch(_){}
  }
- return s.replace(/\\(?:left|right)/g,'')
-  .replace(/\\(?:cdot|times)/g,'*')
-  .replace(/\\(?:sin|cos|tan|ln|log|exp|sqrt|pi)\b/g,m=>m.slice(1))
-  .replace(/\{([^{}]*)\}/g,'($1)').replace(/\s+/g,'').replace(/−/g,'-');
-}
-function availableExpressions(){
- const list=typeof calc.getExpressions==='function'?calc.getExpressions():
-  calc.getState()?.expressions?.list||[];
- return list.filter(e=>!String(e.id||'').startsWith('__')&&
-  /^\s*(?:[A-Za-z]\s*\(\s*x\s*\)|y)\s*=/.test(String(e.latex||''))&&
-  e.type!=='table'&&!e.hidden)
-  .map(e=>({id:e.id,latex:e.latex,ascii:sourceToAscii(e.latex)}));
-}
-function syncSelection(){
- const select=$('lmm-source-list');if(!select)return;
- const prior=select.value;
- const available=availableExpressions();
- select.innerHTML='<option value="">Expresión propia</option>'+
-  available.map(e=>'<option value="'+sanitize(e.id)+'">'+sanitize(e.latex.slice(0,85))+'</option>').join('');
- if(available.some(x=>x.id===prior))select.value=prior;
+ helpers=[];sourceKey='';
 }
 function currentSettings(){
  const read=id=>$('lmm-'+id)?.value;
- return normalizeGeometrySettings({
-  expression:read('formula')||settings.expression,
-  xMin:read('min'),xMax:read('max'),step:read('step'),
-  n:read('param'),selectedX:read('selected'),
-  angle:modeInfo()?.angle??settings.angle
- });
+ return viewSettings({xMin:read('min'),xMax:read('max'),step:read('step'),
+  selectedX:read('selected'),angle:modeInfo()?.angle??settings.angle});
 }
 const modeInfo=()=>LMM_MODES.find(m=>m.id===mode);
 function refreshInputs(){
- const v={formula:settings.expression,min:settings.xMin,max:settings.xMax,
-  step:settings.step,param:settings.n,selected:settings.selectedX};
+ const v={min:settings.xMin,max:settings.xMax,step:settings.step,selected:settings.selectedX};
  for(const [id,value] of Object.entries(v)){
   const el=$('lmm-'+id);if(el)el.value=value;
  }
  const title=$('lmm-mode-title');if(title)title.textContent='Vista · '+modeInfo().name;
  const hint=$('lmm-mode-description');if(hint)hint.textContent=modeInfo().description;
- const options=$('lmm-view-options');
- options?.querySelectorAll('[data-lmm-mode]').forEach(button=>{
+ $('lmm-view-options')?.querySelectorAll('[data-lmm-mode]').forEach(button=>{
   const active=button.dataset.lmmMode===mode;
   button.classList.toggle('active',active);
   button.setAttribute('aria-pressed',String(active));
  });
  const controls=$('lmm-settings-body');if(controls)controls.hidden=mode==='classic';
- syncSelection();
 }
-function clearSource(){
- try{calc.removeExpression({id:'__lmm_source'})}catch(_){}
-}
-function updateSource(){
- if(isExisting){clearSource();return}
- try{calc.setExpression({id:'__lmm_source',
-  latex:'h_{LMM}(x)='+settings.expression,color:'#537fae',secret:true,lineWidth:2})}
- catch(error){console.warn('No se pudo renderizar la expresión auxiliar:',error)}
-}
-function updateReadout(model){
+function updateReadout(models){
  const el=$('lmm-metrics');if(!el)return;
- const g=geometryStatistics(model);
- if(!g){el.textContent='Ninguna línea evaluable en el intervalo seleccionado.';return}
- el.innerHTML='<strong>'+model.totalLines+' líneas con Δx = '+number(settings.step)+'</strong>'+
-  '<span>Seleccionado x = '+number(g.x)+'; f(x) = '+number(g.fx)+'</span>'+
-  '<span>Q = ('+number(g.q[0])+', '+number(g.q[1])+')</span>'+
-  '<span>x · f(x) = '+number(g.product)+'</span>'+
-  '<span>Área orientada: '+number(g.area)+'</span>'+
-  (modeInfo().kind==='circles'?'<span>Radios circulares: '+number(g.radiusPlus)+' / '+number(g.radiusMinus)+'</span>':'')+
-  '<span>Distancias al cuadrado: d+² = '+number(g.dPlus2)+', d−² = '+number(g.dMinus2)+'</span>';
+ if(!models.length){el.textContent='Ingresa una función en el editor de Desmos.';return}
+ el.innerHTML=models.map(({source,model})=>{
+  const g=geometryStatistics(model),label=sanitize(source.latex);
+  if(!g)return '<strong>'+label+'</strong><span>Sin valores reales evaluables en este intervalo.</span>';
+  return '<strong>'+label+'</strong>'+
+   '<span>'+model.geometries.length+' de '+model.totalLines+' muestras · Δx = '+number(settings.step)+'</span>'+
+   '<span>x = '+number(g.x)+'; f(x) = '+number(g.fx)+'</span>'+
+   '<span>Q = ('+number(g.q[0])+', '+number(g.q[1])+')</span>'+
+   '<span>x · f(x) = '+number(g.product)+'</span>'+
+   '<span>Área orientada: '+number(g.area)+'</span>'+
+   (modeInfo().kind==='circles'?'<span>Radios circulares: '+number(g.radiusPlus)+' / '+number(g.radiusMinus)+'</span>':'')+
+   '<span>Distancias al cuadrado: d+² = '+number(g.dPlus2)+', d−² = '+number(g.dMinus2)+'</span>';
+ }).join('<hr>');
 }
-function render(fit=false){
+function render(){
  const info=modeInfo();
- if(info.kind==='classic'){
-  removeGenerated();clearSource();
+ if(info.kind==='classic')return;
+ const models=helpers.map(({source,xs,helper})=>({source,
+  model:geometryFromSamples(settings,xs,helperValues(helper,xs.length))}));
+ const expressions=[];
+ for(const {source,model} of models){
+  for(const shape of geometryPaths(model,mode,72)){
+   expressions.push({id:'__lmm_geometry_'+expressions.length,
+    type:'expression',latex:pathLatex(shape.points),secret:true,
+    color:source.color||'#2877cb',lines:true,points:false,lineWidth:2.5});
+  }
+ }
+ // Las expresiones de listas de puntos admiten secret; las tablas no.
+ // Se actualizan sin tocar las funciones, los datos ni el editor de Desmos.
+ const previous=rows;rows=expressions.map(e=>e.id);
+ for(const id of previous.slice(rows.length))try{calc.removeExpression({id})}catch(_){}
+ try{if(expressions.length)calc.setExpressions(expressions)}
+ catch(error){console.warn('No se pudo dibujar la geometría:',error)}
+ const error=$('lmm-error');
+ if(error){
+  const invalid=models.filter(({model})=>model.invalidXs.length);
+  error.textContent=!models.length?'No hay funciones visibles y=f(x) en Desmos.':
+   invalid.length?'Algunas muestras no tienen un valor real evaluable en Desmos; no se dibujan.':'';
+ }
+ updateReadout(models);
+ if(fitPending&&models.some(({model})=>model.geometries.length)){
+  const bounds=models.filter(({model})=>model.geometries.length).map(({model})=>boundsForGeometry(model,mode));
+  const points=models.flatMap(({model})=>model.geometries);
+  try{calc.setMathBounds({
+   left:Math.min(...bounds.map(b=>b.left),...points.map(p=>p.x)),
+   right:Math.max(...bounds.map(b=>b.right),...points.map(p=>p.x)),
+   bottom:Math.min(...bounds.map(b=>b.bottom),...points.map(p=>p.fx)),
+   top:Math.max(...bounds.map(b=>b.top),...points.map(p=>p.fx))
+  })}catch(_){}
+  fitPending=false;
+ }
+}
+function schedule(fit=false){
+ fitPending=fitPending||fit;
+ if(scheduled)cancelAnimationFrame(scheduled);
+ const serial=++renderSerial;
+ scheduled=requestAnimationFrame(()=>{scheduled=0;if(serial===renderSerial)render()});
+}
+function syncSources(fit=false,force=false){
+ if(mode==='classic'){
+  fitPending=false;releaseHelpers();removeGenerated();
   const el=$('lmm-error');if(el)el.textContent='';
   return;
  }
- let model;
- try{model=geometryForExpression(settings)}
+ const sources=desmosSources(expressionList());
+ let xs;
+ try{xs=sampleValues(settings)}
  catch(error){
-  const field=$('lmm-error');if(field)field.textContent=error.message;
-  removeGenerated();clearSource();return;
+  releaseHelpers();removeGenerated();
+  $('lmm-error').textContent=error.message;return;
  }
- const error=$('lmm-error');
- if(error)error.textContent=model.invalidXs.length?
-  'No se pudo evaluar x = '+model.invalidXs.slice(0,8).map(number).join(', ')+
-  (model.invalidXs.length>8?' ...':''):'';
- const shapes=geometryPaths(model,mode,72);
- removeGenerated();updateSource();
- const expressions=shapes.map((shape,i)=>prepareTable(i,shape.points,
-  info.kind==='triangles'?'#2877cb':i%2?'#e18b38':'#239c85'));
- if(expressions.length){
-  try{calc.setExpressions(expressions);rows=expressions.map(e=>e.id)}
-  catch(error){console.error('No se pudo dibujar en Desmos:',error);
-   if($('lmm-error'))$('lmm-error').textContent='Desmos rechazó algunas líneas: '+error.message}
+ const key=JSON.stringify([sources,xs]);
+ if(force||key!==sourceKey){
+  releaseHelpers();removeGenerated();sourceKey=key;
+  if(typeof calc.HelperExpression!=='function'){
+   $('lmm-error').textContent='El motor de Desmos no permite evaluar las funciones.';return;
+  }
+  for(const source of sources){
+   try{
+    const helper=calc.HelperExpression({latex:helperLatex(source,xs)});
+    helpers.push({source,xs,helper});
+    // El mismo motor resuelve parámetros, funciones dependientes y restricciones.
+    helper.observe('listValue',()=>schedule());
+    helper.observe('numericValue',()=>schedule());
+   }catch(error){console.warn('No se pudo evaluar '+source.latex,error)}
+  }
  }
- updateReadout(model);
- if(fit)try{calc.setMathBounds(boundsForGeometry(model,mode))}catch(_){}
-}
-function schedule(fit=false){
- if(scheduled)cancelAnimationFrame(scheduled);
- const serial=++renderSerial;
- scheduled=requestAnimationFrame(()=>{scheduled=0;if(serial===renderSerial)render(fit)});
+ schedule(fit);
 }
 function chooseMode(next,{fit=true,persist=true}={}){
  const target=LMM_MODES.find(m=>m.id===next);if(!target)return;
@@ -170,17 +177,13 @@ function chooseMode(next,{fit=true,persist=true}={}){
  if(target.angle!==null)settings.angle=target.angle;
  document.body.dataset.lmmMode=mode;
  refreshInputs();
- schedule(fit);
+ syncSources(fit);
  if(persist)save();
  window.dispatchEvent(new CustomEvent('lmm:mode-change',{detail:{mode,angle:target.angle}}));
 }
 function updateSettings(){
- if(isExisting){
-  const selected=availableExpressions().find(e=>e.id===$('lmm-source-list')?.value);
-  if(selected)settings.expression=selected.ascii;
- }
  settings=currentSettings();
- refreshInputs();schedule();save();
+ refreshInputs();syncSources();save();
 }
 function showPanel(open=true){
  panelOpen=Boolean(open);
@@ -217,14 +220,12 @@ function setup(){
    '" aria-pressed="false">'+sanitize(m.name)+'</button>').join('')+'</div>'+
   '<p id="lmm-mode-description"></p>'+
   '<div id="lmm-settings-body"><div class="lmm-panel-divider">Configuración de líneas</div>'+
-  '<label>Función existente en Desmos <select id="lmm-source-list"><option value="">Expresión propia</option></select></label>'+
-  '<label>Expresión de f(x) <input id="lmm-formula" type="text" spellcheck="false" value="x^2"></label>'+
+  '<p class="lmm-note">Fuente única: todas las funciones visibles del editor de Desmos. Modifica allí las funciones y sus parámetros.</p>'+
   '<div class="lmm-grid"><label>x mínimo <input id="lmm-min" type="number" min="-10000" max="10000" step="any" value="1"></label>'+
   '<label>x máximo <input id="lmm-max" type="number" min="-10000" max="10000" step="any" value="6"></label>'+
   '<label>Incremento Δx <input id="lmm-step" type="number" min="0.001" max="10000" step="any" value="1"></label>'+
-  '<label>Parámetro n <input id="lmm-param" type="number" step="any" value="3"></label>'+
   '<label>x a inspeccionar <input id="lmm-selected" type="number" step="any" value="4"></label></div>'+
-  '<p class="lmm-note">Las figuras se generan en x mínimo, x mínimo + Δx, x mínimo + 2Δx, etc. Máximo 150 líneas por vista para mantener fluidez. Solo se usan ángulos de 0° y 90°.</p>'+
+  '<p class="lmm-note">Las figuras se generan en x mínimo, x mínimo + Δx, x mínimo + 2Δx, etc. Máximo 150 muestras por función para mantener fluidez. Solo se usan ángulos de 0° y 90°.</p>'+
   '<p id="lmm-error" role="status"></p><div class="lmm-metrics" id="lmm-metrics"></div></div>';
  frame.appendChild(panel);
  actions.addEventListener('click',event=>{
@@ -240,33 +241,26 @@ function setup(){
   const button=event.target.closest('[data-lmm-mode]');
   if(button)chooseMode(button.dataset.lmmMode);
  });
- $('lmm-source-list').addEventListener('focus',syncSelection);
- $('lmm-source-list').onchange=()=>{
-  const selected=availableExpressions().find(e=>e.id===$('lmm-source-list').value);
-  isExisting=Boolean(selected);
-  if(selected){settings.expression=selected.ascii;$('lmm-formula').value=selected.ascii}
-  updateSettings();
- };
- for(const key of ['formula','min','max','step','param','selected'])
-  $('lmm-'+key).addEventListener('change',()=>{
-   if(key==='formula')isExisting=false;
-   updateSettings();
-  });
+ for(const key of ['min','max','step','selected'])
+  $('lmm-'+key).addEventListener('change',updateSettings);
  window.addEventListener('gmr:project-switched',()=>{
-  removeGenerated();clearSource();restore();
+  clearTimeout(refreshTimer);releaseHelpers();removeGenerated();restore();
  });
- calc.observeEvent?.('change.lmmGeometry',(_name,event)=>{
-  if(!event?.isUserInitiated||mode==='classic'||!isExisting)return;
-  const selection=availableExpressions().find(e=>e.id===$('lmm-source-list')?.value);
-  if(selection&&selection.ascii!==settings.expression){
-   try{compileExpression(selection.ascii);settings.expression=selection.ascii;
-    $('lmm-formula').value=selection.ascii;schedule()}catch(_){}
-  }
+ calc.observeEvent?.('change.lmmGeometry',()=>{
+  if(mode==='classic')return;
+  // Incluye cambios programáticos del generador; la firma excluye las figuras auxiliares.
+  clearTimeout(refreshTimer);
+  refreshTimer=setTimeout(()=>{
+   if(mode==='classic')return;
+   const sources=desmosSources(expressionList());
+   let xs;try{xs=sampleValues(settings)}catch(_){return}
+   if(JSON.stringify([sources,xs])!==sourceKey)syncSources();
+  },60);
  });
  restore();
  window.__lmmGeometry={
   setMode:chooseMode,getMode:()=>mode,getSettings:()=>({...settings}),
-  fit,refresh:()=>schedule(),showPanel:()=>showPanel(true),
+  fit,refresh:()=>syncSources(false,true),showPanel:()=>showPanel(true),
   clear:removeGenerated,preventProjectPollution
  };
  window.dispatchEvent(new Event('lmm:ready'));

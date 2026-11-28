@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {LMM_MODES,MAX_GEOMETRY_LINES,sampleValues,normalizeGeometrySettings,
- geometryForExpression,geometryPaths,boundsForGeometry,geometryStatistics} from '../assets/lmm/geometry-core.mjs';
+ geometryForExpression,geometryPaths,boundsForGeometry,geometryStatistics,geometryFromSamples} from '../assets/lmm/geometry-core.mjs';
 
 test('El selector Vista contiene exactamente cinco opciones con ángulos 0° y 90°',()=>{
  assert.deepEqual(LMM_MODES.map(m=>m.id),
@@ -82,7 +82,11 @@ test('Solo existe una calculadora real: las vistas generan series temporales de 
  assert.match(s,/calc\.removeExpression/);
  assert.match(s,/gmr:project-switched/);
  assert.match(s,/localStorage/);
- assert.match(s,/type:'table'/);
+ assert.match(s,/type:'expression'/);
+ assert.match(s,/secret:true/);
+ assert.doesNotMatch(s,/type:'table'|lmm-formula|lmm-source-list|sourceToAscii/);
+ assert.match(s,/calc\.HelperExpression/);
+ assert.match(s,/helper\.observe\('listValue'/);
 });
 
 test('LMM conserva rutas antiguas y el proyecto de ejemplo de números primos',async()=>{
@@ -131,4 +135,36 @@ test('El PDF general sigue explicando el índice de complejidad con subtotales',
  assert.match(src,/Subtotal/);
  assert.match(src,/categories\.map/);
  assert.match(src,/Los pesos son convenciones/);
+});
+
+
+test('Las cinco vistas usan los valores evaluados por Desmos, no una fórmula de respaldo',async()=>{
+ const {desmosSources,helperLatex,helperValues,pathLatex}=await import('../assets/lmm/desmos-source.mjs');
+ const sources=desmosSources([
+  {id:'1',latex:'f_{1}\\left(x\\right)=a\\cdot x',color:'#ff0000'},
+  {id:'2',latex:'g_{abc}(x)=f_{1}(x)+2',color:'#0000ff'},
+  {id:'3',latex:'y=3x+1'},
+  {id:'4',latex:'a=5'},
+  {id:'5',latex:'h(x)=x^2',hidden:true},
+  {id:'__lmm_source',latex:'h_{LMM}(x)=x^2'},
+  {id:'__lmm_geometry_0',latex:'[(1,2),(3,4)]'},
+  {id:'6',type:'table',columns:[]}
+ ]);
+ assert.deepEqual(sources.map(s=>s.id),['1','2','3']);
+ assert.equal(helperLatex(sources[0],[1,2]),'f_{1}\\left(\\left[1,2\\right]\\right)');
+ assert.match(helperLatex(sources[2],[1,2]),/operatorname\{with\}x=/);
+ assert.deepEqual(helperValues({listValue:[5,10]},2),[5,10]);
+ assert.deepEqual(helperValues({numericValue:3},2),[3,3]);
+ assert.ok(helperValues({},2).every(Number.isNaN));
+ const a=geometryFromSamples({angle:90,selectedX:2},[1,2],[5,10]);
+ const b=geometryFromSamples({angle:90,selectedX:2},[1,2],[7,12]);
+ assert.equal(a.selected.fx,10);assert.equal(b.selected.fx,12);
+ assert.deepEqual(geometryPaths(a,'triangle90')[1].points,[[-2,0],[0,10],[2,0]]);
+ assert.deepEqual(geometryPaths(b,'triangle90')[1].points,[[-2,0],[0,12],[2,0]]);
+ for(const mode of ['triangle0','triangle90','circle0','circle90']){
+  assert.ok(geometryPaths(a,mode).length);
+  assert.notDeepEqual(geometryPaths(a,mode),geometryPaths(b,mode));
+ }
+ assert.equal(geometryFromSamples({angle:90},[1,2],[NaN,10]).geometries.length,1);
+ assert.match(pathLatex([[0,1],[1,2]]),/\\left\[/);
 });
