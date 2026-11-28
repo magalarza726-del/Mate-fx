@@ -3,12 +3,12 @@
  * Una sola calculadora Desmos; las figuras son expresiones auxiliares,
  * nunca otra escena independiente ni parte de las funciones del proyecto.
  */
-import {LMM_MODES,normalizeGeometrySettings,sampleValues,
+import {LMM_MODES,normalizeCountSettings,sampleCountValues,
  geometryPaths,boundsForGeometry,geometryStatistics,geometryFromSamples} from './geometry-core.mjs';
 import {desmosSources,helperLatex,helperValues,pathLatex} from './desmos-source.mjs';
 
 const $=id=>document.getElementById(id);
-const DEFAULT={xMin:1,xMax:6,step:1,angle:90,selectedX:4};
+const DEFAULT={xMin:1,xMax:50,count:20,angle:90};
 const sanitize=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const number=v=>Number.isFinite(v)?Number(v).toLocaleString('es-EC',{maximumFractionDigits:5}):'—';
 const calc=window.__nPrimosCalculator;
@@ -41,8 +41,7 @@ function restore(){
  chooseMode(mode,{fit:false,persist:false});
 }
 function viewSettings(input){
- const {xMin,xMax,step,angle,selectedX}=normalizeGeometrySettings(input);
- return {xMin,xMax,step,angle,selectedX};
+ return normalizeCountSettings(input);
 }
 function expressionList(){
  return calc.getExpressions?.()||calc.getState()?.expressions?.list||[];
@@ -62,15 +61,17 @@ function releaseHelpers(){
 }
 function currentSettings(){
  const read=id=>$('lmm-'+id)?.value;
- return viewSettings({xMin:read('min'),xMax:read('max'),step:read('step'),
-  selectedX:read('selected'),angle:modeInfo()?.angle??settings.angle});
+ return viewSettings({xMin:read('min'),xMax:read('max'),count:read('count'),
+  angle:modeInfo()?.angle??settings.angle});
 }
 const modeInfo=()=>LMM_MODES.find(m=>m.id===mode);
 function refreshInputs(){
- const v={min:settings.xMin,max:settings.xMax,step:settings.step,selected:settings.selectedX};
+ const v={min:settings.xMin,max:settings.xMax,count:settings.count};
  for(const [id,value] of Object.entries(v)){
   const el=$('lmm-'+id);if(el)el.value=value;
  }
+ const increment=$('lmm-auto-step');if(increment)increment.textContent=settings.count>1?'Separación automática Δx = '+number(settings.step):'Una muestra en x mínimo';
+ const label=$('lmm-count-label');if(label)label.textContent=modeInfo().kind==='circles'?'Cantidad de construcciones circulares':'Cantidad de triángulos';
  const title=$('lmm-mode-title');if(title)title.textContent='Vista · '+modeInfo().name;
  const hint=$('lmm-mode-description');if(hint)hint.textContent=modeInfo().description;
  $('lmm-view-options')?.querySelectorAll('[data-lmm-mode]').forEach(button=>{
@@ -113,13 +114,14 @@ function render(){
  // Se actualizan sin tocar las funciones, los datos ni el editor de Desmos.
  const previous=rows;rows=expressions.map(e=>e.id);
  for(const id of previous.slice(rows.length))try{calc.removeExpression({id})}catch(_){}
+ let drawError='';
  try{if(expressions.length)calc.setExpressions(expressions)}
- catch(error){console.warn('No se pudo dibujar la geometría:',error)}
+ catch(error){drawError='Desmos no pudo dibujar las figuras: '+error.message;console.warn(drawError,error)}
  const error=$('lmm-error');
  if(error){
   const invalid=models.filter(({model})=>model.invalidXs.length);
-  error.textContent=!models.length?'No hay funciones visibles y=f(x) en Desmos.':
-   invalid.length?'Algunas muestras no tienen un valor real evaluable en Desmos; no se dibujan.':'';
+  error.textContent=drawError||(!models.length?'No hay funciones visibles y=f(x) en Desmos.':
+   invalid.length?'Algunas muestras no tienen un valor real evaluable en Desmos; no se dibujan.':'');
  }
  updateReadout(models);
  if(fitPending&&models.some(({model})=>model.geometries.length)){
@@ -148,7 +150,7 @@ function syncSources(fit=false,force=false){
  }
  const sources=desmosSources(expressionList());
  let xs;
- try{xs=sampleValues(settings)}
+ try{xs=sampleCountValues(settings)}
  catch(error){
   releaseHelpers();removeGenerated();
   $('lmm-error').textContent=error.message;return;
@@ -183,7 +185,7 @@ function chooseMode(next,{fit=true,persist=true}={}){
 }
 function updateSettings(){
  settings=currentSettings();
- refreshInputs();syncSources();save();
+ refreshInputs();syncSources(true);save();
 }
 function showPanel(open=true){
  panelOpen=Boolean(open);
@@ -223,9 +225,9 @@ function setup(){
   '<p class="lmm-note">Fuente única: todas las funciones visibles del editor de Desmos. Modifica allí las funciones y sus parámetros.</p>'+
   '<div class="lmm-grid"><label>x mínimo <input id="lmm-min" type="number" min="-10000" max="10000" step="any" value="1"></label>'+
   '<label>x máximo <input id="lmm-max" type="number" min="-10000" max="10000" step="any" value="6"></label>'+
-  '<label>Incremento Δx <input id="lmm-step" type="number" min="0.001" max="10000" step="any" value="1"></label>'+
-  '<label>x a inspeccionar <input id="lmm-selected" type="number" step="any" value="4"></label></div>'+
-  '<p class="lmm-note">Las figuras se generan en x mínimo, x mínimo + Δx, x mínimo + 2Δx, etc. Máximo 150 muestras por función para mantener fluidez. Solo se usan ángulos de 0° y 90°.</p>'+
+  '</div><label><span id="lmm-count-label">Cantidad de triángulos</span><input id="lmm-count" type="number" min="1" max="150" step="1" value="20"></label>'+
+  '<p id="lmm-auto-step" role="status"></p>'+
+  '<p class="lmm-note">Distribución uniforme por función, incluyendo los extremos si hay dos o más muestras. Máximo 150 construcciones por función. Las muestras no definidas se omiten. Solo se usan ángulos de 0° y 90°.</p>'+
   '<p id="lmm-error" role="status"></p><div class="lmm-metrics" id="lmm-metrics"></div></div>';
  frame.appendChild(panel);
  actions.addEventListener('click',event=>{
@@ -241,7 +243,7 @@ function setup(){
   const button=event.target.closest('[data-lmm-mode]');
   if(button)chooseMode(button.dataset.lmmMode);
  });
- for(const key of ['min','max','step','selected'])
+ for(const key of ['min','max','count'])
   $('lmm-'+key).addEventListener('change',updateSettings);
  window.addEventListener('gmr:project-switched',()=>{
   clearTimeout(refreshTimer);releaseHelpers();removeGenerated();restore();
@@ -253,7 +255,7 @@ function setup(){
   refreshTimer=setTimeout(()=>{
    if(mode==='classic')return;
    const sources=desmosSources(expressionList());
-   let xs;try{xs=sampleValues(settings)}catch(_){return}
+   let xs;try{xs=sampleCountValues(settings)}catch(_){return}
    if(JSON.stringify([sources,xs])!==sourceKey)syncSources();
   },60);
  });

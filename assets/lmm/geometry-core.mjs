@@ -35,6 +35,23 @@ export function normalizeGeometrySettings(settings={}){
   n:clamp(num('n',3),-9999,9999),
   selectedX:clamp(num('selectedX',4),xMin,xMax)};
 }
+/** Ajustes de vista por cantidad: incluye ambos extremos y migra el antiguo incremento. */
+export function normalizeCountSettings(settings={}){
+ const cfg=normalizeGeometrySettings(settings);
+ const width=cfg.xMax-cfg.xMin;
+ const legacy=Number(settings.step)>0?Math.floor(width/Number(settings.step)+1e-9)+1:20;
+ const requested=settings.count!==undefined&&settings.count!==null&&settings.count!==''?
+  Number(settings.count):legacy;
+ const count=width===0?1:clamp(Math.round(Number.isFinite(requested)?requested:20),1,MAX_GEOMETRY_LINES);
+ return {xMin:cfg.xMin,xMax:cfg.xMax,count,angle:cfg.angle,
+  step:count>1?width/(count-1):0,selectedX:(cfg.xMin+cfg.xMax)/2};
+}
+export function sampleCountValues(settings={}){
+ const {xMin,xMax,count}=normalizeCountSettings(settings);
+ if(count===1)return [xMin];
+ return Array.from({length:count},(_,i)=>i===0?xMin:i===count-1?xMax:
+  fmtNumber(xMin+(xMax-xMin)*i/(count-1)));
+}
 export function sampleValues(settings={}){
  const cfg=normalizeGeometrySettings(settings);
  const count=Math.floor((cfg.xMax-cfg.xMin)/cfg.step+1e-9)+1;

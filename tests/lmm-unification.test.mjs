@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {LMM_MODES,MAX_GEOMETRY_LINES,sampleValues,normalizeGeometrySettings,
- geometryForExpression,geometryPaths,boundsForGeometry,geometryStatistics,geometryFromSamples} from '../assets/lmm/geometry-core.mjs';
+ geometryForExpression,geometryPaths,boundsForGeometry,geometryStatistics,geometryFromSamples,normalizeCountSettings,sampleCountValues} from '../assets/lmm/geometry-core.mjs';
 
 test('El selector Vista contiene exactamente cinco opciones con ángulos 0° y 90°',()=>{
  assert.deepEqual(LMM_MODES.map(m=>m.id),
@@ -115,7 +115,8 @@ test('Navegación sin duplicados: derecha solo Investigación, Análisis, Datos 
  assert.match(ui,/data-lmm-quick="analysis"/);
  assert.match(ui,/data-lmm-quick="data"/);
  assert.match(ui,/id='lmm-view-panel'/);
- assert.match(ui,/id="lmm-step"/);
+ assert.match(ui,/id="lmm-count"/);
+ assert.doesNotMatch(ui,/id="lmm-step"|id="lmm-selected"/);
  assert.match(ui,/LMM_MODES\.map/);
  assert.doesNotMatch(ui,/data-lmm-quick="(?:settings|fit|example)"/);
  assert.doesNotMatch(ui,/lmm-mode-rail|lmm-animate|lmm-angleText/);
@@ -187,4 +188,24 @@ test('Regresión: las funciones generadas desde Investigación también son fuen
  assert.equal(helperLatex(sources[0],[1,2,3]),'f_{1}\\left(\\left[1,2,3\\right]\\right)');
  const model=geometryFromSamples({angle:90},[1,2,3],[0.7,0.8,0.9]);
  for(const mode of ['triangle0','triangle90','circle0','circle90'])assert.ok(geometryPaths(model,mode).length);
+});
+
+test('Cantidad automática: el intervalo 1 a 50 nunca bloquea el dibujo',()=>{
+ const migrated=normalizeCountSettings({xMin:1,xMax:50,step:.1});
+ assert.equal(migrated.count,150);
+ const config=normalizeCountSettings({xMin:1,xMax:50,count:50});
+ assert.equal(config.step,1);
+ assert.deepEqual(sampleCountValues(config),Array.from({length:50},(_,i)=>i+1));
+ const twenty=sampleCountValues({xMin:1,xMax:50,count:20});
+ assert.equal(twenty.length,20);assert.equal(twenty[0],1);assert.equal(twenty.at(-1),50);
+ assert.deepEqual(sampleCountValues({xMin:50,xMax:1,count:3}),[1,25.5,50]);
+ assert.deepEqual(sampleCountValues({xMin:2,xMax:2,count:20}),[2]);
+ assert.deepEqual(sampleCountValues({xMin:1,xMax:50,count:1}),[1]);
+ assert.equal(sampleCountValues({xMin:1,xMax:50,count:999}).length,150);
+ assert.equal(sampleCountValues({xMin:1,xMax:50,count:0}).length,1);
+ const model=geometryFromSamples(config,sampleCountValues(config),Array.from({length:50},(_,i)=>2*(i+1)));
+ assert.equal(geometryPaths(model,'triangle0').length,50);
+ assert.equal(geometryPaths(model,'triangle90').length,50);
+ assert.equal(geometryPaths(model,'circle0').length,100);
+ assert.equal(geometryPaths(model,'circle90').length,100);
 });
