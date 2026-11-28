@@ -487,6 +487,7 @@
             try{
               const id=key==='primes'?EXAMPLE_ID:'ejemplo-'+entry.id;
               let project=store.projects.find(p=>p.id===id);
+              const fresh=!project;
               if(!project){
                 const response=await fetch(new URL('../examples/catalog/'+entry.id+'.json',import.meta.url));
                 if(!response.ok)throw Error('No se pudo cargar la tabla');
@@ -496,7 +497,7 @@
                 store.projects.push(project);
               }
               switchProject(id);dialog.close();
-              if(key!=='primes')window.dispatchEvent(new Event('lmm:example-opened'));
+              if(key!=='primes'&&fresh)window.dispatchEvent(new Event('lmm:example-opened'));
             }catch(e){status.textContent=e.message}
             finally{list.querySelectorAll('button').forEach(b=>b.disabled=false)}
           };

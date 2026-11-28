@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: '22'
       - name: Pruebas de regresión, reportes y validez física
-        run: node --test tests/investigation-core.test.mjs tests/investigation-pdf.test.mjs tests/investigation-quality.test.mjs tests/investigation-v2.test.mjs tests/lmm-unification.test.mjs
+        run: node --test tests/investigation-core.test.mjs tests/investigation-pdf.test.mjs tests/investigation-quality.test.mjs tests/investigation-v2.test.mjs tests/lmm-unification.test.mjs tests/example-catalog.test.mjs
       - name: Verificar archivos publicados desde raíz
         run: |
           test -f index.html

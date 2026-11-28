@@ -51,13 +51,14 @@ if (['mate','prime'].includes(document.body.dataset.gmrLab)) {
     $('ds-plot').disabled=$('ds-fit').disabled=points.length===0;
     dataset.xColumn=x;dataset.yColumn=String(y);
     window.dispatchEvent(new CustomEvent('gmr:dataset-selection',{detail:{lab,dataset,xColumn:x,yColumn:String(y)}}));
-    status(`${points.length} puntos válidos de ${dataset.rows.length} filas. Selección: X=${$('ds-x').selectedOptions[0]?.textContent}, Y=${$('ds-y').selectedOptions[0]?.textContent}.`);
+    status(`${points.length} puntos válidos de ${dataset.rows.length} filas. Selección: X=${$('ds-x').selectedOptions[0]?.textContent}, Y=${$('ds-y').selectedOptions[0]?.textContent}.`+(dataset.note?' '+dataset.note:''));
     preview();
   }
   function populate(data, options = {}){
     if(!data?.headers?.length||!Array.isArray(data.rows))throw Error('El archivo no tiene encabezados.');
     dataset=data;
-    $('ds-filename').textContent=`${data.filename}: ${data.rows.length} filas`;
+    $('ds-filename').textContent=`${data.sheet||data.filename}: ${data.rows.length} filas`;
+    $('ds-filename').title=data.source?data.source+' · pág. '+data.pages.join(', '):data.filename;
     for(const id of ['ds-x','ds-y']){
       const select=$(id);select.disabled=false;select.replaceChildren();
       data.headers.forEach((name,i)=>{const opt=document.createElement('option');opt.value=i;opt.textContent=name;select.add(opt)})
