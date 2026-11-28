@@ -1,0 +1,174 @@
+[
+  {
+    "id": "prob-a",
+    "group": "prob",
+    "title": "A · Distribución normal estándar",
+    "source": "Tablas de probabilidades (parte 2).pdf",
+    "pages": [
+      2,
+      3
+    ],
+    "rows": 705,
+    "columns": 2
+  },
+  {
+    "id": "prob-b",
+    "group": "prob",
+    "title": "B · Distribución t de Student",
+    "source": "Tablas de probabilidades (parte 2).pdf",
+    "pages": [
+      4
+    ],
+    "rows": 46,
+    "columns": 9
+  },
+  {
+    "id": "prob-c",
+    "group": "prob",
+    "title": "C · Distribución ji-cuadrado",
+    "source": "Tablas de probabilidades (parte 2).pdf",
+    "pages": [
+      5
+    ],
+    "rows": 37,
+    "columns": 11
+  },
+  {
+    "id": "prob-d",
+    "group": "prob",
+    "title": "D · Distribución F de Fisher",
+    "source": "Tablas de probabilidades (parte 2).pdf",
+    "pages": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "rows": 34,
+    "columns": 96
+  },
+  {
+    "id": "prob-e",
+    "group": "prob",
+    "title": "E · Kolmogorov–Smirnov",
+    "source": "Tablas de probabilidades (parte 2).pdf",
+    "pages": [
+      16
+    ],
+    "rows": 40,
+    "columns": 6
+  },
+  {
+    "id": "termo-a4",
+    "group": "termo",
+    "title": "A-4 · Agua saturada. Tabla de temperaturas",
+    "source": "Tablas Termodinamicas (4).pdf",
+    "pages": [
+      8,
+      9
+    ],
+    "rows": 76,
+    "columns": 13
+  },
+  {
+    "id": "termo-a5",
+    "group": "termo",
+    "title": "A-5 · Agua saturada. Tabla de presiones",
+    "source": "Tablas Termodinamicas (4).pdf",
+    "pages": [
+      10,
+      11
+    ],
+    "rows": 73,
+    "columns": 13
+  },
+  {
+    "id": "termo-a6",
+    "group": "termo",
+    "title": "A-6 · Vapor de agua sobrecalentado",
+    "source": "Tablas Termodinamicas (4).pdf",
+    "pages": [
+      12,
+      13,
+      14,
+      15
+    ],
+    "rows": 55,
+    "columns": 145
+  },
+  {
+    "id": "termo-a7",
+    "group": "termo",
+    "title": "A-7 · Agua líquida comprimida",
+    "source": "Tablas Termodinamicas (4).pdf",
+    "pages": [
+      16
+    ],
+    "rows": 23,
+    "columns": 25
+  },
+  {
+    "id": "termo-a8",
+    "group": "termo",
+    "title": "A-8 · Hielo saturado. Vapor de agua",
+    "source": "Tablas Termodinamicas (4).pdf",
+    "pages": [
+      17
+    ],
+    "rows": 22,
+    "columns": 13
+  },
+  {
+    "id": "termo-a11",
+    "group": "termo",
+    "title": "A-11 · Refrigerante 134a saturado. Tabla de temperatura",
+    "source": "Tablas Termodinamicas (4).pdf",
+    "pages": [
+      18,
+      19
+    ],
+    "rows": 55,
+    "columns": 13
+  },
+  {
+    "id": "termo-a12",
+    "group": "termo",
+    "title": "A-12 · Refrigerante 134a saturado. Tabla de presión",
+    "source": "Tablas Termodinamicas (4).pdf",
+    "pages": [
+      20
+    ],
+    "rows": 34,
+    "columns": 13
+  },
+  {
+    "id": "termo-a13",
+    "group": "termo",
+    "title": "A-13 · Refrigerante 134a sobrecalentado",
+    "source": "Tablas Termodinamicas (4).pdf",
+    "pages": [
+      21,
+      22
+    ],
+    "rows": 39,
+    "columns": 73
+  },
+  {
+    "id": "termo-a17",
+    "group": "termo",
+    "title": "A-17 · Propiedades de gas ideal del aire",
+    "source": "Tablas Termodinamicas (4).pdf",
+    "pages": [
+      23,
+      24
+    ],
+    "rows": 121,
+    "columns": 6
+  }
+]
